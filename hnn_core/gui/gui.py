@@ -433,6 +433,8 @@ class HNNGUI:
 
         # Cell parameter list
         self.cell_pameters_widgets = dict()
+        # Cell parameter dict
+        self.cell_parameters_widgets = dict()
 
         self._init_ui_components()
         self.add_logging_window_logger()
@@ -581,6 +583,7 @@ class HNNGUI:
                 self._simulation_status_bar, self._simulation_status_contents,
                 self.connectivity_widgets, self.viz_manager,
                 self.simulation_list_widget, self.cell_pameters_widgets)
+                self.simulation_list_widget, self.cell_parameters_widgets,
 
         def _simulation_list_change(value):
             # Simulation Data
@@ -623,13 +626,13 @@ class HNNGUI:
 
         def _cell_type_radio_change(value):
             _update_cell_params_vbox(self._cell_params_out,
-                                     self.cell_pameters_widgets,
+                                     self.cell_parameters_widgets,
                                      value.new,
                                      self.cell_layer_radio_buttons.value)
 
         def _cell_layer_radio_change(value):
             _update_cell_params_vbox(self._cell_params_out,
-                                     self.cell_pameters_widgets,
+                                     self.cell_parameters_widgets,
                                      self.cell_type_radio_buttons.value,
                                      value.new)
 
@@ -699,8 +702,10 @@ class HNNGUI:
 
         connectivity_configuration.children = [connectivity_box,
                                                cell_parameters]
+                                               cell_parameters,
         connectivity_configuration.titles = ['Connectivity',
                                              'Cell parameters']
+                                             'Cell parameters',
 
         drive_selections = VBox([
             self.add_drive_button, self.widget_drive_type_selection,
@@ -913,7 +918,7 @@ class HNNGUI:
                                  self._connectivity_out,
                                  self.connectivity_widgets,
                                  self._cell_params_out,
-                                 self.cell_pameters_widgets,
+                                 self.cell_parameters_widgets,
                                  self.cell_layer_radio_buttons,
                                  self.cell_type_radio_buttons,
                                  self.layout)
@@ -1045,7 +1050,7 @@ class HNNGUI:
             if load_type == 'connectivity':
                 add_connectivity_tab(
                     params, self._connectivity_out, self.connectivity_widgets,
-                    self._cell_params_out, self.cell_pameters_widgets,
+                    self._cell_params_out, self.cell_parameters_widgets,
                     self.cell_layer_radio_buttons,
                     self.cell_type_radio_buttons, layout)
             elif load_type == 'drives':
@@ -1609,7 +1614,7 @@ def _build_drive_objects(drive_type, name, tstop_widget, layout, style,
 
 
 def add_connectivity_tab(params, connectivity_out, connectivity_textfields,
-                         cell_params_out, cell_pameters_vboxes,
+                         cell_params_out, cell_parameters_vboxes,
                          cell_layer_radio_button, cell_type_radio_button,
                          layout):
     """Add all possible connectivity boxes to connectivity tab."""
@@ -1620,7 +1625,7 @@ def add_connectivity_tab(params, connectivity_out, connectivity_textfields,
                                  connectivity_textfields)
 
     # build cell parameters tab
-    add_cell_parameters_tab(cell_params_out, cell_pameters_vboxes,
+    add_cell_parameters_tab(cell_params_out, cell_parameters_vboxes,
                             cell_layer_radio_button, cell_type_radio_button,
                             layout)
     return net
@@ -1830,7 +1835,6 @@ def _init_network_from_widgets(params, dt, tstop, single_simulation_data,
                     'nc_dict']['A_weight'] = vbox_key.children[1].value
 
     # Update cell params
-
     update_functions = {
         'L2 Geometry': _update_L2_geometry_cell_params,
         'L5 Geometry': _update_L5_geometry_cell_params,
@@ -1947,6 +1951,7 @@ def run_button_clicked(widget_simulation_name, log_out, drive_widgets,
                                    simulation_data[_sim_name], drive_widgets,
                                    connectivity_textfields,
                                    cell_pameters_widgets)
+                                   cell_parameters_widgets,
 
         print("start simulation")
         if backend_selection.value == "MPI":
