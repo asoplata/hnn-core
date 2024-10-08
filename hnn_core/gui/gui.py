@@ -690,7 +690,7 @@ class HNNGUI:
                 self.widget_backend_selection, self._backend_config_out]),
         ], layout=self.layout['config_box'])
 
-        connectivity_configuration = Tab()
+        network_configuration = Tab()
 
         connectivity_box = VBox([
             HBox([self.load_connectivity_button, ]),
@@ -705,12 +705,12 @@ class HNNGUI:
 
         syn_gain = VBox([self._syn_gain_out])
 
-        connectivity_configuration.children = [connectivity_box,
-                                               cell_parameters,
-                                               syn_gain]
-        connectivity_configuration.titles = ['Connectivity',
-                                             'Cell parameters',
-                                             'Synaptic gains']
+        network_configuration.children = [connectivity_box,
+                                          cell_parameters,
+                                          syn_gain]
+        network_configuration.titles = ['Connectivity',
+                                        'Cell parameters',
+                                        'Synaptic gains']
 
         drive_selections = VBox([
             self.add_drive_button, self.widget_drive_type_selection,
@@ -730,7 +730,7 @@ class HNNGUI:
         # Tabs for left pane
         left_tab = Tab()
         left_tab.children = [
-            simulation_box, connectivity_configuration, drives_options,
+            simulation_box, network_configuration, drives_options,
             config_panel,
         ]
         titles = ('Simulation', 'Network', 'External drives',
