@@ -299,6 +299,40 @@ def pick_connection(net, src_gids=None, target_gids=None,
     return sorted(conn_set)
 
 
+def _get_cell_index_by_synapse_type(net):
+    """Returns the indexes of excitatory and inhibitory cells in the network.
+
+    This function extracts the source GIDs (Global Identifiers) of excitatory
+    and inhibitory cells based on their connection types. Excitatory cells are
+    identified by their synaptic connections using AMPA and NMDA receptors,
+    while inhibitory cells are identified by their connections using GABAA and
+    GABAB receptors.
+
+    Parameters
+    ----------
+    net : Instance of Network object
+        The Network object
+
+    Returns
+    -------
+    tuple: A tuple containing two lists:
+        - e_cells (list): The source GIDs of excitatory cells.
+        - i_cells (list): The source GIDs of inhibitory cells.
+    """
+
+    def list_src_gids(indices):
+        return np.concatenate([list(net.connectivity[conn_idx]['src_gids'])
+                                  for conn_idx in indices]).tolist()
+
+    e_conns = pick_connection(net, receptor=['ampa', 'nmda'])
+    e_cells = list_src_gids(e_conns)
+
+    i_conns = pick_connection(net, receptor=['gabaa', 'gabab'])
+    i_cells = list_src_gids(i_conns)
+
+    return e_cells, i_cells
+
+
 class Network:
     """The Network class.
 
@@ -1466,13 +1500,7 @@ class Network:
 
         net = self.copy() if copy else self
 
-        e_conns = pick_connection(self, receptor=['ampa', 'nmda'])
-        e_cells = np.concatenate([list(net.connectivity[
-            conn_idx]['src_gids']) for conn_idx in e_conns]).tolist()
-
-        i_conns = pick_connection(self, receptor=['gabaa', 'gabab'])
-        i_cells = np.concatenate([list(net.connectivity[
-            conn_idx]['src_gids']) for conn_idx in i_conns]).tolist()
+        e_cells, i_cells = _get_cell_index_by_synapse_type(net)
         conn_types = {
             'e_e': (e_e, e_cells, e_cells),
             'e_i': (e_i, e_cells, i_cells),
