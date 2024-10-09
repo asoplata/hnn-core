@@ -1525,6 +1525,52 @@ class Network:
         if copy:
             return net
 
+    def get_synaptic_gains(self):
+        """Retrieve gain values for different connection types in the network.
+
+        This function identifies excitatory and inhibitory cells in the network
+        and retrieves the gain value for each type of synaptic connection:
+        - excitatory to excitatory (e_e)
+        - excitatory to inhibitory (e_i)
+        - inhibitory to excitatory (i_e)
+        - inhibitory to inhibitory (i_i)
+
+        The gain is assumed to be uniform within each connection type, and only
+        the first connection's gain value is used for each type.
+
+        Returns
+        -------
+        dict: A dictionary with the connection types ('e_e', 'e_i', 'i_e',
+        'i_i') as keys and their corresponding gain values.
+        """
+        # Initialize gain values with default gain of 1.0 for all connection types
+        values = {k: 1.0 for k in ('e_e', 'e_i', 'i_e', 'i_i')}
+
+        e_cells, i_cells = _get_cell_index_by_synapse_type(self)
+
+        # Define the connection types and corresponding source/target cell indexes
+        conn_types = {
+            'e_e': (e_cells, e_cells),
+            'e_i': (e_cells, i_cells),
+            'i_e': (i_cells, e_cells),
+            'i_i': (i_cells, i_cells)
+        }
+
+        # Retrieve the gain value for each connection type
+        for conn_type, (src_indexes, target_indexes) in conn_types.items():
+            conn_indices = pick_connection(self,
+                                           src_gids=src_indexes,
+                                           target_gids=target_indexes)
+
+            if conn_indices:
+                # Extract the gain from the first connection
+                values[conn_type] = (
+                    self.connectivity[conn_indices[0]]['nc_dict']['gain']
+                )
+
+        return values
+
+
     def plot_cells(self, ax=None, show=True):
         """Plot the cells using Network.pos_dict.
 
