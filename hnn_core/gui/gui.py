@@ -1750,10 +1750,13 @@ def add_cell_parameters_tab(cell_params_out, cell_pameters_vboxes,
 
 def add_synaptic_gain_tab(net, syn_gain_out, syn_gain_textfields, layout):
 
+    gain_values = net.get_synaptic_gains()
     gain_types = ('e_e', 'e_i', 'i_e', 'i_i')
     for gain_type in gain_types:
         gain_widget = BoundedFloatText(
-            value=1, description=f'{gain_type}', min=0, max=1e6, step=.1,
+            value=gain_values[gain_type],
+            description=f'{gain_type}',
+            min=0, max=1e6, step=.1,
             disabled=False, layout=layout)
         syn_gain_textfields[gain_type] = gain_widget
 
