@@ -309,7 +309,8 @@ def test_gui_change_connectivity():
                                            _single_simulation,
                                            gui.drive_widgets,
                                            gui.connectivity_widgets,
-                                           gui.cell_pameters_widgets,
+                                           gui.cell_parameters_widgets,
+                                           gui.synaptic_gain_widgets,
                                            add_drive=False)
 
                 # test if the new value is reflected in the network
@@ -348,7 +349,8 @@ def test_gui_init_network(setup_gui):
     _init_network_from_widgets(gui.params, gui.widget_dt, gui.widget_tstop,
                                _single_simulation, gui.drive_widgets,
                                gui.connectivity_widgets,
-                               gui.cell_pameters_widgets)
+                               gui.cell_parameters_widgets,
+                               gui.synaptic_gain_widgets)
     plt.close('all')
 
     net_from_gui = _single_simulation['net']
@@ -933,7 +935,8 @@ def test_gui_add_tonic_input():
     _init_network_from_widgets(gui.params, gui.widget_dt, gui.widget_tstop,
                                _single_simulation, gui.drive_widgets,
                                gui.connectivity_widgets,
-                               gui.cell_pameters_widgets)
+                               gui.cell_parameters_widgets,
+                               gui.synaptic_gain_widgets)
 
     net = _single_simulation['net']
     assert net.external_biases['tonic'] is not None
@@ -960,7 +963,7 @@ def test_gui_cell_params_widgets(setup_gui):
     layers = gui.cell_layer_radio_buttons.options
     assert (len(layers) == 3)
 
-    keys = gui.cell_pameters_widgets.keys()
+    keys = gui.cell_parameters_widgets.keys()
     num_cell_params = 0
     for pyramid_cell_type in pyramid_cell_types:
         cell_type = pyramid_cell_type.split('_')[0]
