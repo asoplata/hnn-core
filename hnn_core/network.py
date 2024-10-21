@@ -1465,7 +1465,7 @@ class Network:
         _validate_type(copy, bool, 'copy')
 
         net = self.copy() if copy else self
-
+        import pdb ; pdb.set_trace() ; # AES debug
         e_conns = pick_connection(self, receptor=['ampa', 'nmda'])
         e_cells = np.concatenate([list(net.connectivity[
             conn_idx]['src_gids']) for conn_idx in e_conns]).tolist()

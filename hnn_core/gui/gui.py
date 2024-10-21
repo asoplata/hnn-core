@@ -473,6 +473,7 @@ class HNNGUI:
         self._drives_out = Output()  # tab to add new drives
         self._connectivity_out = Output()  # tab to tune connectivity.
         self._cell_params_out = Output()
+        self._syn_gains_out = Output()
 
         self._log_out = Output()
 
@@ -686,10 +687,14 @@ class HNNGUI:
             self._cell_params_out
         ])
 
+        synaptic_gains_box = VBox(self._syn_gains_out)
+
         connectivity_configuration.children = [connectivity_box,
-                                               cell_parameters]
+                                               cell_parameters,
+                                               synaptic_gains_box]
         connectivity_configuration.titles = ['Connectivity',
-                                             'Cell parameters']
+                                             'Cell parameters',
+                                             'Universal synaptic gain']
 
         drive_selections = VBox([
             self.add_drive_button, self.widget_drive_type_selection,
@@ -905,6 +910,7 @@ class HNNGUI:
                                  self.cell_pameters_widgets,
                                  self.cell_layer_radio_buttons,
                                  self.cell_type_radio_buttons,
+                                 self._syn_gains_out,
                                  self.layout)
 
             # Add drives
@@ -1035,8 +1041,8 @@ class HNNGUI:
                 add_connectivity_tab(
                     params, self._connectivity_out, self.connectivity_widgets,
                     self._cell_params_out, self.cell_pameters_widgets,
-                    self.cell_layer_radio_buttons,
-                    self.cell_type_radio_buttons, layout)
+                    self.cell_layer_radio_buttons, self.cell_type_radio_buttons,
+                    self._syn_gains_out, layout)
             elif load_type == 'drives':
                 self.add_drive_tab(params)
             else:
@@ -1600,6 +1606,7 @@ def _build_drive_objects(drive_type, name, tstop_widget, layout, style,
 def add_connectivity_tab(params, connectivity_out, connectivity_textfields,
                          cell_params_out, cell_pameters_vboxes,
                          cell_layer_radio_button, cell_type_radio_button,
+                         syn_gains_out,
                          layout):
     """Add all possible connectivity boxes to connectivity tab."""
     net = dict_to_network(params)
@@ -1612,6 +1619,10 @@ def add_connectivity_tab(params, connectivity_out, connectivity_textfields,
     add_cell_parameters_tab(cell_params_out, cell_pameters_vboxes,
                             cell_layer_radio_button, cell_type_radio_button,
                             layout)
+    # build cell parameters tab
+    add_synaptic_gains_tab(cell_params_out, cell_pameters_vboxes,
+                           cell_layer_radio_button, cell_type_radio_button,
+                           layout)
     return net
 
 
