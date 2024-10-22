@@ -895,8 +895,8 @@ def test_network_mesh():
     _ = law_2021_model(mesh_shape=mesh_shape)
 
 
-def test_synaptic_gains():
-    """Test synaptic gains update"""
+def test_set_synaptic_gains():
+    """Test synaptic gains setter"""
     net = jones_2009_model()
     nb_base = NetworkBuilder(net)
     e_cell_names = ['L2_pyramidal', 'L5_pyramidal']
@@ -961,6 +961,16 @@ def test_synaptic_gains():
     # Unaltered check
     assert (_get_weight(nb_updated, 'L2Pyr_L5Basket_ampa') /
             _get_weight(nb_base, 'L2Pyr_L5Basket_ampa')) == 1
+
+
+def test_get_synaptic_gains():
+    """Test synaptic gains getter."""
+    net = jones_2009_model()
+    assert net.get_synaptic_gains() == {'e_e': 1.0, 'e_i': 1.0,
+                                        'i_e': 1.0, 'i_i': 1.0}
+    new_gains = {'e_e': 0.5, 'e_i': 1.5, 'i_e': 0.75, 'i_i': 1.0}
+    net.set_synaptic_gains(**new_gains)
+    assert net.get_synaptic_gains() == new_gains
 
 
 class TestPickConnection:
