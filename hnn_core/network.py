@@ -1543,9 +1543,7 @@ class Network:
         dict: A dictionary with the connection types ('e_e', 'e_i', 'i_e',
         'i_i') as keys and their corresponding gain values.
         """
-        # Initialize gain values with default gain of 1.0
-        values = {k: 1.0 for k in ('e_e', 'e_i', 'i_e', 'i_i')}
-
+        values = {}
         e_cells, i_cells = _get_cell_index_by_synapse_type(self)
 
         # Define the connection types and source/target cell indexes
