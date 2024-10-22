@@ -322,7 +322,7 @@ def _get_cell_index_by_synapse_type(net):
 
     def list_src_gids(indices):
         return np.concatenate([list(net.connectivity[conn_idx]['src_gids'])
-                                  for conn_idx in indices]).tolist()
+                               for conn_idx in indices]).tolist()
 
     e_conns = pick_connection(net, receptor=['ampa', 'nmda'])
     e_cells = list_src_gids(e_conns)
@@ -1543,12 +1543,12 @@ class Network:
         dict: A dictionary with the connection types ('e_e', 'e_i', 'i_e',
         'i_i') as keys and their corresponding gain values.
         """
-        # Initialize gain values with default gain of 1.0 for all connection types
+        # Initialize gain values with default gain of 1.0
         values = {k: 1.0 for k in ('e_e', 'e_i', 'i_e', 'i_i')}
 
         e_cells, i_cells = _get_cell_index_by_synapse_type(self)
 
-        # Define the connection types and corresponding source/target cell indexes
+        # Define the connection types and source/target cell indexes
         conn_types = {
             'e_e': (e_cells, e_cells),
             'e_i': (e_cells, i_cells),
@@ -1569,7 +1569,6 @@ class Network:
                 )
 
         return values
-
 
     def plot_cells(self, ax=None, show=True):
         """Plot the cells using Network.pos_dict.
