@@ -1461,8 +1461,8 @@ class Network:
                                      method=method,
                                      min_distance=min_distance)})
 
-    def update_weights(self, e_e=None, e_i=None,
-                       i_e=None, i_i=None, copy=False):
+    def set_synaptic_gains(self, e_e=None, e_i=None,
+                           i_e=None, i_i=None, copy=False):
         """Update synaptic weights of the network.
 
         Parameters

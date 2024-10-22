@@ -1891,7 +1891,7 @@ def _init_network_from_widgets(params, dt, tstop, single_simulation_data,
     # Update with synaptic gains
     syn_gain_values = {key: widget.value
                        for key, widget in syn_gain_textfields.items()}
-    single_simulation_data['net'].update_weights(**syn_gain_values)
+    single_simulation_data['net'].set_synaptic_gains(**syn_gain_values)
 
     if add_drive is False:
         return

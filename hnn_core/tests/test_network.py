@@ -906,16 +906,16 @@ def test_synaptic_gains():
     arg_names = ['e_e', 'e_i', 'i_e', 'i_i']
     for arg in arg_names:
         with pytest.raises(TypeError, match='must be an instance of int or'):
-            net.update_weights(**{arg: 'abc'})
+            net.set_synaptic_gains(**{arg: 'abc'})
 
         with pytest.raises(ValueError, match='must be non-negative'):
-            net.update_weights(**{arg: -1})
+            net.set_synaptic_gains(**{arg: -1})
 
     with pytest.raises(TypeError, match='must be an instance of bool'):
-        net.update_weights(copy='True')
+        net.set_synaptic_gains(copy='True')
 
     # Single argument check with copy
-    net_updated = net.update_weights(e_e=2.0, copy=True)
+    net_updated = net.set_synaptic_gains(e_e=2.0, copy=True)
     for conn in net_updated.connectivity:
         if (conn['src_type'] in e_cell_names and
                 conn['target_type'] in e_cell_names):
@@ -927,7 +927,7 @@ def test_synaptic_gains():
         assert conn['nc_dict']['gain'] == 1.0
 
     # Single argument with inplace change
-    net.update_weights(i_e=0.5, copy=False)
+    net.set_synaptic_gains(i_e=0.5, copy=False)
     for conn in net.connectivity:
         if (conn['src_type'] in i_cell_names and
                 conn['target_type'] in e_cell_names):
@@ -936,7 +936,7 @@ def test_synaptic_gains():
             assert conn['nc_dict']['gain'] == 1.0
 
     # Two argument check
-    net.update_weights(i_e=0.5, i_i=0.25, copy=False)
+    net.set_synaptic_gains(i_e=0.5, i_i=0.25, copy=False)
     for conn in net.connectivity:
         if (conn['src_type'] in i_cell_names and
                 conn['target_type'] in e_cell_names):
