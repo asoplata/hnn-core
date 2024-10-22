@@ -116,6 +116,8 @@ def test_gui_compose():
     gui = HNNGUI()
     gui.compose()
     assert len(gui.connectivity_widgets) == 12
+    assert len(gui.synaptic_gain_widgets) == 4
+    assert len(gui.cell_parameters_widgets) == 6
     assert len(gui.drive_widgets) == 3
     plt.close('all')
 
