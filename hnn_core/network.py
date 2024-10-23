@@ -1540,7 +1540,8 @@ class Network:
 
         Returns
         -------
-        dict: A dictionary with the connection types ('e_e', 'e_i', 'i_e',
+        values : dict
+             A dictionary with the connection types ('e_e', 'e_i', 'i_e',
         'i_i') as keys and their corresponding gain values.
         """
         values = {}
