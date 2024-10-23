@@ -302,7 +302,7 @@ def pick_connection(net, src_gids=None, target_gids=None,
 def _get_cell_index_by_synapse_type(net):
     """Returns the indices of excitatory and inhibitory cells in the network.
 
-    This function extracts the source GIDs (Global Identifiers) of excitatory
+    This function extracts the source GIDs (cell ID) of excitatory
     and inhibitory cells based on their connection types. Excitatory cells are
     identified by their synaptic connections using AMPA and NMDA receptors,
     while inhibitory cells are identified by their connections using GABAA and
