@@ -1749,7 +1749,7 @@ def add_cell_parameters_tab(cell_params_out, cell_pameters_vboxes,
 
 
 def add_synaptic_gain_tab(net, syn_gain_out, syn_gain_textfields, layout):
-
+    """Creates widgets for global synaptic gains"""
     gain_values = net.get_synaptic_gains()
     gain_types = ('e_e', 'e_i', 'i_e', 'i_i')
     for gain_type in gain_types:
