@@ -324,11 +324,11 @@ def _get_cell_index_by_synapse_type(net):
         return np.concatenate([list(net.connectivity[conn_idx]['src_gids'])
                                for conn_idx in indices]).tolist()
 
-    e_conns = pick_connection(net, receptor=['ampa', 'nmda'])
-    e_cells = list_src_gids(e_conns)
+    picks_e = pick_connection(net, receptor=['ampa', 'nmda'])
+    e_cells = list_src_gids(picks_e)
 
-    i_conns = pick_connection(net, receptor=['gabaa', 'gabab'])
-    i_cells = list_src_gids(i_conns)
+    picks_i = pick_connection(net, receptor=['gabaa', 'gabab'])
+    i_cells = list_src_gids(picks_i)
 
     return e_cells, i_cells
 
@@ -1556,15 +1556,15 @@ class Network:
         }
 
         # Retrieve the gain value for each connection type
-        for conn_type, (src_indexes, target_indexes) in conn_types.items():
-            conn_indices = pick_connection(self,
-                                           src_gids=src_indexes,
-                                           target_gids=target_indexes)
+        for conn_type, (src_idxs, target_idxs) in conn_types.items():
+            picks = pick_connection(self,
+                                    src_gids=src_idxs,
+                                    target_gids=target_idxs)
 
-            if conn_indices:
+            if picks:
                 # Extract the gain from the first connection
                 values[conn_type] = (
-                    self.connectivity[conn_indices[0]]['nc_dict']['gain']
+                    self.connectivity[picks[0]]['nc_dict']['gain']
                 )
 
         return values
