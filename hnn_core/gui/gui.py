@@ -1155,10 +1155,15 @@ def _get_connectivity_widgets(conn_data):
             continuous_update=False, min=0, max=1e6, step=0.01,
             description="weight", style=style)
 
+        gain_text_input = BoundedFloatText(
+            value=conn_data[receptor_name]['gain'], disabled=False,
+            continuous_update=False, min=0, max=1e6, step=0.01,
+            description="gain", style=style)
+
         conn_widget = VBox([
             HTML(value=f"""<p>
             Receptor: {conn_data[receptor_name]['receptor']}</p>"""),
-            w_text_input, HTML(value="<hr style='margin-bottom:5px'/>")
+            w_text_input, gain_text_input, HTML(value="<hr style='margin-bottom:5px'/>")
         ])
 
         conn_widget._belongsto = {
@@ -1645,10 +1650,13 @@ def add_network_connectivity_tab(net, connectivity_out,
                             conn_idx]['nc_dict']['A_weight']
                         current_p = net.connectivity[
                             conn_idx]['probability']
+                        current_gain = net.connectivity[
+                            conn_idx]['nc_dict']['gain']
                         # valid connection
                         receptor_related_conn[receptor] = {
                             "weight": current_w,
                             "probability": current_p,
+                            "gain": current_gain,
                             # info used to identify connection
                             "receptor": receptor,
                             "location": location,
@@ -1817,6 +1825,8 @@ def _init_network_from_widgets(params, dt, tstop, single_simulation_data,
                 conn_idx = conn_indices[0]
                 single_simulation_data['net'].connectivity[conn_idx][
                     'nc_dict']['A_weight'] = vbox_key.children[1].value
+                single_simulation_data['net'].connectivity[conn_idx][
+                    'nc_dict']['gain'] = vbox_key.children[2].value
 
     # Update cell params
 
