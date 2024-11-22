@@ -143,6 +143,12 @@ cell_parameters_dict = {
     ]
 }
 
+gain_type_dict = {
+    'e_e': 'Excitatory-to-Excitatory',
+    'e_i': 'Excitatory-to-Inhibitory',
+    'i_e': 'Inhibitory-to-Excitatory',
+    'i_i': 'Inhibitory-to-Inhibitory',
+}
 
 class _OutputWidgetHandler(logging.Handler):
     def __init__(self, output_widget, *args, **kwargs):
@@ -694,6 +700,9 @@ class HNNGUI:
 
         connectivity_box = VBox([
             HBox([self.load_connectivity_button, ]),
+            VBox([HTML("<div style='text-align:center'>"
+            "Global Synaptic Gain Multipliers</div>"),
+                  self._syn_gain_out]),
             self._connectivity_out,
         ])
 
@@ -703,14 +712,10 @@ class HNNGUI:
             self._cell_params_out
         ])
 
-        syn_gain = VBox([self._syn_gain_out])
-
         network_configuration.children = [connectivity_box,
-                                          cell_parameters,
-                                          syn_gain]
+                                          cell_parameters]
         network_configuration.titles = ['Connectivity',
-                                        'Cell parameters',
-                                        'Synaptic gains']
+                                        'Cell parameters']
 
         drive_selections = VBox([
             self.add_drive_button, self.widget_drive_type_selection,
@@ -1631,21 +1636,24 @@ def add_connectivity_tab(params, connectivity_out, connectivity_textfields,
 
     # build network connectivity tab
     add_network_connectivity_tab(net, connectivity_out,
-                                 connectivity_textfields)
+                                 connectivity_textfields,
+                                 syn_gain_out, syn_gain_textfields,
+                                 layout)
 
     # build cell parameters tab
     add_cell_parameters_tab(cell_params_out, cell_parameters_vboxes,
                             cell_layer_radio_button, cell_type_radio_button,
                             layout)
 
-    # build synaptic gains tab
-    add_synaptic_gain_tab(net, syn_gain_out, syn_gain_textfields, layout)
-
     return net
 
 
 def add_network_connectivity_tab(net, connectivity_out,
-                                 connectivity_textfields):
+                                 connectivity_textfields,
+                                 syn_gain_out,
+                                 syn_gain_textfields,
+                                 layout):
+    """Creates widgets for synaptic connectivity values and global synaptic gains"""
     cell_types = [ct for ct in net.cell_types.keys()]
     receptors = ('ampa', 'nmda', 'gabaa', 'gabab')
     locations = ('proximal', 'distal', 'soma')
@@ -1698,6 +1706,27 @@ def add_network_connectivity_tab(net, connectivity_out,
     with connectivity_out:
         display(cell_connectivity)
 
+
+    # clear existing gains
+    syn_gain_out.clear_output()
+    gain_values = net.get_synaptic_gains()
+    gain_types = ('e_e', 'e_i', 'i_e', 'i_i')
+
+    for gain_type in gain_types:
+        gain_widget = BoundedFloatText(
+            value=gain_values[gain_type],
+            description=f'{gain_type_dict[gain_type]}',
+            min=0, max=1e6, step=.1,
+            disabled=False, layout=layout)
+
+        gain_widget.layout.width = "150px"
+        syn_gain_textfields[gain_type] = gain_widget
+
+    gain_vbox = VBox([widget for widget in syn_gain_textfields.values()])
+
+    with syn_gain_out:
+        display(gain_vbox)
+
     return net
 
 
@@ -1746,24 +1775,6 @@ def add_cell_parameters_tab(cell_params_out, cell_pameters_vboxes,
                              cell_pameters_vboxes,
                              cell_type_radio_button.value,
                              cell_layer_radio_button.value)
-
-
-def add_synaptic_gain_tab(net, syn_gain_out, syn_gain_textfields, layout):
-    """Creates widgets for global synaptic gains"""
-    gain_values = net.get_synaptic_gains()
-    gain_types = ('e_e', 'e_i', 'i_e', 'i_i')
-    for gain_type in gain_types:
-        gain_widget = BoundedFloatText(
-            value=gain_values[gain_type],
-            description=f'{gain_type}',
-            min=0, max=1e6, step=.1,
-            disabled=False, layout=layout)
-        syn_gain_textfields[gain_type] = gain_widget
-
-    gain_vbox = VBox([widget for widget in syn_gain_textfields.values()])
-
-    with syn_gain_out:
-        display(gain_vbox)
 
 
 def get_cell_param_default_value(cell_type_key, param_dict):
