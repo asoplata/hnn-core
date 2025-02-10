@@ -32,7 +32,7 @@
             if [ ${{ matrix.os }} == 'macos-latest' ]; then
               export OLD_DYLD_FALLBACK_LIBRARY_PATH=$DYLD_FALLBACK_LIBRARY_PATH
               export DYLD_FALLBACK_LIBRARY_PATH=$DYLD_FALLBACK_LIBRARY_PATH:${CONDA_PREFIX}/lib
-              python -m pip install --upgrade pipe
+              python -m pip install --upgrade pip
               # conda install --yes -c conda-forge mpi4py openmpi
               conda install --yes conda-forge::mpi4py conda-forge::openmpi
             # elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
