@@ -410,7 +410,7 @@ class HNNGUI:
         self.widget_mpi_cmd = Text(value='mpiexec',
                                    placeholder='Fill if applies',
                                    description='MPI cmd:', disabled=False)
-        self.widget_n_jobs = BoundedIntText(value=1,
+        self.widget_n_jobs = BoundedIntText(value=self.n_cores,
                                             min=1,
                                             max=self.n_cores,
                                             description='Cores:',
