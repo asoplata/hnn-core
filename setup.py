@@ -10,6 +10,9 @@ from setuptools.command.build_py import build_py
 
 descr = """Code for biophysical simulation of a cortical column using Neuron"""
 
+
+
+
 DISTNAME = 'hnn-core'
 DESCRIPTION = descr
 MAINTAINER = 'Mainak Jas'
