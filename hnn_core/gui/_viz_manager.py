@@ -440,7 +440,11 @@ def _update_ax(fig, ax, single_simulation, sim_name, plot_type, plot_config):
                 io_buf.seek(0)
                 img_arr = np.reshape(
                     np.frombuffer(io_buf.getvalue(), dtype=np.uint8),
-                    newshape=(int(_fig.bbox.bounds[3]), int(_fig.bbox.bounds[2]), -1),
+                    (
+                        int(_fig.bbox.bounds[3]),
+                        int(_fig.bbox.bounds[2]),
+                        -1,
+                    ),
                 )
                 io_buf.close()
                 _ = ax.imshow(img_arr)
@@ -1152,6 +1156,9 @@ class _VizManager:
             template_name = list(fig_templates.keys())[0]
         self._simulate_switch_fig_template(template_name)
 
+        # Update the external data widget (widget_opt_target_data)
+        self.update_external_data_widget()
+
     def compose(self):
         """Compose widgets."""
         with self.axes_config_output:
@@ -1182,6 +1189,29 @@ class _VizManager:
             ]
         )
         return config_panel, fig_output_container
+
+    def update_external_data_widget(self):
+        """Enable exfiltration of simulation data by `HNNGUI` objects.
+
+        This allows external registered widgets (such as `HNNGUI.opt_target_widgets`), which are
+        "external" to `_VizManager`, to access `_VizManager`'s available simulation data entries.
+        """
+        if (
+            hasattr(self, "_external_data_widget")
+            and self._external_data_widget is not None
+        ):
+            all_sim_names = list(self.data["simulations"].keys())
+            if len(all_sim_names) == 0:
+                all_sim_names = [" "]
+
+            prior_value = self._external_data_widget.value
+            # Note updating the options of the widget resets the value
+            self._external_data_widget.options = all_sim_names
+
+            if prior_value in all_sim_names:
+                self._external_data_widget.value = prior_value
+            else:
+                self._external_data_widget.value = all_sim_names[0]
 
     def _layout_template_change(self, template_type):
         # check if plot set type requires loaded sim-data
