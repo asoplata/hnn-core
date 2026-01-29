@@ -42,7 +42,7 @@ def test_cell():
 
     # test that ExpSyn always takes nrn.Segment, not float
     with pytest.raises(TypeError, match="secloc must be instance of"):
-        cell.syn_create(0.5, e=0.0, tau1=0.5, tau2=5.0)
+        cell.syn_create(0.5, e=0.0, tau1=0.5, tau2=5.0, type="Exp2Syn")
 
     pickle.dumps(cell)  # check cell object is picklable until built
 

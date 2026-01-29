@@ -305,10 +305,8 @@ class Cell:
     sections : dict of Section
         Dictionary with keys as section name.
     synapses : dict of dict
-        Keys are name of synaptic mechanism. Each synaptic mechanism
-        has keys for parameters of the mechanism, e.g., 'e', 'tau1',
-        'tau2'.
-        sections.
+        Keys are name of synaptic mechanism. Each synaptic mechanism dict has keys for
+        parameters of the mechanism, e.g., 'e', 'tau1', 'tau2'.  sections.
     sect_loc : dict of list
         Can have keys 'proximal' or 'distal' each containing
         names of section locations that are proximal or distal.
@@ -830,7 +828,7 @@ class Cell:
                     self.ca[sec_name] = h.Vector()
                     self.ca[sec_name].record(self._nrn_sections[sec_name](0.5)._ref_cai)
 
-    def syn_create(self, secloc, e, tau1, tau2):
+    def syn_create(self, secloc, **kwargs):
         """Create an h.Exp2Syn synapse.
 
         Parameters
@@ -851,12 +849,28 @@ class Cell:
         """
         if not isinstance(secloc, nrn.Segment):
             raise TypeError(
-                f"secloc must be instance ofnrn.Segment. Got {type(secloc)}"
+                f"secloc must be instance of nrn.Segment. Got {type(secloc)}"
             )
-        syn = h.Exp2Syn(secloc)
-        syn.e = e
-        syn.tau1 = tau1
-        syn.tau2 = tau2
+
+        # Check for backwards compatibility, or case of type being "Exp2Syn"
+        if ("type" not in kwargs.keys()) or (kwargs["type"] == "Exp2Syn"):
+            syn = h.Exp2Syn(secloc)
+            try:
+                for param_name in ["e", "tau1", "tau2"]:
+                    setattr(syn, param_name, kwargs[param_name])
+            except KeyError:
+                raise KeyError(
+                    f"The Exp2Syn synapse in segment {secloc} is missing a required parameter."
+                )
+        else:
+            # Otherwise, there is a custom synapse type to be used. Create a synapse of that type,
+            # then use all remaining kwargs to set its attributes.
+            synapse_class = getattr(h, type)
+            syn = synapse_class(secloc)
+            for param_name, param_value in kwargs.items():
+                if param_name != "type" and hasattr(syn, param_name):
+                    setattr(syn, param_name, param_value)
+
         return syn
 
     def setup_source_netcon(self, threshold):
