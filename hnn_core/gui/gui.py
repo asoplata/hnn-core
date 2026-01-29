@@ -1895,43 +1895,36 @@ class HNNGUI:
         prior_opt_widget_values = {}
         # This is a check for if there's existing "state" in the Optimization drive widgets:
         if self.opt_drive_widgets:
-            # This means there's existing "state" in the Optimization drive widgets,
-            # such as if we're doing a second round of optimization after the user has
-            # indicated that they want to optimize against a particular parameter (such
-            # as by checking its checkbox). In this case, we want to re-load the prior
-            # "state" of our optimization widgets:
+            # This means there's existing "state" in the Optimization drive widgets, such as if
+            # we're doing a second round of optimization after the user has indicated that they want
+            # to optimize against a particular parameter (such as by checking its checkbox). In this
+            # case, we want to re-load the prior "state" of our optimization widgets:
             #
-            # This code is basically copied from `_generate_constraints_and_func`, but
-            # using `_extract_prior_constraints` instead of `_build_constraints` due to
-            # the use of min/max percentages.
+            # This code is basically copied from `_generate_constraints_and_func`, but uses
+            # `_build_constraints` to find any prior min/max percentages for the widget values,
+            # instead of the actual "true" value of the constrained parameter.
             for drive in self.opt_drive_widgets:
                 if drive["type"] in ("Tonic"):
-                    prior_opt_widget_values.update(_extract_prior_constraints(drive))
+                    prior_opt_widget_values.update(_build_constraints(drive))
                     prior_opt_widget_values.update(
-                        _extract_prior_constraints(drive, "amplitude")
+                        _build_constraints(drive, syn_type="amplitude")
                     )
                 else:
                     # Synaptic variables are a special case, since they are dicts instead of
                     # single values
                     for syn_type in ("weights_ampa", "weights_nmda", "delays"):
                         prior_opt_widget_values.update(
-                            _extract_prior_constraints(drive, syn_type)
+                            _build_constraints(drive, syn_type=syn_type)
                         )
                     if drive["type"] == "Poisson":
+                        prior_opt_widget_values.update(_build_constraints(drive))
                         prior_opt_widget_values.update(
-                            _extract_prior_constraints(drive)
-                        )
-                        prior_opt_widget_values.update(
-                            _extract_prior_constraints(drive, "rate_constant")
+                            _build_constraints(drive, syn_type="rate_constant")
                         )
                     elif drive["type"] in ("Evoked", "Gaussian"):
-                        prior_opt_widget_values.update(
-                            _extract_prior_constraints(drive)
-                        )
+                        prior_opt_widget_values.update(_build_constraints(drive))
                     elif drive["type"] in ("Rhythmic", "Bursty"):
-                        prior_opt_widget_values.update(
-                            _extract_prior_constraints(drive)
-                        )
+                        prior_opt_widget_values.update(_build_constraints(drive))
 
         # clear before adding drives
         self._opt_drives_out.clear_output()
@@ -4897,11 +4890,26 @@ def _build_opt_drive_widget(
     return opt_drive_box, opt_drive_widget
 
 
-def _extract_prior_constraints(drive, syn_type=None):
-    """Extract percentage values from optimization widgets for prior state preservation.
+def _build_constraints(drive, syn_type=None, apply_percentages=False):
+    """Build a dictionary containing parameter constraint values or percentages.
 
-    This function extracts the raw percentage values from the min/max widgets,
-    which are used to preserve the optimization widget state when rebuilding the UI.
+    Parameters
+    ----------
+    drive : dict
+        Dictionary containing drive parameter widgets and their values.
+    syn_type : str, optional
+        The synapse type to build constraints for (e.g., 'ampa', 'nmda').
+    apply_percentages : bool, default=False
+        If True, converts percentage values to actual constraint values based on
+        current parameter values. If False, returns raw percentage values.
+
+    Returns
+    -------
+    output_constraints : dict
+        Dictionary mapping unique parameter names to constraint tuples. Keys are
+        formatted as '{drive_type}_{drive_name}_{syn_type}_{var_name}' (or without
+        syn_type if not provided). Values are tuples of (min_value, max_value),
+        either as actual values or percentages depending on `apply_percentages`.
     """
     output_constraints = {}
     if syn_type:
@@ -4928,52 +4936,21 @@ def _extract_prior_constraints(drive, syn_type=None):
             # Get the percentage values from the min/max widgets (raw percentages)
             min_pct = input_dict[var_name + "_opt_min"].value
             max_pct = input_dict[var_name + "_opt_max"].value
-            output_constraints.update({unique_param_name: tuple([min_pct, max_pct])})
-
-    return output_constraints
-
-
-def _build_constraints(drive, syn_type=None):
-    """Build constraints dictionary with actual values converted from percentages.
-
-    This function converts the percentage values from the min/max widgets into
-    actual constraint values based on the current parameter value.
-    """
-    output_constraints = {}
-    if syn_type:
-        input_dict = drive[syn_type]
-    else:
-        input_dict = drive
-    for key in input_dict.keys():
-        # For every variable with a checkbox, but only if the checkbox
-        # is true/checked
-        if ("_opt_checkbox" in key) and (input_dict[key].value):
-            # Extract the var name
-            var_name = key.split("_opt_checkbox")[0]
-            # Create a new, unique var name for this drive's instance of
-            # that variable, which will become our key in our
-            # `input_constraints` dict
-            unique_param_name = str(
-                drive["type"]
-                + "_"
-                + drive["name"]
-                + "_"
-                + (syn_type + "_" if syn_type else "")
-                + var_name
-            )
-            # Get the current value of the parameter
-            current_value = input_dict[var_name].value
-            # Get the percentage values from the min/max widgets
-            min_pct = input_dict[var_name + "_opt_min"].value
-            max_pct = input_dict[var_name + "_opt_max"].value
-            # Convert percentages to actual values
-            # e.g., if current_value=10 and min_pct=-50, then min_value=10*(1-0.5)=5
-            min_value = current_value * (1 + min_pct / 100)
-            max_value = current_value * (1 + max_pct / 100)
-            # Use the unique name as the key, and add the bounds as actual values
-            output_constraints.update(
-                {unique_param_name: tuple([min_value, max_value])}
-            )
+            if apply_percentages:
+                # Get the current value of the parameter
+                current_value = input_dict[var_name].value
+                # Convert percentages to actual values
+                # e.g., if current_value=10 and min_pct=-50, then min_value=10*(1-0.5)=5
+                min_value = current_value * (1 + min_pct / 100)
+                max_value = current_value * (1 + max_pct / 100)
+                # Use the unique name as the key, and add the bounds as actual values
+                output_constraints.update(
+                    {unique_param_name: tuple([min_value, max_value])}
+                )
+            else:
+                output_constraints.update(
+                    {unique_param_name: tuple([min_pct, max_pct])}
+                )
     return output_constraints
 
 
@@ -5012,20 +4989,28 @@ def _generate_constraints_and_func(net, opt_drive_widgets):
     constraints = {}
     for drive in opt_drive_widgets:
         if drive["type"] in ("Tonic"):
-            constraints.update(_build_constraints(drive))
-            constraints.update(_build_constraints(drive, "amplitude"))
+            constraints.update(_build_constraints(drive, apply_percentages=True))
+            constraints.update(
+                _build_constraints(drive, syn_type="amplitude", apply_percentages=True)
+            )
         else:
             # Synaptic variables are a special case, since they are dicts instead of
             # single values
             for syn_type in ("weights_ampa", "weights_nmda", "delays"):
-                constraints.update(_build_constraints(drive, syn_type))
+                constraints.update(_build_constraints(drive, syn_type=syn_type))
             if drive["type"] == "Poisson":
-                constraints.update(_build_constraints(drive))
-                constraints.update(_build_constraints(drive, "rate_constant"))
+                constraints.update(_build_constraints(drive, apply_percentages=True))
+                constraints.update(
+                    _build_constraints(
+                        drive,
+                        syn_type="rate_constant",
+                        apply_percentages=True,
+                    )
+                )
             elif drive["type"] in ("Evoked", "Gaussian"):
-                constraints.update(_build_constraints(drive))
+                constraints.update(_build_constraints(drive, apply_percentages=True))
             elif drive["type"] in ("Rhythmic", "Bursty"):
-                constraints.update(_build_constraints(drive))
+                constraints.update(_build_constraints(drive, apply_percentages=True))
 
     # Second, create a new `set_params` function that iterates through the drive
     # widgets AGAIN, but which deploys our newly-created `constraints` dict:
