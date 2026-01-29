@@ -78,13 +78,13 @@ Community leaders will follow these Community Impact Guidelines in determining t
 
 ## Google Summer of Code (GSoC)
 
-For those interested in becoming GSoC Contributors: please do not reach out to us privately, but instead make your initial contact via the [INCF GSoC recommendations here](https://www.incf.org/recommendations-gsoc-contributors). We will reach out if and when we are able. 
+For those interested in becoming GSoC Contributors: please do not reach out to us privately, but instead make your initial contact via the [INCF GSoC recommendations here](https://www.incf.org/recommendations-gsoc-contributors). We will reach out if and when we are able.
 
 Every year, we receive significantly more GSoC interest than we are able to support (approximately two projects). Some good guidance on common expectations and tips for improving your chances in general are available [here at the Jenkins project's GSoC information page](https://www.jenkins.io/projects/gsoc/contributors/).
 
 ## AI and LLM Policy
 
-We do allow AI- and LLM- based code and documentation contributions. However, *the contributor is responsible for every line of code and text submitted* as part of their contributions. We reserve the right to close or ignore any contributions which may have been colloquially "vibe-coded", meaning the contributor does not fully understand the code or text changes themself, or there is a strong mismatch between a contribution's documentation versus its code changes, or the contributions exhibit other signs of having been submitted without the contributor fully understanding or double-checking the contents. Again, if you submit AI-generated code, please double-check every line.
+We do allow AI- and LLM- based code and documentation contributions. However, *the contributor must understand every line of code and text submitted* as part of their contributions. We reserve the right to close or ignore any contributions. We will close contributions deemed to have been colloquially "vibe-coded", meaning the contributor does not fully understand the code or text changes themself, and/or there is a strong mismatch between a contribution's documentation versus its code changes, and/or the contributions exhibit other signs of having been submitted without the contributor fully understanding or double-checking the contents.
 
 ## Attribution
 
