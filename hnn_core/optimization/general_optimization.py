@@ -455,6 +455,11 @@ def _run_opt_cobyla(
 
     obj_values = list()
 
+    best = {
+        "obj": np.inf,
+        "params": None,
+    }
+
     def _obj_func(predicted_params):
         return obj_fun(
             initial_net=initial_net,
@@ -463,11 +468,12 @@ def _run_opt_cobyla(
             predicted_params=predicted_params,
             update_params=_update_params,
             obj_values=obj_values,
+            best=best,
             tstop=tstop,
             obj_fun_kwargs=obj_fun_kwargs,
         )
 
-    opt_results = fmin_cobyla(
+    fmin_cobyla(
         _obj_func,
         cons=constraints,
         rhobeg=0.1,
@@ -478,7 +484,7 @@ def _run_opt_cobyla(
     )
 
     # get optimized params
-    opt_params = opt_results
+    opt_params = best["params"]
 
     # get objective values
     obj = [np.min(obj_values[:idx]) for idx in range(1, max_iter + 1)]

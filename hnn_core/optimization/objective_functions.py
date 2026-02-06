@@ -16,6 +16,7 @@ def _rmse_evoked(
     predicted_params,
     update_params,
     obj_values,
+    best,
     tstop,
     obj_fun_kwargs,
 ):
@@ -33,6 +34,10 @@ def _rmse_evoked(
         Parameters selected by the optimizer.
     update_params : func
         Function to update params.
+    obj_values : list
+        List to store objective function values.
+    best : dict
+        Dictionary with keys "obj" and "params" to store the best objective value and corresponding parameters.
     tstop : float
         The simulated dipole's duration.
     target : instance of Dipole
@@ -64,6 +69,11 @@ def _rmse_evoked(
     obj = _rmse(dpl, obj_fun_kwargs["target"], tstop=tstop)
     obj_values.append(obj)
 
+    # update best params
+    if obj < best["obj"]:
+        best["obj"] = obj
+        best["params"] = predicted_params.copy()
+
     return obj
 
 
@@ -74,6 +84,7 @@ def _maximize_psd(
     predicted_params,
     update_params,
     obj_values,
+    best,
     tstop,
     obj_fun_kwargs,
 ):
@@ -91,6 +102,10 @@ def _maximize_psd(
         Parameters selected by the optimizer.
     update_params : func
         Function to update params.
+    obj_values : list
+        List to store objective function values.
+    best : dict
+        Dictionary with keys "obj" and "params" to store the best objective value and corresponding parameters.
     tstop : float
         The simulated dipole's duration.
     f_bands : list of tuples
@@ -156,5 +171,10 @@ def _maximize_psd(
     obj = -sum(f_bands_psds) / sum(psd_simulated)
 
     obj_values.append(obj)
+
+    # update best params
+    if obj < best["obj"]:
+        best["obj"] = obj
+        best["params"] = predicted_params.copy()
 
     return obj
