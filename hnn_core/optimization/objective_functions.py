@@ -16,9 +16,9 @@ def _rmse_evoked(
     predicted_params,
     update_params,
     obj_values,
-    best,
     tstop,
     obj_fun_kwargs,
+    best=None,
 ):
     """The objective function for evoked responses.
 
@@ -36,14 +36,14 @@ def _rmse_evoked(
         Function to update params.
     obj_values : list
         List to store objective function values.
-    best : dict
-        Dictionary with keys "obj" and "params" to store the best objective value and corresponding parameters.
     tstop : float
         The simulated dipole's duration.
     target : instance of Dipole
         A dipole object with experimental data.
     n_trials : int
         Number of trials to simulate and average.
+    best : dict, optional
+        Dictionary with keys "obj" and "params" to store the best objective value and corresponding parameters.
 
     Returns
     -------
@@ -70,7 +70,7 @@ def _rmse_evoked(
     obj_values.append(obj)
 
     # update best params
-    if obj < best["obj"]:
+    if best is not None and obj < best["obj"]:
         best["obj"] = obj
         best["params"] = predicted_params.copy()
 
@@ -84,9 +84,9 @@ def _maximize_psd(
     predicted_params,
     update_params,
     obj_values,
-    best,
     tstop,
     obj_fun_kwargs,
+    best=None,
 ):
     """The objective function for PSDs.
 
@@ -104,8 +104,6 @@ def _maximize_psd(
         Function to update params.
     obj_values : list
         List to store objective function values.
-    best : dict
-        Dictionary with keys "obj" and "params" to store the best objective value and corresponding parameters.
     tstop : float
         The simulated dipole's duration.
     f_bands : list of tuples
@@ -113,6 +111,8 @@ def _maximize_psd(
     relative_bandpower : list of float | float
         Weight for each frequency band in f_bands. If a single float is provided,
         the same weight is applied to all frequency bands.
+    best : dict, optional
+        Dictionary with keys "obj" and "params" to store the best objective value and corresponding parameters.
 
     Returns
     -------
@@ -173,7 +173,7 @@ def _maximize_psd(
     obj_values.append(obj)
 
     # update best params
-    if obj < best["obj"]:
+    if best is not None and obj < best["obj"]:
         best["obj"] = obj
         best["params"] = predicted_params.copy()
 
