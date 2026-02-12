@@ -252,7 +252,8 @@ def test_user_obj_fun(solver):
     # simulate a dipole to establish ground-truth drive parameters
     net_offset = jones_2009_model(mesh_shape=(3, 3))
 
-    def maximize_csd(
+    # This was modeled after `objective_functions._maximize_psd`
+    def custom_optim_func(
         initial_net,
         initial_params,
         set_params,
@@ -261,6 +262,7 @@ def test_user_obj_fun(solver):
         obj_values,
         tstop,
         obj_fun_kwargs,
+        best=None,
     ):
         import numpy as np
         from hnn_core.optimization import _update_params
@@ -309,6 +311,11 @@ def test_user_obj_fun(solver):
         obj = sum(csd_subsets) / sum(sum(csd))
         obj_values.append(obj)
 
+        # update best params
+        if best is not None and obj < best["obj"]:
+            best["obj"] = obj
+            best["params"] = predicted_params.copy()
+
         return obj
 
     def set_params(net_offset, params):
@@ -344,7 +351,7 @@ def test_user_obj_fun(solver):
         constraints=constraints,
         set_params=set_params,
         solver=solver,
-        obj_fun=maximize_csd,
+        obj_fun=custom_optim_func,
         max_iter=max_iter,
     )
 
@@ -362,7 +369,7 @@ def test_user_obj_fun(solver):
             constraints=constraints,
             set_params=set_params,
             solver=solver,
-            obj_fun=maximize_csd,
+            obj_fun=custom_optim_func,
             max_iter=max_iter,
         )
 
