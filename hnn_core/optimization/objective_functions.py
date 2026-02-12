@@ -43,7 +43,11 @@ def _rmse_evoked(
     n_trials : int
         Number of trials to simulate and average.
     best : dict, optional
-        Dictionary with keys "obj" and "params" to store the best objective value and corresponding parameters.
+        Dictionary with keys "obj" and "params" to store the best objective value and
+        corresponding parameters. Note that `best` will be updated as a "side-effect",
+        and is not returned by the function; this is necessary because the optimization
+        routines in `scipy.optimize` require the objective functions to return a single
+        scalar value.
 
     Returns
     -------
@@ -109,11 +113,14 @@ def _maximize_psd(
     f_bands : list of tuples
         Lower and higher limit for each frequency band.
     relative_bandpower : list of float | float
-        Weight for each frequency band in f_bands. If a single float is provided,
-        the same weight is applied to all frequency bands.
+        Weight for each frequency band in f_bands. If a single float is provided, the
+        same weight is applied to all frequency bands.
     best : dict, optional
-        Dictionary with keys "obj" and "params" to store the best objective value and corresponding parameters.
-
+        Dictionary with keys "obj" and "params" to store the best objective value and
+        corresponding parameters. Note that `best` will be updated as a "side-effect",
+        and is not returned by the function; this is necessary because the optimization
+        routines in `scipy.optimize` require the objective functions to return a single
+        scalar value.
     Returns
     -------
     obj : float
@@ -121,11 +128,11 @@ def _maximize_psd(
 
     Notes
     -----
-    The objective function minimizes the sum of the weighted (user-defined)
-    frequency band PSDs (user-defined) relative to the total PSD of the signal.
-    The objective function can be represented as -Σc[ΣPSD(i)/ΣPSD(j)] where c
-    is the weight for each frequency band, PSD(i) is the PSD for each frequency
-    band, and PSD(j) is the total PSD of the signal.
+    The objective function minimizes the sum of the weighted (user-defined) frequency
+    band PSDs (user-defined) relative to the total PSD of the signal. The objective
+    function can be represented as -Σc[ΣPSD(i)/ΣPSD(j)] where c is the weight for each
+    frequency band, PSD(i) is the PSD for each frequency band, and PSD(j) is the total
+    PSD of the signal.
     """
 
     import numpy as np
