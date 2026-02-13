@@ -2348,7 +2348,25 @@ def _get_connectivity_widgets(conn_data, global_gain_textfields):
     return sliders
 
 
-def _get_drive_weight_widgets(layout, style, location, data=None):
+def _create_synaptic_widgets(
+    layout,
+    style,
+    location,
+    data=None,
+    for_opt=False,
+    quadruple_entry_hbox_layout=None,
+    if_poisson=False,
+    **_autogen_opt_widget_kwargs,
+):
+    """Create synaptic weight, delay, and (optionally) rate constant widgets.
+
+    When ``for_opt=False`` (default), this creates plain widgets for the Drives
+    tab. When ``for_opt=True``, this creates Optimization widgets with
+    constraint controls and observers that mirror the Drives-tab widgets.
+
+    This handles the cases for Evoked, Poisson, and Rhythmic drives, but not
+    Tonic biases.
+    """
     default_data = {
         "weights_ampa": {
             "L5_pyramidal": 0.0,
@@ -2369,6 +2387,18 @@ def _get_drive_weight_widgets(layout, style, location, data=None):
             "L2_basket": 0.1,
         },
     }
+    if if_poisson:
+        default_data.update(
+            {
+                "rate_constant": {
+                    "L5_pyramidal": 40.0,
+                    "L2_pyramidal": 40.0,
+                    "L5_basket": 40.0,
+                    "L2_basket": 40.0,
+                },
+            }
+        )
+
     if isinstance(data, dict):
         default_data = _update_nested_dict(default_data, data)
 
@@ -2377,47 +2407,163 @@ def _get_drive_weight_widgets(layout, style, location, data=None):
     if location == "distal":
         cell_types.remove("L5_basket")
 
-    weights_ampa, weights_nmda, delays = dict(), dict(), dict()
-    for cell_type in cell_types:
-        weights_ampa[f"{cell_type}"] = BoundedFloatText(
-            value=default_data["weights_ampa"][cell_type],
-            description=f"{cell_type}:",
-            min=0,
-            max=1e6,
-            step=0.01,
-            **kwargs,
+    syn_widgets_dict = {
+        "weights_ampa": {},
+        "weights_nmda": {},
+        "delays": {},
+    }
+    if if_poisson:
+        syn_widgets_dict["rate_constant"] = {}
+
+    if for_opt:
+        ampa_weights_list, nmda_weights_list, delays_list = [], [], []
+        if if_poisson:
+            rate_constant_list = []
+        for cell_type in cell_types:
+            # AMPA weights
+            syn_widgets_dict["weights_ampa"].update(
+                _create_opt_widgets_for_drive_var(
+                    cell_type,
+                    default_data["weights_ampa"][cell_type],
+                    f"{cell_type}:",
+                    syn_type="weights_ampa",
+                    **_autogen_opt_widget_kwargs,
+                )
+            )
+            ampa_weights_list.append(
+                _create_hbox_for_opt_var(
+                    cell_type,
+                    syn_widgets_dict["weights_ampa"],
+                    quadruple_entry_hbox_layout,
+                )
+            )
+            # NMDA weights
+            syn_widgets_dict["weights_nmda"].update(
+                _create_opt_widgets_for_drive_var(
+                    cell_type,
+                    default_data["weights_nmda"][cell_type],
+                    f"{cell_type}:",
+                    syn_type="weights_nmda",
+                    **_autogen_opt_widget_kwargs,
+                )
+            )
+            nmda_weights_list.append(
+                _create_hbox_for_opt_var(
+                    cell_type,
+                    syn_widgets_dict["weights_nmda"],
+                    quadruple_entry_hbox_layout,
+                )
+            )
+            # Synaptic delays
+            syn_widgets_dict["delays"].update(
+                _create_opt_widgets_for_drive_var(
+                    cell_type,
+                    default_data["delays"][cell_type],
+                    f"{cell_type}:",
+                    syn_type="delays",
+                    **_autogen_opt_widget_kwargs,
+                )
+            )
+            delays_list.append(
+                _create_hbox_for_opt_var(
+                    cell_type,
+                    syn_widgets_dict["delays"],
+                    quadruple_entry_hbox_layout,
+                )
+            )
+            if if_poisson:
+                # Poisson rate constants
+                syn_widgets_dict["rate_constant"].update(
+                    _create_opt_widgets_for_drive_var(
+                        cell_type,
+                        default_data["rate_constant"][cell_type],
+                        f"{cell_type}:",
+                        syn_type="rate_constant",
+                        **_autogen_opt_widget_kwargs,
+                    )
+                )
+                rate_constant_list.append(
+                    _create_hbox_for_opt_var(
+                        cell_type,
+                        syn_widgets_dict["rate_constant"],
+                        quadruple_entry_hbox_layout,
+                    )
+                )
+
+        syn_widgets_list = (
+            [HTML(value="<b>AMPA weights</b>")]
+            + ampa_weights_list
+            + [HTML(value="<b>NMDA weights</b>")]
+            + nmda_weights_list
+            + [HTML(value="<b>Synaptic delays</b>")]
+            + delays_list
+            + (
+                [HTML(value="<b>Rate constants</b>")] + rate_constant_list
+                if if_poisson
+                else []
+            )
         )
-        weights_nmda[f"{cell_type}"] = BoundedFloatText(
-            value=default_data["weights_nmda"][cell_type],
-            description=f"{cell_type}:",
-            min=0,
-            max=1e6,
-            step=0.01,
-            **kwargs,
-        )
-        delays[f"{cell_type}"] = BoundedFloatText(
-            value=default_data["delays"][cell_type],
-            description=f"{cell_type}:",
-            min=0,
-            max=1e6,
-            step=0.1,
-            **kwargs,
+    else:
+        weights_ampa, weights_nmda, delays = dict(), dict(), dict()
+        for cell_type in cell_types:
+            weights_ampa[f"{cell_type}"] = BoundedFloatText(
+                value=default_data["weights_ampa"][cell_type],
+                description=f"{cell_type}:",
+                min=0,
+                max=1e6,
+                step=0.01,
+                **kwargs,
+            )
+            weights_nmda[f"{cell_type}"] = BoundedFloatText(
+                value=default_data["weights_nmda"][cell_type],
+                description=f"{cell_type}:",
+                min=0,
+                max=1e6,
+                step=0.01,
+                **kwargs,
+            )
+            delays[f"{cell_type}"] = BoundedFloatText(
+                value=default_data["delays"][cell_type],
+                description=f"{cell_type}:",
+                min=0,
+                max=1e6,
+                step=0.1,
+                **kwargs,
+            )
+
+        syn_widgets_dict = {
+            "weights_ampa": weights_ampa,
+            "weights_nmda": weights_nmda,
+            "delays": delays,
+        }
+        if if_poisson:
+            rate_constant = dict()
+            for cell_type in cell_types:
+                rate_constant[f"{cell_type}"] = BoundedFloatText(
+                    value=default_data["rate_constant"][cell_type],
+                    description=f"{cell_type}:",
+                    min=0,
+                    max=1e6,
+                    step=0.01,
+                    **kwargs,
+                )
+            syn_widgets_dict["rate_constant"] = rate_constant
+
+        syn_widgets_list = (
+            [HTML(value="<b>AMPA weights</b>")]
+            + list(weights_ampa.values())
+            + [HTML(value="<b>NMDA weights</b>")]
+            + list(weights_nmda.values())
+            + [HTML(value="<b>Synaptic delays</b>")]
+            + list(delays.values())
+            + (
+                [HTML(value="<b>Rate constants</b>")] + list(rate_constant.values())
+                if if_poisson
+                else []
+            )
         )
 
-    widgets_dict = {
-        "weights_ampa": weights_ampa,
-        "weights_nmda": weights_nmda,
-        "delays": delays,
-    }
-    widgets_list = (
-        [HTML(value="<b>AMPA weights</b>")]
-        + list(weights_ampa.values())
-        + [HTML(value="<b>NMDA weights</b>")]
-        + list(weights_nmda.values())
-        + [HTML(value="<b>Synaptic delays</b>")]
-        + list(delays.values())
-    )
-    return widgets_list, widgets_dict
+    return syn_widgets_list, syn_widgets_dict
 
 
 def _cell_spec_change(change, widget):
@@ -2587,15 +2733,11 @@ def _create_widgets_for_rhythmic(
         description="Cell-Specific",
         **kwargs,
     )
-    seedcore = IntText(
-        value=default_data["seedcore"], description="Seed", **kwargs
-    )
+    seedcore = IntText(value=default_data["seedcore"], description="Seed", **kwargs)
 
     if for_opt:
         _make_opt_observers(n_drive_cells, "n_drive_cells", drive_widgets, drive_idx)
-        _make_opt_observers(
-            cell_specific, "is_cell_specific", drive_widgets, drive_idx
-        )
+        _make_opt_observers(cell_specific, "is_cell_specific", drive_widgets, drive_idx)
         _make_opt_observers(seedcore, "seedcore", drive_widgets, drive_idx)
 
     # Disable n_drive_cells widget based on cell_specific checkbox
@@ -2617,32 +2759,20 @@ def _create_widgets_for_rhythmic(
 
     # Synaptic widgets
     # --------------------------------------------------------------------------
-    if for_opt:
-        syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets_for_opt(
-            layout,
-            style,
-            location,
-            drive_data={
-                "weights_ampa": weights_ampa,
-                "weights_nmda": weights_nmda,
-                "delays": delays,
-            },
-            quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
-            **_autogen_opt_widget_kwargs,
-        )
-        drive.update(syn_widgets_dict)
-    else:
-        syn_widgets_list, syn_widgets_dict = _get_drive_weight_widgets(
-            layout,
-            style,
-            location,
-            data={
-                "weights_ampa": weights_ampa,
-                "weights_nmda": weights_nmda,
-                "delays": delays,
-            },
-        )
-        drive.update(syn_widgets_dict)
+    syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
+        layout,
+        style,
+        location,
+        data={
+            "weights_ampa": weights_ampa,
+            "weights_nmda": weights_nmda,
+            "delays": delays,
+        },
+        for_opt=for_opt,
+        quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
+        **(_autogen_opt_widget_kwargs if for_opt else {}),
+    )
+    drive.update(syn_widgets_dict)
 
     # Build the VBox layout
     # --------------------------------------------------------------------------
@@ -2788,15 +2918,11 @@ def _create_widgets_for_poisson(
         description="Cell-Specific",
         **kwargs,
     )
-    seedcore = IntText(
-        value=default_data["seedcore"], description="Seed", **kwargs
-    )
+    seedcore = IntText(value=default_data["seedcore"], description="Seed", **kwargs)
 
     if for_opt:
         _make_opt_observers(n_drive_cells, "n_drive_cells", drive_widgets, drive_idx)
-        _make_opt_observers(
-            cell_specific, "is_cell_specific", drive_widgets, drive_idx
-        )
+        _make_opt_observers(cell_specific, "is_cell_specific", drive_widgets, drive_idx)
         _make_opt_observers(seedcore, "seedcore", drive_widgets, drive_idx)
 
     # Disable n_drive_cells widget based on cell_specific checkbox
@@ -2816,51 +2942,23 @@ def _create_widgets_for_poisson(
 
     # Synaptic widgets
     # --------------------------------------------------------------------------
-    if for_opt:
-        syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets_for_opt(
-            layout,
-            style,
-            location,
-            drive_data={
-                "weights_ampa": weights_ampa,
-                "weights_nmda": weights_nmda,
-                "delays": delays,
-            },
-            quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
-            if_poisson=True,
-            **_autogen_opt_widget_kwargs,
-        )
-        drive.update(syn_widgets_dict)
-    else:
-        syn_widgets_list, syn_widgets_dict = _get_drive_weight_widgets(
-            layout,
-            style,
-            location,
-            data={
-                "weights_ampa": weights_ampa,
-                "weights_nmda": weights_nmda,
-                "delays": delays,
-            },
-        )
-        # For non-opt, add rate_constant widgets manually
-        cell_types = ["L5_pyramidal", "L2_pyramidal", "L5_basket", "L2_basket"]
-        rate_constant = dict()
-        for cell_type in cell_types:
-            rate_constant[f"{cell_type}"] = BoundedFloatText(
-                value=default_data["rate_constant"][cell_type],
-                description=f"{cell_type}:",
-                min=0,
-                max=1e6,
-                step=0.01,
-                **kwargs,
-            )
-        syn_widgets_dict.update({"rate_constant": rate_constant})
-        syn_widgets_list.extend(
-            [HTML(value="<b>Rate constants</b>")]
-            + list(syn_widgets_dict["rate_constant"].values())
-        )
-        drive.update(syn_widgets_dict)
-        drive["rate_constant"] = rate_constant
+    syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
+        layout,
+        style,
+        location,
+        data={
+            "weights_ampa": weights_ampa,
+            "weights_nmda": weights_nmda,
+            "delays": delays,
+        },
+        for_opt=for_opt,
+        quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
+        if_poisson=True,
+        **(_autogen_opt_widget_kwargs if for_opt else {}),
+    )
+    drive.update(syn_widgets_dict)
+    if not for_opt:
+        drive["rate_constant"] = syn_widgets_dict["rate_constant"]
 
     # Build the VBox layout
     # --------------------------------------------------------------------------
@@ -2878,8 +2976,7 @@ def _create_widgets_for_poisson(
         )
     else:
         drive_box = VBox(
-            [tstart, tstop, n_drive_cells, cell_specific, seedcore]
-            + syn_widgets_list
+            [tstart, tstop, n_drive_cells, cell_specific, seedcore] + syn_widgets_list
         )
 
     return drive, drive_box
@@ -3036,32 +3133,20 @@ def _create_widgets_for_evoked(
 
     # Synaptic widgets
     # --------------------------------------------------------------------------
-    if for_opt:
-        syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets_for_opt(
-            layout,
-            style,
-            location,
-            drive_data={
-                "weights_ampa": weights_ampa,
-                "weights_nmda": weights_nmda,
-                "delays": delays,
-            },
-            quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
-            **_autogen_opt_widget_kwargs,
-        )
-        drive.update(syn_widgets_dict)
-    else:
-        syn_widgets_list, syn_widgets_dict = _get_drive_weight_widgets(
-            layout,
-            style,
-            location,
-            data={
-                "weights_ampa": weights_ampa,
-                "weights_nmda": weights_nmda,
-                "delays": delays,
-            },
-        )
-        drive.update(syn_widgets_dict)
+    syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
+        layout,
+        style,
+        location,
+        data={
+            "weights_ampa": weights_ampa,
+            "weights_nmda": weights_nmda,
+            "delays": delays,
+        },
+        for_opt=for_opt,
+        quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
+        **(_autogen_opt_widget_kwargs if for_opt else {}),
+    )
+    drive.update(syn_widgets_dict)
 
     # Build the VBox layout
     # --------------------------------------------------------------------------
@@ -4361,194 +4446,6 @@ def _create_hbox_for_opt_var(var_name, widget_dict, layout):
         ],
         layout=layout,
     )
-
-
-def _create_synaptic_widgets_for_opt(
-    layout,
-    style,
-    location,
-    drive_data=None,
-    quadruple_entry_hbox_layout=None,
-    if_poisson=False,
-    **_autogen_opt_widget_kwargs,
-):
-    """Orchestration function for a drive's synaptic Optimization widgets.
-
-    Similarly to `_create_opt_widgets_for_drive_var`, this creates 4 Optimization
-    widgets for each synaptic variable of a valid drive. Additionally, this also
-    arranges the placement/layout of these widgets for use later. Since each target
-    celltype is its own variable, this produces many widgets and places them in a
-    visually hierarchical structure analogous to the synaptic variable's widgets in the
-    Drive tab. The four widgets are:
-
-        1. The widget showing that variable inside the drive's accordion entry. This
-        widget is disabled/ghosted by default, since contains the same information as
-        the variable's value in the equivalent widget in the Drives tab. An observation
-        is created such that the Optimization version of the widget updates its value
-        based on changes in the Drive version of the widget.
-
-        2. A checkbox widget for whether this variable should have its value and
-        constraints used during the Optimization. This checkbox is False by default, and
-        is used later in `_generate_constraints_and_func` to build the "parameters
-        update function" (`set_params`) that is needed by the Optimization process.
-
-        3. A widget for the "minimum" percentage of the current value of the drive
-        variable, to be used as the minimum of the constraint range. This will only be
-        actually used if the checkbox is checked.
-
-        4. A widget for the "maximum" percentage of the current value of the drive
-        variable, to be used as the maximum of the constraint range. This will only be
-        actually used if the checkbox is checked.
-
-    This handles the cases for Evoked, Poisson, and Rhythmic drives, but not Tonic
-    biases. Tonic biases require slightly different handling, and do the same essential
-    code inside their own `_create...` function.
-
-    This is analogous to, and was built from, the Drives-tab equivalent
-    `_get_drive_weight_widgets`.
-    """
-    default_data = {
-        "weights_ampa": {
-            "L5_pyramidal": 0.0,
-            "L2_pyramidal": 0.0,
-            "L5_basket": 0.0,
-            "L2_basket": 0.0,
-        },
-        "weights_nmda": {
-            "L5_pyramidal": 0.0,
-            "L2_pyramidal": 0.0,
-            "L5_basket": 0.0,
-            "L2_basket": 0.0,
-        },
-        "delays": {
-            "L5_pyramidal": 0.1,
-            "L2_pyramidal": 0.1,
-            "L5_basket": 0.1,
-            "L2_basket": 0.1,
-        },
-    }
-    if if_poisson:
-        default_data.update(
-            {
-                "rate_constant": {
-                    "L5_pyramidal": 40.0,
-                    "L2_pyramidal": 40.0,
-                    "L5_basket": 40.0,
-                    "L2_basket": 40.0,
-                },
-            }
-        )
-
-    if isinstance(drive_data, dict):
-        default_data = _update_nested_dict(default_data, drive_data)
-
-    cell_types = ["L5_pyramidal", "L2_pyramidal", "L5_basket", "L2_basket"]
-    if location == "distal":
-        cell_types.remove("L5_basket")
-
-    syn_widgets_dict = {
-        "weights_ampa": {},
-        "weights_nmda": {},
-        "delays": {},
-    }
-    if if_poisson:
-        syn_widgets_dict.update(
-            {
-                "rate_constant": {},
-            }
-        )
-
-    ampa_weights_list, nmda_weights_list, delays_list = [], [], []
-    if if_poisson:
-        rate_constant_list = []
-    for cell_type in cell_types:
-        # Create the widgets and their placement, for AMPA weights
-        syn_widgets_dict["weights_ampa"].update(
-            _create_opt_widgets_for_drive_var(
-                cell_type,
-                default_data["weights_ampa"][cell_type],
-                f"{cell_type}:",
-                syn_type="weights_ampa",
-                **_autogen_opt_widget_kwargs,
-            )
-        )
-        ampa_weights_list.append(
-            _create_hbox_for_opt_var(
-                cell_type,
-                syn_widgets_dict["weights_ampa"],
-                quadruple_entry_hbox_layout,
-            )
-        )
-        # Create the widgets and their placement, for NMDA weights
-        syn_widgets_dict["weights_nmda"].update(
-            _create_opt_widgets_for_drive_var(
-                cell_type,
-                default_data["weights_nmda"][cell_type],
-                f"{cell_type}:",
-                syn_type="weights_nmda",
-                **_autogen_opt_widget_kwargs,
-            )
-        )
-        nmda_weights_list.append(
-            _create_hbox_for_opt_var(
-                cell_type,
-                syn_widgets_dict["weights_nmda"],
-                quadruple_entry_hbox_layout,
-            )
-        )
-        # Create the widgets and their placement, for synaptic delays
-        syn_widgets_dict["delays"].update(
-            _create_opt_widgets_for_drive_var(
-                cell_type,
-                default_data["delays"][cell_type],
-                f"{cell_type}:",
-                syn_type="delays",
-                **_autogen_opt_widget_kwargs,
-            )
-        )
-        delays_list.append(
-            _create_hbox_for_opt_var(
-                cell_type,
-                syn_widgets_dict["delays"],
-                quadruple_entry_hbox_layout,
-            )
-        )
-        if if_poisson:
-            # Create the widgets and their placement, for Poisson rate constants
-            syn_widgets_dict["rate_constant"].update(
-                _create_opt_widgets_for_drive_var(
-                    cell_type,
-                    default_data["rate_constant"][cell_type],
-                    f"{cell_type}:",
-                    syn_type="rate_constant",
-                    **_autogen_opt_widget_kwargs,
-                )
-            )
-            rate_constant_list.append(
-                _create_hbox_for_opt_var(
-                    cell_type,
-                    syn_widgets_dict["rate_constant"],
-                    quadruple_entry_hbox_layout,
-                )
-            )
-
-    syn_widgets_list = (
-        [HTML(value="<b>AMPA weights</b>")]
-        + ampa_weights_list
-        + [HTML(value="<b>NMDA weights</b>")]
-        + nmda_weights_list
-        + [HTML(value="<b>Synaptic delays</b>")]
-        + delays_list
-        + (
-            [HTML(value="<b>Rate constants</b>")] + rate_constant_list
-            if if_poisson
-            else []
-        )
-    )
-    return syn_widgets_list, syn_widgets_dict
-
-
-
 
 
 def _build_opt_drive_widget(
