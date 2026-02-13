@@ -1458,10 +1458,11 @@ class HNNGUI:
             )
 
             # Add drives
-            self.add_drive_tab(self.params)
+            self.update_drive_tab_accordion(self.params)
 
             # Add optimization
-            self.add_opt_tab(self.params)
+            self.update_opt_tab_target_widgets()
+            self.update_opt_tab_accordion(self.params)
 
     def add_drive_widget(
         self,
@@ -1546,7 +1547,7 @@ class HNNGUI:
             with self._drives_out:
                 display(self.drive_accordion)
 
-    def add_drive_tab(self, params):
+    def update_drive_tab_accordion(self, params):
         net = dict_to_network(params)
         drive_specs = net.external_drives
         tonic_specs = net.external_biases
@@ -1618,8 +1619,9 @@ class HNNGUI:
                     layout,
                 )
             elif load_type == "drives":
-                self.add_drive_tab(params)
-                self.add_opt_tab(params)
+                self.update_drive_tab_accordion(params)
+                self.update_opt_tab_target_widgets()
+                self.update_opt_tab_accordion(params)
             else:
                 raise ValueError
 
@@ -1667,7 +1669,7 @@ class HNNGUI:
         with self._opt_target_out:
             display(displayed_target_widgets)
 
-    def add_opt_target_widgets(self):
+    def update_opt_tab_target_widgets(self):
         # Preserve prior widget state for "target data" if widgets already exist
         # ------------------------------------------------------------------------------
         prior_target_state = {}
@@ -1886,7 +1888,7 @@ class HNNGUI:
             mimetype="text/plain",
         )
 
-    def add_opt_drive_accordion(self, params):
+    def update_opt_tab_accordion(self, params):
         """Create/update the drives output of the optimization tab"""
         net = dict_to_network(params)
         drive_specs = net.external_drives
@@ -2078,10 +2080,6 @@ class HNNGUI:
             self._opt_drives_out.clear_output()
             with self._opt_drives_out:
                 display(self.opt_drive_accordion)
-
-    def add_opt_tab(self, params):
-        self.add_opt_target_widgets()
-        self.add_opt_drive_accordion(params)
 
 
 def _prepare_upload_file_from_local(path):
@@ -4488,7 +4486,6 @@ def _create_hbox_for_opt_var(var_name, widget_dict, layout):
         ],
         layout=layout,
     )
-
 
 
 def _build_constraints(drive, syn_type=None, apply_percentages=False):
