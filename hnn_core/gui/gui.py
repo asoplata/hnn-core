@@ -2004,8 +2004,8 @@ class HNNGUI:
         )
         prespecified_drive_data.update({"seedcore": max(event_seed, 2)})
 
-        # Set the lower (negative) and upper (positive) bounds of the initial min/max
-        # constraint values
+        # Set the lower (100% - X) and upper (100% + X) bounds of the initial min/max
+        # constraint values. This should NEVER EXCEED 100!
         initial_constraint_range_percentage = 50
 
         # Stylin'
@@ -3865,11 +3865,11 @@ def _create_opt_widgets_for_drive_var(
         value=(
             prior_min_pct
             if prior_min_pct is not None
-            else -initial_constraint_range_percentage
+            else (100 - initial_constraint_range_percentage)
         ),
         description="Min:",
-        min=-100,
-        max=1000,
+        min=0,
+        max=100,
         step=1,
         layout=minmax_layout,
         style=minmax_style,
@@ -3878,10 +3878,10 @@ def _create_opt_widgets_for_drive_var(
         value=(
             prior_max_pct
             if prior_max_pct is not None
-            else initial_constraint_range_percentage
+            else (100 + initial_constraint_range_percentage)
         ),
         description="Max:",
-        min=-100,
+        min=100,
         max=1000,
         step=1,
         layout=minmax_layout,
@@ -4941,9 +4941,10 @@ def _build_constraints(drive, syn_type=None, apply_percentages=False):
                 # Get the current value of the parameter
                 current_value = input_dict[var_name].value
                 # Convert percentages to actual values
-                # e.g., if current_value=10 and min_pct=-50, then min_value=10*(1-0.5)=5
-                min_value = current_value * (1 + min_pct / 100)
-                max_value = current_value * (1 + max_pct / 100)
+                # e.g., if current_value=10 and min_pct=50 (%),
+                #       then min_value = 10*(50/100) = 5
+                min_value = current_value * (min_pct / 100)
+                max_value = current_value * (max_pct / 100)
                 # Use the unique name as the key, and add the bounds as actual values
                 output_constraints.update(
                     {unique_param_name: tuple([min_value, max_value])}
