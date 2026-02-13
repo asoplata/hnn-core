@@ -4332,27 +4332,26 @@ def _create_poisson_widget_for_opt(
         location=location,  # notice this is not a widget but a str!
     )
 
-    # Add the non-synaptic widgets that we are interested in constraining/optimizing
-    # against, along with new widgets to control their constraints:
-    # ----------------------------------------------------------------------------------
-    opt_drive_widget.update(
-        _create_opt_widgets_for_drive_var(
-            "tstart",
-            default_data["tstart"],
-            "Start time (ms):",
-            **_autogen_opt_widget_kwargs,
-        )
-        | _create_opt_widgets_for_drive_var(
-            "tstop",
-            default_data["tstop"],
-            "Stop time (ms):",
-            **_autogen_opt_widget_kwargs,
-        )
-    )
-
     # Add the non-synaptic widgets that we are NOT interested in constraining/optimizing
     # against:
     # ----------------------------------------------------------------------------------
+    tstart = BoundedFloatText(
+        value=default_data["tstart"],
+        description="Start time (ms):",
+        min=0,
+        max=1e6,
+        layout=var_layout,
+        style=var_style,
+    )
+    _make_opt_observers(tstart, "tstart", drive_widgets, drive_idx)
+    tstop = BoundedFloatText(
+        value=default_data["tstop"],
+        description="Stop time (ms):",
+        max=1e6,
+        layout=var_layout,
+        style=var_style,
+    )
+    _make_opt_observers(tstop, "tstop", drive_widgets, drive_idx)
     n_drive_cells = IntText(
         value=default_data["n_drive_cells"],
         description="No. Drive Cells:",
@@ -4361,7 +4360,6 @@ def _create_poisson_widget_for_opt(
         style=var_style,
     )
     _make_opt_observers(n_drive_cells, "n_drive_cells", drive_widgets, drive_idx)
-
     cell_specific = Checkbox(
         value=default_data["cell_specific"],
         description="Cell-Specific",
@@ -4385,6 +4383,8 @@ def _create_poisson_widget_for_opt(
 
     opt_drive_widget.update(
         dict(
+            tstart=tstart,
+            tstop=tstop,
             n_drive_cells=n_drive_cells,
             is_cell_specific=cell_specific,
             seedcore=seedcore,
@@ -4416,12 +4416,8 @@ def _create_poisson_widget_for_opt(
     opt_drive_box = VBox(
         [
             column_titles,
-            _create_hbox_for_opt_var(
-                "tstart", opt_drive_widget, quadruple_entry_hbox_layout
-            ),
-            _create_hbox_for_opt_var(
-                "tstop", opt_drive_widget, quadruple_entry_hbox_layout
-            ),
+            tstart,
+            tstop,
             n_drive_cells,
             cell_specific,
             seedcore,
@@ -4503,31 +4499,13 @@ def _create_rhythmic_widget_for_opt(
         _create_opt_widgets_for_drive_var(
             "burst_rate",
             default_data["burst_rate"],
-            "Burst rate (Hz):",
+            "Burst rate (Hz)",
             **_autogen_opt_widget_kwargs,
         )
         | _create_opt_widgets_for_drive_var(
             "burst_std",
             default_data["burst_std"],
-            "Burst std dev (Hz):",
-            **_autogen_opt_widget_kwargs,
-        )
-        | _create_opt_widgets_for_drive_var(
-            "tstart",
-            default_data["tstart"],
-            "Start time (ms):",
-            **_autogen_opt_widget_kwargs,
-        )
-        | _create_opt_widgets_for_drive_var(
-            "tstart_std",
-            default_data["tstart_std"],
-            "Start std dev (ms):",
-            **_autogen_opt_widget_kwargs,
-        )
-        | _create_opt_widgets_for_drive_var(
-            "tstop",
-            default_data["tstop"],
-            "Stop time (ms):",
+            "Burst std dev (Hz)",
             **_autogen_opt_widget_kwargs,
         )
     )
@@ -4535,13 +4513,40 @@ def _create_rhythmic_widget_for_opt(
     # Add the non-synaptic widgets that we are NOT interested in constraining/optimizing
     # against:
     # ----------------------------------------------------------------------------------
+    tstart = BoundedFloatText(
+        value=default_data["tstart"],
+        description="Start time (ms)",
+        min=0,
+        max=1e6,
+        layout=var_layout,
+        style=var_style,
+    )
+    _make_opt_observers(tstart, "tstart", drive_widgets, drive_idx)
+    tstart_std = BoundedFloatText(
+        value=default_data["tstart_std"],
+        description="Start time dev (ms)",
+        min=0,
+        max=1e6,
+        layout=var_layout,
+        style=var_style,
+    )
+    _make_opt_observers(tstart_std, "tstart_std", drive_widgets, drive_idx)
+    tstop = BoundedFloatText(
+        value=default_data["tstop"],
+        description="Stop time (ms)",
+        max=1e6,
+        layout=var_layout,
+        style=var_style,
+    )
+    _make_opt_observers(tstop, "tstop", drive_widgets, drive_idx)
+
     # AES: numspikes is a special case, since it MUST be an integer, but our
     # Optimization's constraints-updaing functions currently assume all constraints are
     # floats, since they update according to fractional values. Therefore, we cannot
     # currently pass it to our constraints to use in Optimization currently.
     numspikes = BoundedIntText(
         value=default_data["numspikes"],
-        description="No. Spikes:",
+        description="No. Spikes",
         min=0,
         max=int(1e6),
         layout=var_layout,
@@ -4551,7 +4556,7 @@ def _create_rhythmic_widget_for_opt(
 
     n_drive_cells = IntText(
         value=default_data["n_drive_cells"],
-        description="No. Drive Cells:",
+        description="No. Drive Cells",
         disabled=default_data["cell_specific"],
         layout=var_layout,
         style=var_style,
@@ -4581,6 +4586,9 @@ def _create_rhythmic_widget_for_opt(
 
     opt_drive_widget.update(
         dict(
+            tstart=tstart,
+            tstart_std=tstart_std,
+            tstop=tstop,
             numspikes=numspikes,
             n_drive_cells=n_drive_cells,
             is_cell_specific=cell_specific,
@@ -4611,15 +4619,9 @@ def _create_rhythmic_widget_for_opt(
     opt_drive_box = VBox(
         [
             column_titles,
-            _create_hbox_for_opt_var(
-                "tstart", opt_drive_widget, quadruple_entry_hbox_layout
-            ),
-            _create_hbox_for_opt_var(
-                "tstart_std", opt_drive_widget, quadruple_entry_hbox_layout
-            ),
-            _create_hbox_for_opt_var(
-                "tstop", opt_drive_widget, quadruple_entry_hbox_layout
-            ),
+            tstart,
+            tstart_std,
+            tstop,
             _create_hbox_for_opt_var(
                 "burst_rate", opt_drive_widget, quadruple_entry_hbox_layout
             ),
@@ -4692,26 +4694,31 @@ def _create_tonic_widget_for_opt(
 
     # Begin making the widgets
     # ----------------------------------------------------------------------------------
+    t0 = BoundedFloatText(
+        value=default_data["t0"],
+        description="Start time (ms):",
+        min=0,
+        max=1e6,
+        layout=var_layout,
+        style=var_style,
+    )
+    _make_opt_observers(t0, "t0", drive_widgets, drive_idx)
+    tstop = BoundedFloatText(
+        value=default_data["tstop"],
+        description="Stop time (ms):",
+        max=1e6,
+        layout=var_layout,
+        style=var_style,
+    )
+    _make_opt_observers(tstop, "tstop", drive_widgets, drive_idx)
+
     # Let's "initialize" the dictionary that will hold our widgets:
     opt_drive_widget = dict(
         type="Tonic",
         name=name,
+        t0=t0,
+        tstop=tstop,
     )
-    opt_drive_widget.update(
-        _create_opt_widgets_for_drive_var(
-            "t0",
-            default_data["t0"],
-            "Start time (ms):",
-            **_autogen_opt_widget_kwargs,
-        )
-        | _create_opt_widgets_for_drive_var(
-            "tstop",
-            default_data["tstop"],
-            "Stop time (ms):",
-            **_autogen_opt_widget_kwargs,
-        )
-    )
-
     syn_widgets_dict = {
         "amplitude": {},
     }
@@ -4742,12 +4749,8 @@ def _create_tonic_widget_for_opt(
     opt_drive_box = VBox(
         [
             column_titles,
-            _create_hbox_for_opt_var(
-                "t0", opt_drive_widget, quadruple_entry_hbox_layout
-            ),
-            _create_hbox_for_opt_var(
-                "tstop", opt_drive_widget, quadruple_entry_hbox_layout
-            ),
+            t0,
+            tstop,
         ]
         + syn_widgets_list
     )
