@@ -2390,8 +2390,8 @@ def _create_synaptic_widgets(
         default_data.update(
             {
                 "rate_constant": {
+                    "L2_pyramidal": 140.0,
                     "L5_pyramidal": 40.0,
-                    "L2_pyramidal": 40.0,
                     "L5_basket": 40.0,
                     "L2_basket": 40.0,
                 },
