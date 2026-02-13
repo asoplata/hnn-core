@@ -1498,7 +1498,7 @@ class HNNGUI:
         )
         prespecified_drive_data.update({"seedcore": max(event_seed, 2)})
 
-        drive, drive_box = _build_drive_objects(
+        drive, drive_box = _create_widgets_for_drive(
             drive_type,
             name,
             self.widget_tstop,
@@ -2033,29 +2033,30 @@ class HNNGUI:
             """,
         )
 
-        opt_drive_box, opt_drive_widget = _build_opt_drive_widget(
+        opt_drive_widget, opt_drive_box = _create_widgets_for_drive(
             drive_type,
             name,
-            checkbox_layout,
-            checkbox_style,
-            minmax_layout,
-            minmax_style,
-            quadruple_entry_hbox_layout,
+            self.widget_tstop,
             var_layout,
             var_style,
-            column_titles,
-            initial_constraint_range_percentage,
-            prespecified_drive_data,
-            drive_idx,
-            self.drive_widgets,
             location,
+            prespecified_drive_data,
             prespecified_weights_ampa,
             prespecified_weights_nmda,
             prespecified_delays,
             prespecified_n_drive_cells,
             prespecified_cell_specific,
-            self.widget_tstop,
-            prior_opt_widget_values,
+            for_opt=True,
+            checkbox_layout=checkbox_layout,
+            checkbox_style=checkbox_style,
+            minmax_layout=minmax_layout,
+            minmax_style=minmax_style,
+            quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
+            column_titles=column_titles,
+            initial_constraint_range_percentage=initial_constraint_range_percentage,
+            drive_idx=drive_idx,
+            drive_widgets=self.drive_widgets,
+            prior_opt_widget_values=prior_opt_widget_values,
         )
 
         self.opt_drive_boxes.append(opt_drive_box)
@@ -3353,7 +3354,7 @@ def _create_widgets_for_tonic(
     return drive, drive_box
 
 
-def _build_drive_objects(
+def _create_widgets_for_drive(
     drive_type,
     name,
     tstop_widget,
@@ -3366,7 +3367,40 @@ def _build_drive_objects(
     delays,
     n_drive_cells,
     cell_specific,
+    for_opt=False,
+    checkbox_layout=None,
+    checkbox_style=None,
+    minmax_layout=None,
+    minmax_style=None,
+    quadruple_entry_hbox_layout=None,
+    column_titles=None,
+    initial_constraint_range_percentage=None,
+    drive_idx=None,
+    drive_widgets=None,
+    prior_opt_widget_values=None,
 ):
+    """Build & arrange all widgets for a single Drive.
+
+    When ``for_opt=False`` (default), this creates the widgets for the Drives
+    tab. When ``for_opt=True``, this creates the Optimization widgets with
+    constraint controls and observers that mirror the Drives-tab widgets.
+
+    Returns ``(drive, drive_box)`` — the widget dict and VBox layout.
+    """
+    opt_kwargs = dict(
+        for_opt=for_opt,
+        checkbox_layout=checkbox_layout,
+        checkbox_style=checkbox_style,
+        minmax_layout=minmax_layout,
+        minmax_style=minmax_style,
+        quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
+        column_titles=column_titles,
+        initial_constraint_range_percentage=initial_constraint_range_percentage,
+        drive_idx=drive_idx,
+        drive_widgets=drive_widgets,
+        prior_opt_widget_values=prior_opt_widget_values,
+    )
+
     if drive_type in ("Rhythmic", "Bursty"):
         drive, drive_box = _create_widgets_for_rhythmic(
             name,
@@ -3380,6 +3414,7 @@ def _build_drive_objects(
             delays=delays,
             n_drive_cells=n_drive_cells,
             cell_specific=cell_specific,
+            **opt_kwargs,
         )
     elif drive_type == "Poisson":
         drive, drive_box = _create_widgets_for_poisson(
@@ -3394,6 +3429,7 @@ def _build_drive_objects(
             delays=delays,
             n_drive_cells=n_drive_cells,
             cell_specific=cell_specific,
+            **opt_kwargs,
         )
     elif drive_type in ("Evoked", "Gaussian"):
         drive, drive_box = _create_widgets_for_evoked(
@@ -3407,10 +3443,16 @@ def _build_drive_objects(
             delays=delays,
             n_drive_cells=n_drive_cells,
             cell_specific=cell_specific,
+            **opt_kwargs,
         )
     elif drive_type == "Tonic":
         drive, drive_box = _create_widgets_for_tonic(
-            name, tstop_widget, layout, style, data=drive_data
+            name,
+            tstop_widget,
+            layout,
+            style,
+            data=drive_data,
+            **opt_kwargs,
         )
     else:
         raise ValueError(f"Unknown drive type {drive_type}")
@@ -4447,142 +4489,6 @@ def _create_hbox_for_opt_var(var_name, widget_dict, layout):
         layout=layout,
     )
 
-
-def _build_opt_drive_widget(
-    drive_type,
-    name,
-    checkbox_layout,
-    checkbox_style,
-    minmax_layout,
-    minmax_style,
-    quadruple_entry_hbox_layout,
-    var_layout,
-    var_style,
-    column_titles,
-    initial_constraint_range_percentage,
-    drive_data,
-    drive_idx,
-    drive_widgets,
-    location,
-    weights_ampa,
-    weights_nmda,
-    delays,
-    n_drive_cells,
-    cell_specific,
-    tstop_widget,
-    prior_opt_widget_values,
-):
-    """Build & arrange the Optimization widgets for a single Drive's widgets-set.
-
-    Note that this returned widget contains MANY smaller widgets inside. The arrangement
-    of these smaller widgets is returned in the "box".
-
-    Also note that the "Drive" itself (as opposed to its widgets) does not necessarily
-    exist at this point in time, just like it's possible that no Network objects
-    exists. This does not create the Drives themselves; it only creates Optimization widgets
-    that are based on, and are observing, existing Drive widgets. The Drives themselves
-    are only created *later* during one of the `run_..._clicked` actions.
-
-    This is analogous to, and was built from, the Drives-tab equivalent
-    `_build_drive_objects`.
-    """
-    if drive_type in ("Evoked", "Gaussian"):
-        opt_drive_widget, opt_drive_box = _create_widgets_for_evoked(
-            name,
-            layout=var_layout,
-            style=var_style,
-            location=location,
-            data=drive_data,
-            weights_ampa=weights_ampa,
-            weights_nmda=weights_nmda,
-            delays=delays,
-            n_drive_cells=n_drive_cells,
-            cell_specific=cell_specific,
-            for_opt=True,
-            checkbox_layout=checkbox_layout,
-            checkbox_style=checkbox_style,
-            minmax_layout=minmax_layout,
-            minmax_style=minmax_style,
-            quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
-            column_titles=column_titles,
-            initial_constraint_range_percentage=initial_constraint_range_percentage,
-            drive_idx=drive_idx,
-            drive_widgets=drive_widgets,
-            prior_opt_widget_values=prior_opt_widget_values,
-        )
-    elif drive_type == "Poisson":
-        opt_drive_widget, opt_drive_box = _create_widgets_for_poisson(
-            name,
-            tstop_widget,
-            layout=var_layout,
-            style=var_style,
-            location=location,
-            data=drive_data,
-            weights_ampa=weights_ampa,
-            weights_nmda=weights_nmda,
-            delays=delays,
-            n_drive_cells=n_drive_cells,
-            cell_specific=cell_specific,
-            for_opt=True,
-            checkbox_layout=checkbox_layout,
-            checkbox_style=checkbox_style,
-            minmax_layout=minmax_layout,
-            minmax_style=minmax_style,
-            quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
-            column_titles=column_titles,
-            initial_constraint_range_percentage=initial_constraint_range_percentage,
-            drive_idx=drive_idx,
-            drive_widgets=drive_widgets,
-            prior_opt_widget_values=prior_opt_widget_values,
-        )
-    elif drive_type in ("Rhythmic", "Bursty"):
-        opt_drive_widget, opt_drive_box = _create_widgets_for_rhythmic(
-            name,
-            tstop_widget,
-            layout=var_layout,
-            style=var_style,
-            location=location,
-            data=drive_data,
-            weights_ampa=weights_ampa,
-            weights_nmda=weights_nmda,
-            delays=delays,
-            n_drive_cells=n_drive_cells,
-            cell_specific=cell_specific,
-            for_opt=True,
-            checkbox_layout=checkbox_layout,
-            checkbox_style=checkbox_style,
-            minmax_layout=minmax_layout,
-            minmax_style=minmax_style,
-            quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
-            column_titles=column_titles,
-            initial_constraint_range_percentage=initial_constraint_range_percentage,
-            drive_idx=drive_idx,
-            drive_widgets=drive_widgets,
-            prior_opt_widget_values=prior_opt_widget_values,
-        )
-    elif drive_type == "Tonic":
-        opt_drive_widget, opt_drive_box = _create_widgets_for_tonic(
-            name,
-            tstop_widget,
-            layout=var_layout,
-            style=var_style,
-            data=drive_data,
-            for_opt=True,
-            checkbox_layout=checkbox_layout,
-            checkbox_style=checkbox_style,
-            minmax_layout=minmax_layout,
-            minmax_style=minmax_style,
-            quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
-            column_titles=column_titles,
-            initial_constraint_range_percentage=initial_constraint_range_percentage,
-            drive_idx=drive_idx,
-            drive_widgets=drive_widgets,
-            prior_opt_widget_values=prior_opt_widget_values,
-        )
-    else:
-        raise ValueError(f"Unknown drive type {drive_type}")
-
-    return opt_drive_box, opt_drive_widget
 
 
 def _build_constraints(drive, syn_type=None, apply_percentages=False):
