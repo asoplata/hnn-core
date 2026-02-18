@@ -835,6 +835,7 @@ class Cell:
         ----------
         secloc : instance of nrn.Segment
             The section location. E.g., soma(0.5).
+        AES TODO docs
         e: float
             Reverse potential (in mV)
         tau1: float
@@ -852,7 +853,8 @@ class Cell:
                 f"secloc must be instance of nrn.Segment. Got {type(secloc)}"
             )
 
-        # Check for backwards compatibility, or case of type being "Exp2Syn"
+        # Check for no "type" (including backwards compatibility), or case of type being
+        # explicitly "Exp2Syn"
         if ("type" not in kwargs.keys()) or (kwargs["type"] == "Exp2Syn"):
             syn = h.Exp2Syn(secloc)
             try:
@@ -863,8 +865,9 @@ class Cell:
                     f"The Exp2Syn synapse in segment {secloc} is missing a required parameter."
                 )
         else:
-            # Otherwise, there is a custom synapse type to be used. Create a synapse of that type,
-            # then use all remaining kwargs to set its attributes.
+            # Otherwise, there is a custom synapse type to be used. Create a synapse of
+            # that type, then use all remaining kwargs to set its attributes.
+            # -------------------------------------------------------------------------
             try:
                 synapse_class = getattr(h, kwargs["type"])
             except AttributeError:
@@ -874,10 +877,23 @@ class Cell:
                     "mechanism files or you are missing a required MOD file for this "
                     "synapse type."
                 )
+            # Create the synapse
             syn = synapse_class(secloc)
+
+            # Set attributes of this synapse from their entry in kwargs, if present
             for param_name, param_value in kwargs.items():
-                if param_name != "type" and hasattr(syn, param_name):
+                if hasattr(syn, param_name):
                     setattr(syn, param_name, param_value)
+                elif param_name == "type":
+                    # Ignore "type" since it's only used in the control flow of this
+                    # function, but is never an actual attribute of the NEURON Synapse
+                    # object.
+                    continue
+                else:
+                    raise ValueError(
+                        f"Synapse type '{kwargs['type']}' does not have a parameter "
+                        f"named '{param_name}'."
+                    )
 
         return syn
 
