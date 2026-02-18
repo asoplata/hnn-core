@@ -462,7 +462,7 @@ def _cell_L5Pyr(override_params, pos=(0.0, 0.0, 0), gid=0):
     )
 
 
-def _get_basket_soma(cell_name, v_init=-64.9737):
+def _get_basket_soma(v_init=-64.9737):
     """Create Basket somatic Section objects.
 
     This sets geometric and electrical properties (length, diameter, axial resistance,
@@ -679,7 +679,7 @@ def basket(cell_name, pos=(0, 0, 0), gid=None):
         raise ValueError(f"Unknown basket cell type: {cell_name}")
 
     sections = dict()
-    sections["soma"] = _get_basket_soma(cell_name)
+    sections["soma"] = _get_basket_soma()
     synapses = _get_basket_syn_props()
     sections["soma"].syns = list(synapses.keys())
     sections["soma"].mechs = {"hh2": dict()}
