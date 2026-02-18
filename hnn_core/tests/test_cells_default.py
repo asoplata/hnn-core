@@ -242,81 +242,75 @@ def test_linear_g_at_dist():
 
 def test_basket_voltage_init():
     """Test voltage initialization for Basket cell types."""
-    # Current section initial voltage, for soma (only section) of both basket types
+    # Current section initial voltage, for soma (only section) of both basket types. The
+    # original location of this value can be found at
+    # https://github.com/jonescompneurolab/hnn-core/blob/8a0fffef8d8803e2404d7237f9adeabecd1285ed/hnn_core/network_builder.py#L681
     expected_basket_v0 = -64.9737
 
     # Initial setup
     load_custom_mechanisms()
-    l5b = basket(cell_name="L5_basket")
-    l2b = basket(cell_name="L2_basket")
+    cells = {
+        "L2_basket": basket(cell_name="L2_basket"),
+        "L5_basket": basket(cell_name="L5_basket"),
+    }
 
-    # Test initial voltages (v0) for basket cells
-    assert np.isclose(l5b.sections["soma"].v0, expected_basket_v0), (
-        f"L5_basket soma v0={l5b.sections['soma'].v0}, expected {expected_basket_v0}"
-    )
-    assert np.isclose(l2b.sections["soma"].v0, expected_basket_v0), (
-        f"L2_basket soma v0={l2b.sections['soma'].v0}, expected {expected_basket_v0}"
-    )
+    # Test initial voltages (v0) for basket cells after HNN-Core Cell class creation,
+    # but before NEURON cell building
+    for cell_name, cell in cells.items():
+        assert np.isclose(cell.sections["soma"].v0, expected_basket_v0), (
+            f"{cell_name} soma v0={cell.sections['soma'].v0}, expected {expected_basket_v0}"
+        )
 
-    # Test that v0 values are correctly applied to built NEURON sections
-    l2b.build()
-    l5b.build()
-
-    # Initialize with finitialize() which should use the v0 values
+    # Build NEURON cells and sections, then initialize
+    for cell in cells.values():
+        cell.build()
     h.finitialize()
 
-    # All L2Pyr sections should have the same v0
-    l2b_soma_v = l2b._nrn_sections["soma"](0.5).v
-    l5b_soma_v = l5b._nrn_sections["soma"](0.5).v
-
-    assert np.isclose(l2b_soma_v, expected_basket_v0, atol=0.1), (
-        f"L2_Basket soma initial voltage is {l2b_soma_v}, expected {expected_basket_v0}"
-    )
-    assert np.isclose(l5b_soma_v, expected_basket_v0, atol=0.1), (
-        f"L5_Basket soma initial voltage is {l5b_soma_v}, expected {expected_basket_v0}"
-    )
+    # Test that the initial voltages of the built NEURON sections (at the midpoint)
+    # still match our expected values
+    for cell_name, cell in cells.items():
+        soma_v = cell._nrn_sections["soma"](0.5).v
+        assert np.isclose(soma_v, expected_basket_v0, atol=0.1), (
+            f"{cell_name} soma initial voltage is {soma_v}, expected {expected_basket_v0}"
+        )
 
 
 def test_l2pyr_voltage_init():
     """Test voltage initialization for Layer 2/3 Pyramidal cell type."""
-    # Current section initial voltage, for all sections
+    # Current section initial voltage, for all sections. The original location of this
+    # value can be found at
+    # https://github.com/jonescompneurolab/hnn-core/blob/8a0fffef8d8803e2404d7237f9adeabecd1285ed/hnn_core/network_builder.py#L667
     expected_l2pyr_v0 = -71.46
 
     # Initial setup
     load_custom_mechanisms()
     l2pyr = pyramidal(cell_name="L2_pyramidal")
 
-    # Test initial voltages (v0) for L2Pyr
+    # Test initial voltages (v0) for L2Pyr cells after HNN-Core Cell class creation,
+    # but before NEURON cell building
     for sec_name, sec in l2pyr.sections.items():
         assert np.isclose(sec.v0, expected_l2pyr_v0), (
             f"L2Pyr {sec_name} v0={sec.v0}, expected {expected_l2pyr_v0}"
         )
 
-    # Test that v0 values are correctly applied to built NEURON sections
+    # Build NEURON cells and sections, then initialize
     l2pyr.build(sec_name_apical="apical_trunk")
-
-    # Initialize with finitialize() which should use the v0 values
     h.finitialize()
 
-    # All L2Pyr sections should have the same v0
-    soma_v = l2pyr._nrn_sections["soma"](0.5).v
-    apical_1_v = l2pyr._nrn_sections["apical_1"](0.5).v
-    basal_1_v = l2pyr._nrn_sections["basal_1"](0.5).v
-
-    assert np.isclose(soma_v, expected_l2pyr_v0, atol=0.1), (
-        f"L2Pyr soma initial voltage is {soma_v}, expected {expected_l2pyr_v0}"
-    )
-    assert np.isclose(apical_1_v, expected_l2pyr_v0, atol=0.1), (
-        f"L2Pyr apical_1 initial voltage is {apical_1_v}, expected {expected_l2pyr_v0}"
-    )
-    assert np.isclose(basal_1_v, expected_l2pyr_v0, atol=0.1), (
-        f"L2Pyr basal_1 initial voltage is {basal_1_v}, expected {expected_l2pyr_v0}"
-    )
+    # Test that the initial voltages of the built NEURON sections (at the midpoint)
+    # still match our expected values
+    for sec_name in l2pyr._nrn_sections:
+        v = l2pyr._nrn_sections[sec_name](0.5).v
+        assert np.isclose(v, expected_l2pyr_v0, atol=0.1), (
+            f"L2Pyr {sec_name} initial voltage is {v}, expected {expected_l2pyr_v0}"
+        )
 
 
 def test_l5pyr_voltage_init():
-    """Test voltage initialization for Layer 2/3 Pyramidal cell type."""
-    # Current section initial voltages
+    """Test voltage initialization for Layer 5 Pyramidal cell type."""
+    # Current section initial voltages. The original location of these values can be
+    # found at
+    # https://github.com/jonescompneurolab/hnn-core/blob/8a0fffef8d8803e2404d7237f9adeabecd1285ed/hnn_core/network_builder.py#L668-L679
     expected_l5pyr_v0 = {
         "apical_1": -71.32,
         "apical_2": -69.08,
@@ -333,33 +327,22 @@ def test_l5pyr_voltage_init():
     load_custom_mechanisms()
     l5pyr = pyramidal(cell_name="L5_pyramidal")
 
-    # Test initial voltages (v0) for L5Pyr - different sections have different values
+    # Test initial voltages (v0) for L5Pyr cells after HNN-Core Cell class creation,
+    # but before NEURON cell building
     for sec_name, sec in l5pyr.sections.items():
         expected_v0 = expected_l5pyr_v0[sec_name]
         assert np.isclose(sec.v0, expected_v0), (
             f"L5Pyr {sec_name} v0={sec.v0}, expected {expected_v0}"
         )
 
-    # Test that v0 values are correctly applied to built NEURON sections
+    # Build NEURON cells and sections, then initialize
     l5pyr.build(sec_name_apical="apical_trunk")
-
-    # After building, NEURON sections should have v initialized to v0
-    # Check a few key sections with different v0 values
-    apical_2_nrn_sec = l5pyr._nrn_sections["apical_2"]
-    apical_tuft_nrn_sec = l5pyr._nrn_sections["apical_tuft"]
-    soma_nrn_sec = l5pyr._nrn_sections["soma"]
-
-    # Initialize with finitialize() which should use the v0 values
     h.finitialize()
 
-    # Check that voltages match expected v0 values
-    # Note: We check at the midpoint (0.5) of each section
-    assert np.isclose(apical_2_nrn_sec(0.5).v, -69.08, atol=0.1), (
-        f"apical_2 initial voltage is {apical_2_nrn_sec(0.5).v}, expected -69.08"
-    )
-    assert np.isclose(apical_tuft_nrn_sec(0.5).v, -67.30, atol=0.1), (
-        f"apical_tuft initial voltage is {apical_tuft_nrn_sec(0.5).v}, expected -67.30"
-    )
-    assert np.isclose(soma_nrn_sec(0.5).v, -72.0, atol=0.1), (
-        f"soma initial voltage is {soma_nrn_sec(0.5).v}, expected -72.0"
-    )
+    # Test that the initial voltages of the built NEURON sections (at the midpoint)
+    # still match our expected values
+    for sec_name in l5pyr._nrn_sections:
+        v = l5pyr._nrn_sections[sec_name](0.5).v
+        assert np.isclose(v, expected_l5pyr_v0[sec_name], atol=0.1), (
+            f"L5Pyr {sec_name} initial voltage is {v}, expected {expected_l5pyr_v0[sec_name]}"
+        )
