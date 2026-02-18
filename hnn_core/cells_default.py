@@ -107,7 +107,7 @@ def _get_dends(
     return sections
 
 
-def _get_pyr_soma(p_all, cell_type, v_init=-65):
+def _get_pyr_soma(params, cell_type, v_init=-65):
     """Create Pyramidal somatic Section objects from flat parameter dictionary.
 
     Extracts geometric and electrical properties (length, diameter, axial resistance,
@@ -147,10 +147,10 @@ def _get_pyr_soma(p_all, cell_type, v_init=-65):
       as it is a newer addition not found in legacy parameter files.
     """
     return Section(
-        L=p_all[f"{cell_type}_soma_L"],
-        diam=p_all[f"{cell_type}_soma_diam"],
-        cm=p_all[f"{cell_type}_soma_cm"],
-        Ra=p_all[f"{cell_type}_soma_Ra"],
+        L=params[f"{cell_type}_soma_L"],
+        diam=params[f"{cell_type}_soma_diam"],
+        cm=params[f"{cell_type}_soma_cm"],
+        Ra=params[f"{cell_type}_soma_Ra"],
         v0=v_init,
     )
 
