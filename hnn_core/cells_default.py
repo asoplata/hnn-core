@@ -196,8 +196,7 @@ def _cell_L2Pyr(override_params, pos=(0.0, 0.0, 0), gid=0):
     pos : tuple of (float, float, int), default=(0.0, 0.0, 0)
         Coordinates of cell soma in xyz-space.
     gid : int, default=0
-        The unique, "global ID" (GID) of the cell. Once the GID is set, it cannot be
-        changed.
+        The unique, "global ID" (GID) of the cell.
 
     Returns
     -------
@@ -339,8 +338,7 @@ def _cell_L5Pyr(override_params, pos=(0.0, 0.0, 0), gid=0):
     pos : tuple of (float, float, int), default=(0.0, 0.0, 0)
         Coordinates of cell soma in xyz-space.
     gid : int, default=0
-        The unique, "global ID" (GID) of the cell. Once the GID is set, it cannot be
-        changed.
+        The unique, "global ID" (GID) of the cell.
 
     Returns
     -------
@@ -666,8 +664,7 @@ def basket(cell_name, pos=(0, 0, 0), gid=None):
     pos : tuple of (int, int, int), default=(0, 0, 0)
         Coordinates of cell soma in xyz-space.
     gid : int, default=None
-        The unique, "global ID" (GID) of the cell. Once the GID is set, it cannot be
-        changed.
+        The unique, "global ID" (GID) of the cell.
 
     Returns
     -------
@@ -721,8 +718,7 @@ def pyramidal(cell_name, pos=(0, 0, 0), override_params=None, gid=None):
         `params_default.py::get_L5Pyr_params_default`. If no overrides are desired, then
         this argument should be None.
     gid : int or None (optional)
-        The unique, "global ID" (GID) of the cell. Once the GID is set, it cannot be
-        changed.
+        The unique, "global ID" (GID) of the cell.
     """
     if cell_name == "L2_pyramidal":
         return _cell_L2Pyr(override_params, pos=pos, gid=gid)
