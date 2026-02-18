@@ -584,9 +584,6 @@ class Cell:
             sec = self._nrn_sections[sec_name]
             for mech_name, p_mech in section.mechs.items():
                 sec.insert(mech_name)
-                # This is one of the two places where we are actually applying our
-                # initial voltage
-                setattr(sec, "v", section.v0)
                 for attr, val in p_mech.items():
                     if isinstance(val, list):
                         seg_xs, seg_vals = val[0], val[1]
