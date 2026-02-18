@@ -865,7 +865,15 @@ class Cell:
         else:
             # Otherwise, there is a custom synapse type to be used. Create a synapse of that type,
             # then use all remaining kwargs to set its attributes.
-            synapse_class = getattr(h, type)
+            try:
+                synapse_class = getattr(h, kwargs["type"])
+            except AttributeError:
+                raise ValueError(
+                    f"Synapse type '{kwargs['type']}' not found in NEURON's hoc "
+                    "interpreter. You probably either need to recompile your MOD "
+                    "mechanism files or you are missing a required MOD file for this "
+                    "synapse type."
+                )
             syn = synapse_class(secloc)
             for param_name, param_value in kwargs.items():
                 if param_name != "type" and hasattr(syn, param_name):
