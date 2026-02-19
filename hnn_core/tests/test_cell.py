@@ -313,3 +313,47 @@ def test_create_synapses_invalid_param_custom_type():
     custom_synapse_config = dict(tau1=1.0, tau2=20.0, type="ExpSyn", unknown_param=9)
     with pytest.raises(ValueError, match="does not have a parameter named"):
         _create_cell_and_run_synapse_test(custom_synapse_config)
+
+
+def test_create_synapses_valid_NMDA_gao_type_default():
+    """Test syn_create with new synapse type 'NMDA_gao'.
+
+    This requires the new 'NMDA_gao' synapse mechanism type to be present in
+    `hnn_core/mod/NMDA_gao.mod` and to be compiled by `nrnivmodl`. This new synapse
+    mechanism type is required for the upcoming Duecker 2025 model, as seen here
+    https://github.com/jonescompneurolab/hnn-core/pull/1227
+
+    This uses `Cell.build` to test both `Cell._create_synapses` and `Cell.syn_create`.
+    """
+    custom_synapse_config = dict(type="NMDA_gao")
+    _create_cell_and_run_synapse_test(custom_synapse_config)
+
+
+def test_create_synapses_valid_NMDA_gao_type_params():
+    """syn_create with valid custom 'type' kwarg should create the specified synapse.
+
+    This requires the new 'NMDA_gao' synapse mechanism type to be present in
+    `hnn_core/mod/NMDA_gao.mod` and to be compiled by `nrnivmodl`. This new synapse
+    mechanism type is required for the upcoming Duecker 2025 model, as seen here
+    https://github.com/jonescompneurolab/hnn-core/pull/1227
+
+    This uses `Cell.build` to test both `Cell._create_synapses` and `Cell.syn_create`.
+    """
+    custom_synapse_config = dict(e=50.0, Beta=0.02, Cdur=1.5, type="NMDA_gao")
+    _create_cell_and_run_synapse_test(custom_synapse_config)
+
+
+def test_create_synapses_invalid_param_NMDA_gao_type():
+    """syn_create with invalid parameter for custom 'type' should raise an error.
+
+    This requires the new 'NMDA_gao' synapse mechanism type to be present in
+    `hnn_core/mod/NMDA_gao.mod` and to be compiled by `nrnivmodl`. This new synapse
+    mechanism type is required for the upcoming Duecker 2025 model, as seen here
+    https://github.com/jonescompneurolab/hnn-core/pull/1227
+
+
+    This uses `Cell.build` to test both `Cell._create_synapses` and `Cell.syn_create`.
+    """
+    custom_synapse_config = dict(tau=1.0, type="NMDA_gao")
+    with pytest.raises(ValueError, match="does not have a parameter named"):
+        _create_cell_and_run_synapse_test(custom_synapse_config)
