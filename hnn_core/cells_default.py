@@ -238,29 +238,34 @@ def _get_basket_soma(cell_name):
 def _get_syn_props(p_all, cell_type, syn_types=["ampa", "nmda", "gabaa", "gabab"]):
     """Get synaptic properties for a specific cell type.
 
-    This was formerly called `_get_pyr_syn_props`, but `_pyr` was dropped from name due to this
-    function's future usage by interneurons in the upcoming Duecker_ET model.
+    This was formerly called `_get_pyr_syn_props`, but `_pyr` was dropped from name due
+    to this function's future usage by interneurons in the upcoming Duecker model.
 
     Parameters
     ----------
     p_all : dict
-        Dictionary containing all parameters with keys in the format '{cell_type}_{syn}_e',
-        '{cell_type}_{syn}_tau1', and '{cell_type}_{syn}_tau2'.
+        Dictionary containing parameters with keys. For example, keys could be
+        '{cell_type}_{syn}_e', '{cell_type}_{syn}_tau1', and '{cell_type}_{syn}_tau2',
+        with their values being the corresponding parameter values.
     cell_type : {'L2Pyr', 'L5Pyr'}
         The "short-name" type of cell
     syn_types : list of str, optional
-        List of synapse types to extract properties for. Default: ["ampa", "nmda", "gabaa", "gabab"]
+        List of synapse types to extract properties for. Default: ["ampa", "nmda",
+        "gabaa", "gabab"]
 
     Returns
     -------
     syn_props : dict
-        Dictionary where keys are synapse types and values are dictionaries containing 'e' (reversal
-        potential), 'tau1' (rise time constant), and 'tau2' (decay time constant) for each synapse
-        type.
+        Dictionary where keys are synapse types and values are dictionaries containing
+        synapse properties. At minimum includes 'type' (synapse mechanism type, e.g.,
+        'Exp2Syn'). For `Exp2Syn` synapses, includes 'e' (reversal potential), 'tau1'
+        (rise time constant), and 'tau2' (decay time constant). Custom synapse types may
+        include additional parameters specific to that mechanism.
     """
     syn_props = dict()
     for syn in syn_types:
-        # Backwards compatibility check: if syn_type key is missing or None, default to Exp2Syn
+        # Backwards compatibility check: if syn_type key is missing or None, default to
+        # Exp2Syn
         if (f"{cell_type}_{syn}_type" not in p_all.keys()) or (
             p_all[f"{cell_type}_{syn}_type"] == "Exp2Syn"
         ):

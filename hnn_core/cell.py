@@ -829,24 +829,37 @@ class Cell:
                     self.ca[sec_name].record(self._nrn_sections[sec_name](0.5)._ref_cai)
 
     def syn_create(self, secloc, **kwargs):
-        """Create an h.Exp2Syn synapse.
+        """Create a NEURON synapse at the given section location.
+
+        By default (or when ``type='Exp2Syn'``), creates an ``h.Exp2Syn`` two-state
+        kinetic synapse. A custom NEURON synapse type can be used instead by passing
+        ``type=<synapse_class_name>`` along with any parameters that synapse accepts.
 
         Parameters
         ----------
         secloc : instance of nrn.Segment
-            The section location. E.g., soma(0.5).
-        AES TODO docs
-        e: float
-            Reverse potential (in mV)
-        tau1: float
-            Rise time (in ms)
-        tau2: float
-            Decay time (in ms)
+            The section location. E.g., ``soma(0.5)``.
+        **kwargs : dict
+            Synapse parameters. The following keys are recognised:
+
+            type : str, optional
+                Name of the NEURON synapse class to instantiate (must be available in
+                NEURON's hoc interpreter). Custom synapse types must be compiled from a MOD file. Defaults to ``'Exp2Syn'``.
+            e : float
+                Reversal potential (mV). Required for ``Exp2Syn``.
+            tau1 : float
+                Rise time constant (ms). Required for ``Exp2Syn``.
+            tau2 : float
+                Decay time constant (ms). Required for ``Exp2Syn``.
+
+            For custom synapse types, pass any parameters accepted by that synapse as
+            additional keyword arguments. Unknown or invalid parameter names will raise
+            a ``ValueError``.
 
         Returns
         -------
-        syn : instance of h.Exp2Syn
-            A two state kinetic scheme synapse.
+        syn : NEURON synapse object
+            The instantiated synapse object (e.g. ``h.Exp2Syn`` or a custom type).
         """
         if not isinstance(secloc, nrn.Segment):
             raise TypeError(
