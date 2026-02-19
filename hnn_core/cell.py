@@ -822,28 +822,22 @@ class Cell:
                 - "soma" : only the soma
                 - "all"  : all sections in `section_names`
                 - None   : skip
-
         name : str
             the attribute name to hold the recordings; e.g., for name="ina",
             the recording would be accessed with "self.ina"
-
         section_names : list
             list of available section names
-
         mech : str or None
             The mechanism inside a section segment (e.g., "hh2") to use for recording
             If None, the current is recorded directly from the section
             itself (from the top-level variable)
-
         ref : str
             The name of the hoc reference variable to record from (e.g., "_ref_ina"
             for sodium)
-
         per_segment: bool
             If True, record from every segment in the section
                 - keys will follow the format: "seg_x_0.500"
             If False, record only from the midpoint (0.5)
-
         """
 
         # create an attribute on self to hold the currents
@@ -1015,7 +1009,7 @@ class Cell:
             Option to record voltages from all sections ('all'), or just
             the soma ('soma'). Default: False.
         record_isec : 'all' | 'soma' | False
-            Option to record voltages from all sections ('all'), or just
+            Option to record currents from all sections ('all'), or just
             the soma ('soma'). Default: False.
         record_ca : 'all' | 'soma' | False
             Option to record calcium concentration from all sections ('all'),
