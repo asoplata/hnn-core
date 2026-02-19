@@ -555,7 +555,7 @@ def calculate_neuron_geometry(
     for child_section in sorted_sections:
         child_section_start = end_pts[child_section][0]
 
-        # set shift for basal_1, which shoud move in the negative direction along
+        # set shift for basal_1, which should move in the negative direction along
         # the z axis
         if child_section != "soma" and child_section_start == end_pts["soma"][0]:
             # the vertical offset for basal 2/3 should be negative
@@ -1982,7 +1982,7 @@ def postproc_soma_dipole(
 
             I_t += I_abs
 
-        # arround for different structure for isec when recontructing from components
+        # around for different structure for isec when reconstructing from components
         if from_components:
             soma_isec = net.cell_response.isec[trial][gid].get(sec_name, {})
             for syn_key in soma_isec:
@@ -2213,8 +2213,9 @@ check_rmse_and_residuals(net)
 # %% ---------------------------------------------------
 # Notes:
 # - ".glb" is a standardized format for 3D models
-# - files can be openened in free model viewers such as
+# - files can be opened in free model viewers such as
 #   https://modelviewer.dev/editor/
+
 
 def generate_blender_neuron(
     end_pts,
@@ -2225,8 +2226,7 @@ def generate_blender_neuron(
     scale_factor=0.01,
     width_scale=2.0,
 ):
-    """
-    """
+    """ """
     diameters = extract_diameters(
         end_pts.keys(),
         defaults,
