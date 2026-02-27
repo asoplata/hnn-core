@@ -830,11 +830,11 @@ class HNNGUI:
 
         def _add_drive_button_clicked(b):
             location = self.widget_location_selection.value.lower()
-            output = self.add_drive_widget(
+            output = self.add_drive_tab_drive_widget(
                 self.widget_drive_type_selection.value,
                 location,
             )
-            self.add_opt_drive_widget(
+            self.add_opt_tab_drive_widget(
                 drive_type=self.widget_drive_type_selection.value,
                 location=location,
                 prespecified_drive_name=self.drive_widgets[-1]["name"],
@@ -1464,7 +1464,7 @@ class HNNGUI:
             self.update_opt_tab_target_widgets()
             self.update_opt_tab_accordion(self.params)
 
-    def add_drive_widget(
+    def add_drive_tab_drive_widget(
         self,
         drive_type,
         location,
@@ -1499,7 +1499,7 @@ class HNNGUI:
         )
         prespecified_drive_data.update({"seedcore": max(event_seed, 2)})
 
-        drive, drive_box = _create_widgets_for_drive(
+        new_drive_widgets, new_drive_box = _create_widgets_for_drive(
             drive_type,
             name,
             self.widget_tstop,
@@ -1522,13 +1522,13 @@ class HNNGUI:
             layout=self.layout["del_fig_btn"],
         )
         delete_button.on_click(self._delete_single_drive)
-        drive_box.children += (
+        new_drive_box.children += (
             HTML(value="<p> </p>"),  # Adds blank space
             delete_button,
         )
 
-        self.drive_boxes.append(drive_box)
-        self.drive_widgets.append(drive)
+        self.drive_boxes.append(new_drive_box)
+        self.drive_widgets.append(new_drive_widgets)
 
         if render:
             # Construct accordion object
@@ -1537,10 +1537,10 @@ class HNNGUI:
                 len(self.drive_boxes) - 1 if expand_last_drive else None
             )
             # Update accordion title with location
-            for idx, drive in enumerate(self.drive_widgets):
-                tab_name = drive["name"]
-                if drive["type"] != "Tonic":
-                    tab_name += f" ({drive['location']})"
+            for idx, new_drive_widgets in enumerate(self.drive_widgets):
+                tab_name = new_drive_widgets["name"]
+                if new_drive_widgets["type"] != "Tonic":
+                    tab_name += f" ({new_drive_widgets['location']})"
                 self.drive_accordion.set_title(idx, tab_name)
 
             self._drives_out.clear_output()
@@ -1580,7 +1580,7 @@ class HNNGUI:
                 )
 
             should_render = idx == (len(drive_names) - 1)
-            self.add_drive_widget(
+            self.add_drive_tab_drive_widget(
                 drive_type=specs["type"].capitalize(),
                 location=specs["location"],
                 prespecified_drive_name=drive_name,
@@ -1957,7 +1957,7 @@ class HNNGUI:
 
             should_render = drive_idx == (len(drive_names) - 1)
 
-            self.add_opt_drive_widget(
+            self.add_opt_tab_drive_widget(
                 drive_type=specs["type"].capitalize(),
                 location=specs["location"],
                 prespecified_drive_name=drive_name,
@@ -1968,7 +1968,7 @@ class HNNGUI:
                 **kwargs,
             )
 
-    def add_opt_drive_widget(
+    def add_opt_tab_drive_widget(
         self,
         drive_type,
         location,
@@ -2634,7 +2634,7 @@ def _create_widgets_for_rhythmic(
         )
 
     # Initialize the drive widget dict
-    drive = dict(
+    new_drive_widgets = dict(
         type="Rhythmic",
         name=name,
         location=location,
@@ -2643,7 +2643,7 @@ def _create_widgets_for_rhythmic(
     # burst_rate and burst_std widgets
     # --------------------------------------------------------------------------
     if for_opt:
-        drive.update(
+        new_drive_widgets.update(
             _create_opt_widgets_for_drive_var(
                 "burst_rate",
                 default_data["burst_rate"],
@@ -2672,7 +2672,7 @@ def _create_widgets_for_rhythmic(
             max=1e6,
             **kwargs,
         )
-        drive.update(dict(burst_rate=burst_rate, burst_std=burst_std))
+        new_drive_widgets.update(dict(burst_rate=burst_rate, burst_std=burst_std))
 
     # tstart, tstart_std, tstop widgets
     # --------------------------------------------------------------------------
@@ -2744,7 +2744,7 @@ def _create_widgets_for_rhythmic(
         partial(_cell_spec_change, widget=n_drive_cells), names="value"
     )
 
-    drive.update(
+    new_drive_widgets.update(
         dict(
             tstart=tstart,
             tstart_std=tstart_std,
@@ -2771,22 +2771,22 @@ def _create_widgets_for_rhythmic(
         quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
         **(_autogen_opt_widget_kwargs if for_opt else {}),
     )
-    drive.update(syn_widgets_dict)
+    new_drive_widgets.update(syn_widgets_dict)
 
     # Build the VBox layout
     # --------------------------------------------------------------------------
     if for_opt:
-        drive_box = VBox(
+        new_drive_box = VBox(
             [
                 column_titles,
                 tstart,
                 tstart_std,
                 tstop,
                 _create_hbox_for_opt_var(
-                    "burst_rate", drive, quadruple_entry_hbox_layout
+                    "burst_rate", new_drive_widgets, quadruple_entry_hbox_layout
                 ),
                 _create_hbox_for_opt_var(
-                    "burst_std", drive, quadruple_entry_hbox_layout
+                    "burst_std", new_drive_widgets, quadruple_entry_hbox_layout
                 ),
                 numspikes,
                 n_drive_cells,
@@ -2796,7 +2796,7 @@ def _create_widgets_for_rhythmic(
             + syn_widgets_list
         )
     else:
-        drive_box = VBox(
+        new_drive_box = VBox(
             [
                 tstart,
                 tstart_std,
@@ -2811,7 +2811,7 @@ def _create_widgets_for_rhythmic(
             + syn_widgets_list
         )
 
-    return drive, drive_box
+    return new_drive_widgets, new_drive_box
 
 
 def _create_widgets_for_poisson(
@@ -2878,7 +2878,7 @@ def _create_widgets_for_poisson(
         )
 
     # Initialize the drive widget dict
-    drive = dict(
+    new_drive_widgets = dict(
         type="Poisson",
         name=name,
         location=location,  # notice this is not a widget but a str!
@@ -2929,7 +2929,7 @@ def _create_widgets_for_poisson(
         partial(_cell_spec_change, widget=n_drive_cells), names="value"
     )
 
-    drive.update(
+    new_drive_widgets.update(
         dict(
             tstart=tstart,
             tstop=tstop,
@@ -2955,14 +2955,14 @@ def _create_widgets_for_poisson(
         if_poisson=True,
         **(_autogen_opt_widget_kwargs if for_opt else {}),
     )
-    drive.update(syn_widgets_dict)
+    new_drive_widgets.update(syn_widgets_dict)
     if not for_opt:
-        drive["rate_constant"] = syn_widgets_dict["rate_constant"]
+        new_drive_widgets["rate_constant"] = syn_widgets_dict["rate_constant"]
 
     # Build the VBox layout
     # --------------------------------------------------------------------------
     if for_opt:
-        drive_box = VBox(
+        new_drive_box = VBox(
             [
                 column_titles,
                 tstart,
@@ -2974,11 +2974,11 @@ def _create_widgets_for_poisson(
             + syn_widgets_list
         )
     else:
-        drive_box = VBox(
+        new_drive_box = VBox(
             [tstart, tstop, n_drive_cells, cell_specific, seedcore] + syn_widgets_list
         )
 
-    return drive, drive_box
+    return new_drive_widgets, new_drive_box
 
 
 def _create_widgets_for_evoked(
@@ -3025,7 +3025,7 @@ def _create_widgets_for_evoked(
     kwargs = dict(layout=layout, style=style)
 
     # Initialize the drive widget dict
-    drive = dict(
+    new_drive_widgets = dict(
         type="Evoked",
         name=name,
         location=location,
@@ -3047,7 +3047,7 @@ def _create_widgets_for_evoked(
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
         )
-        drive.update(
+        new_drive_widgets.update(
             _create_opt_widgets_for_drive_var(
                 "mu",
                 default_data["mu"],
@@ -3078,7 +3078,7 @@ def _create_widgets_for_evoked(
             step=0.01,
             **kwargs,
         )
-        drive.update(dict(mu=mu, sigma=sigma))
+        new_drive_widgets.update(dict(mu=mu, sigma=sigma))
 
     # numspikes widget
     # --------------------------------------------------------------------------
@@ -3121,7 +3121,7 @@ def _create_widgets_for_evoked(
         partial(_cell_spec_change, widget=n_drive_cells), names="value"
     )
 
-    drive.update(
+    new_drive_widgets.update(
         dict(
             numspikes=numspikes,
             n_drive_cells=n_drive_cells,
@@ -3145,16 +3145,20 @@ def _create_widgets_for_evoked(
         quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
         **(_autogen_opt_widget_kwargs if for_opt else {}),
     )
-    drive.update(syn_widgets_dict)
+    new_drive_widgets.update(syn_widgets_dict)
 
     # Build the VBox layout
     # --------------------------------------------------------------------------
     if for_opt:
-        drive_box = VBox(
+        new_drive_box = VBox(
             [
                 column_titles,
-                _create_hbox_for_opt_var("mu", drive, quadruple_entry_hbox_layout),
-                _create_hbox_for_opt_var("sigma", drive, quadruple_entry_hbox_layout),
+                _create_hbox_for_opt_var(
+                    "mu", new_drive_widgets, quadruple_entry_hbox_layout
+                ),
+                _create_hbox_for_opt_var(
+                    "sigma", new_drive_widgets, quadruple_entry_hbox_layout
+                ),
                 numspikes,
                 n_drive_cells,
                 cell_specific,
@@ -3163,7 +3167,7 @@ def _create_widgets_for_evoked(
             + syn_widgets_list
         )
     else:
-        drive_box = VBox(
+        new_drive_box = VBox(
             [
                 mu,
                 sigma,
@@ -3175,7 +3179,7 @@ def _create_widgets_for_evoked(
             + syn_widgets_list
         )
 
-    return drive, drive_box
+    return new_drive_widgets, new_drive_box
 
 
 def _create_widgets_for_tonic(
@@ -3287,7 +3291,7 @@ def _create_widgets_for_tonic(
         )
 
     # Initialize the drive widget dict
-    drive = dict(
+    new_drive_widgets = dict(
         type="Tonic",
         name=name,
         t0=t0_widget,
@@ -3318,16 +3322,16 @@ def _create_widgets_for_tonic(
                     quadruple_entry_hbox_layout,
                 )
             )
-        drive.update(syn_widgets_dict)
+        new_drive_widgets.update(syn_widgets_dict)
         syn_widgets_list = [HTML(value="<b>Amplitude (nA)</b>")] + amplitudes_list
     else:
-        drive["amplitude"] = amplitudes
+        new_drive_widgets["amplitude"] = amplitudes
         widgets_dict = {
             "amplitude": amplitudes,
             "t0": t0_widget,
             "tstop": tstop_w,
         }
-        drive.update(widgets_dict)
+        new_drive_widgets.update(widgets_dict)
         syn_widgets_list = (
             [HTML(value="<b>Times (ms):</b>")]
             + [t0_widget, tstop_w]
@@ -3338,7 +3342,7 @@ def _create_widgets_for_tonic(
     # Build the VBox layout
     # --------------------------------------------------------------------------
     if for_opt:
-        drive_box = VBox(
+        new_drive_box = VBox(
             [
                 column_titles,
                 t0_widget,
@@ -3347,9 +3351,9 @@ def _create_widgets_for_tonic(
             + syn_widgets_list
         )
     else:
-        drive_box = VBox(syn_widgets_list)
+        new_drive_box = VBox(syn_widgets_list)
 
-    return drive, drive_box
+    return new_drive_widgets, new_drive_box
 
 
 def _create_widgets_for_drive(
@@ -3383,7 +3387,7 @@ def _create_widgets_for_drive(
     tab. When ``for_opt=True``, this creates the Optimization widgets with
     constraint controls and observers that mirror the Drives-tab widgets.
 
-    Returns ``(drive, drive_box)`` — the widget dict and VBox layout.
+    Returns ``(new_drive_widgets, new_drive_box)`` — the widget dict and VBox layout.
     """
     opt_kwargs = dict(
         for_opt=for_opt,
@@ -3400,7 +3404,7 @@ def _create_widgets_for_drive(
     )
 
     if drive_type in ("Rhythmic", "Bursty"):
-        drive, drive_box = _create_widgets_for_rhythmic(
+        new_drive_widgets, new_drive_box = _create_widgets_for_rhythmic(
             name,
             tstop_widget,
             layout,
@@ -3415,7 +3419,7 @@ def _create_widgets_for_drive(
             **opt_kwargs,
         )
     elif drive_type == "Poisson":
-        drive, drive_box = _create_widgets_for_poisson(
+        new_drive_widgets, new_drive_box = _create_widgets_for_poisson(
             name,
             tstop_widget,
             layout,
@@ -3430,7 +3434,7 @@ def _create_widgets_for_drive(
             **opt_kwargs,
         )
     elif drive_type in ("Evoked", "Gaussian"):
-        drive, drive_box = _create_widgets_for_evoked(
+        new_drive_widgets, new_drive_box = _create_widgets_for_evoked(
             name,
             layout,
             style,
@@ -3444,7 +3448,7 @@ def _create_widgets_for_drive(
             **opt_kwargs,
         )
     elif drive_type == "Tonic":
-        drive, drive_box = _create_widgets_for_tonic(
+        new_drive_widgets, new_drive_box = _create_widgets_for_tonic(
             name,
             tstop_widget,
             layout,
@@ -3455,7 +3459,7 @@ def _create_widgets_for_drive(
     else:
         raise ValueError(f"Unknown drive type {drive_type}")
 
-    return drive, drive_box
+    return new_drive_widgets, new_drive_box
 
 
 def add_connectivity_tab(
