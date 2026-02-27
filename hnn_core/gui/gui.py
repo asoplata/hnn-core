@@ -1501,11 +1501,13 @@ class HNNGUI:
         )
         prespecified_drive_data.update({"seedcore": max(event_seed, 2)})
 
+        choose_tab_drive_or_opt = "drive"
         new_drive_widgets, new_drive_box = _create_widgets_for_drive(
             drive_type,
             name,
             self.widget_tstop,
             location,
+            choose_tab_drive_or_opt,
             prespecified_drive_data,
             prespecified_weights_ampa,
             prespecified_weights_nmda,
@@ -2037,18 +2039,19 @@ class HNNGUI:
             """,
         )
 
+        choose_tab_drive_or_opt = "opt"
         opt_drive_widget, opt_drive_box = _create_widgets_for_drive(
             drive_type,
             name,
             self.widget_tstop,
             location,
+            choose_tab_drive_or_opt,
             prespecified_drive_data,
             prespecified_weights_ampa,
             prespecified_weights_nmda,
             prespecified_delays,
             prespecified_n_drive_cells,
             prespecified_cell_specific,
-            for_opt=True,
             opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
             opt_tab_column_titles=opt_tab_column_titles,
             initial_constraint_range_percentage=initial_constraint_range_percentage,
@@ -2351,12 +2354,12 @@ def _get_connectivity_widgets(conn_data, global_gain_textfields):
 
 def _create_synaptic_widgets(
     location,
+    choose_tab_drive_or_opt,  # which tab to build for, including which kwargs to use
     data=None,
     # Drive-tab-specific kwargs
     drive_tab_var_layout=None,
     drive_tab_var_style=None,
     # Optimization-tab-specific kwargs
-    for_opt=False,
     if_poisson=False,
     opt_tab_quad_hbox_layout=None,
     initial_constraint_range_percentage=None,
@@ -2372,8 +2375,8 @@ def _create_synaptic_widgets(
 ):
     """Create synaptic weight, delay, and (optionally) rate constant widgets.
 
-    When ``for_opt=False`` (default), this creates plain widgets for the Drives
-    tab. When ``for_opt=True``, this creates Optimization widgets with
+    When ``choose_tab_drive_or_opt=="drive"``, this creates plain widgets for the Drives
+    tab. When ``choose_tab_drive_or_opt=="opt"``, this creates Optimization widgets with
     constraint controls and observers that mirror the Drives-tab widgets.
 
     This handles the cases for Evoked, Poisson, and Rhythmic drives, but not
@@ -2414,7 +2417,7 @@ def _create_synaptic_widgets(
     if isinstance(data, dict):
         default_data = _update_nested_dict(default_data, data)
 
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
         complex_opt_widget_kwargs = dict(
             initial_constraint_range_percentage=initial_constraint_range_percentage,
@@ -2428,7 +2431,7 @@ def _create_synaptic_widgets(
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
         )
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         simple_widget_kwargs = dict(
             layout=drive_tab_var_layout, style=drive_tab_var_style
         )
@@ -2446,7 +2449,7 @@ def _create_synaptic_widgets(
     if if_poisson:
         syn_widgets_dict["rate_constant"] = {}
 
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         ampa_weights_list, nmda_weights_list, delays_list = [], [], []
         if if_poisson:
             rate_constant_list = []
@@ -2534,7 +2537,7 @@ def _create_synaptic_widgets(
                 else []
             )
         )
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         weights_ampa, weights_nmda, delays = dict(), dict(), dict()
         for cell_type in cell_types:
             weights_ampa[f"{cell_type}"] = BoundedFloatText(
@@ -2608,6 +2611,7 @@ def _create_widgets_for_rhythmic(
     name,
     tstop_widget,
     location,
+    choose_tab_drive_or_opt,  # which tab to build for, including which kwargs to use
     data={},
     weights_ampa=None,
     weights_nmda=None,
@@ -2618,7 +2622,6 @@ def _create_widgets_for_rhythmic(
     drive_tab_var_layout=None,
     drive_tab_var_style=None,
     # Optimization-tab-specific kwargs
-    for_opt=False,
     opt_tab_quad_hbox_layout=None,
     opt_tab_column_titles=None,
     initial_constraint_range_percentage=None,
@@ -2634,10 +2637,10 @@ def _create_widgets_for_rhythmic(
 ):
     """Create all widgets (& observers) for a Rhythmic drive.
 
-    When ``for_opt=False`` (default), this creates the widgets for the Drives
-    tab. When ``for_opt=True``, this creates the widgets for the Optimization
-    tab, including constraint widgets and observers that mirror the Drives-tab
-    widgets.
+    When ``choose_tab_drive_or_opt=="drive"``, this creates the widgets for
+    the Drives tab. When ``choose_tab_drive_or_opt=="opt"``, this creates the widgets
+    for the Optimization tab, including constraint widgets and observers that mirror the
+    Drives-tab widgets.
     """
     default_data = {
         "tstart": 0.0,
@@ -2653,7 +2656,7 @@ def _create_widgets_for_rhythmic(
     data.update({"n_drive_cells": n_drive_cells, "cell_specific": cell_specific})
     default_data = _update_nested_dict(default_data, data)
 
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
         # Note that opt_tab_quad_hbox_layout and opt_tab_column_titles are not needed
         # here.
@@ -2669,7 +2672,7 @@ def _create_widgets_for_rhythmic(
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
         )
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         simple_widget_kwargs = dict(
             layout=drive_tab_var_layout, style=drive_tab_var_style
         )
@@ -2684,7 +2687,7 @@ def _create_widgets_for_rhythmic(
 
     # burst_rate and burst_std widgets
     # --------------------------------------------------------------------------
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         new_drive_widgets.update(
             _create_opt_widgets_for_drive_var(
                 "burst_rate",
@@ -2699,7 +2702,7 @@ def _create_widgets_for_rhythmic(
                 **complex_opt_widget_kwargs,
             )
         )
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         burst_rate = BoundedFloatText(
             value=default_data["burst_rate"],
             description="Burst rate (Hz)",
@@ -2735,11 +2738,11 @@ def _create_widgets_for_rhythmic(
     tstop = BoundedFloatText(
         value=default_data["tstop"],
         description="Stop time (ms)",
-        max=tstop_widget.value if not for_opt else 1e6,
+        max=tstop_widget.value if not choose_tab_drive_or_opt == "opt" else 1e6,
         **simple_widget_kwargs,
     )
 
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         _make_opt_observers(tstart, "tstart", drive_widgets, drive_idx)
         _make_opt_observers(tstart_std, "tstart_std", drive_widgets, drive_idx)
         _make_opt_observers(tstop, "tstop", drive_widgets, drive_idx)
@@ -2758,7 +2761,7 @@ def _create_widgets_for_rhythmic(
         **simple_widget_kwargs,
     )
 
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         _make_opt_observers(numspikes, "numspikes", drive_widgets, drive_idx)
 
     # n_drive_cells, cell_specific, seedcore widgets
@@ -2778,7 +2781,7 @@ def _create_widgets_for_rhythmic(
         value=default_data["seedcore"], description="Seed", **simple_widget_kwargs
     )
 
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         _make_opt_observers(n_drive_cells, "n_drive_cells", drive_widgets, drive_idx)
         _make_opt_observers(cell_specific, "is_cell_specific", drive_widgets, drive_idx)
         _make_opt_observers(seedcore, "seedcore", drive_widgets, drive_idx)
@@ -2802,21 +2805,21 @@ def _create_widgets_for_rhythmic(
 
     # Synaptic widgets
     # --------------------------------------------------------------------------
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         syn_args = complex_opt_widget_kwargs
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         syn_args = dict(
             drive_tab_var_layout=drive_tab_var_layout,
             drive_tab_var_style=drive_tab_var_style,
         )
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
         location,
+        choose_tab_drive_or_opt,
         data={
             "weights_ampa": weights_ampa,
             "weights_nmda": weights_nmda,
             "delays": delays,
         },
-        for_opt=for_opt,
         opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
         **syn_args,
     )
@@ -2824,7 +2827,7 @@ def _create_widgets_for_rhythmic(
 
     # Build the VBox layout
     # --------------------------------------------------------------------------
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         new_drive_box = VBox(
             [
                 opt_tab_column_titles,
@@ -2844,7 +2847,7 @@ def _create_widgets_for_rhythmic(
             ]
             + syn_widgets_list
         )
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         new_drive_box = VBox(
             [
                 tstart,
@@ -2867,6 +2870,7 @@ def _create_widgets_for_poisson(
     name,
     tstop_widget,
     location,
+    choose_tab_drive_or_opt,  # which tab to build for, including which kwargs to use
     data={},
     weights_ampa=None,
     weights_nmda=None,
@@ -2877,7 +2881,6 @@ def _create_widgets_for_poisson(
     drive_tab_var_layout=None,
     drive_tab_var_style=None,
     # Optimization-tab-specific kwargs
-    for_opt=False,
     opt_tab_quad_hbox_layout=None,
     opt_tab_column_titles=None,
     initial_constraint_range_percentage=None,
@@ -2893,10 +2896,10 @@ def _create_widgets_for_poisson(
 ):
     """Create all widgets (& observers) for a Poisson drive.
 
-    When ``for_opt=False`` (default), this creates the widgets for the Drives
-    tab. When ``for_opt=True``, this creates the widgets for the Optimization
-    tab, including constraint widgets and observers that mirror the Drives-tab
-    widgets.
+    When ``choose_tab_drive_or_opt=="drive"``, this creates the widgets for the Drives
+    tab. When ``choose_tab_drive_or_opt=="opt"``, this creates the widgets for the
+    Optimization tab, including constraint widgets and observers that mirror the
+    Drives-tab widgets.
     """
     default_data = {
         "tstart": 0.0,
@@ -2914,7 +2917,7 @@ def _create_widgets_for_poisson(
     data.update({"n_drive_cells": n_drive_cells, "cell_specific": cell_specific})
     default_data = _update_nested_dict(default_data, data)
 
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
         # Note that opt_tab_quad_hbox_layout and opt_tab_column_titles are not needed
         # here.
@@ -2930,7 +2933,7 @@ def _create_widgets_for_poisson(
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
         )
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         simple_widget_kwargs = dict(
             layout=drive_tab_var_layout, style=drive_tab_var_style
         )
@@ -2954,12 +2957,12 @@ def _create_widgets_for_poisson(
     )
     tstop = BoundedFloatText(
         value=default_data["tstop"],
-        max=tstop_widget.value if not for_opt else 1e6,
+        max=tstop_widget.value if choose_tab_drive_or_opt == "drive" else 1e6,
         description="Stop time (ms)",
         **simple_widget_kwargs,
     )
 
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         _make_opt_observers(tstart, "tstart", drive_widgets, drive_idx)
         _make_opt_observers(tstop, "tstop", drive_widgets, drive_idx)
 
@@ -2980,7 +2983,7 @@ def _create_widgets_for_poisson(
         value=default_data["seedcore"], description="Seed", **simple_widget_kwargs
     )
 
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         _make_opt_observers(n_drive_cells, "n_drive_cells", drive_widgets, drive_idx)
         _make_opt_observers(cell_specific, "is_cell_specific", drive_widgets, drive_idx)
         _make_opt_observers(seedcore, "seedcore", drive_widgets, drive_idx)
@@ -3002,32 +3005,32 @@ def _create_widgets_for_poisson(
 
     # Synaptic widgets
     # --------------------------------------------------------------------------
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         syn_args = complex_opt_widget_kwargs
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         syn_args = dict(
             drive_tab_var_layout=drive_tab_var_layout,
             drive_tab_var_style=drive_tab_var_style,
         )
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
         location,
+        choose_tab_drive_or_opt,
         data={
             "weights_ampa": weights_ampa,
             "weights_nmda": weights_nmda,
             "delays": delays,
         },
-        for_opt=for_opt,
         opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
         if_poisson=True,
         **syn_args,
     )
     new_drive_widgets.update(syn_widgets_dict)
-    if not for_opt:
+    if choose_tab_drive_or_opt == "drive":
         new_drive_widgets["rate_constant"] = syn_widgets_dict["rate_constant"]
 
     # Build the VBox layout
     # --------------------------------------------------------------------------
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         new_drive_box = VBox(
             [
                 opt_tab_column_titles,
@@ -3039,7 +3042,7 @@ def _create_widgets_for_poisson(
             ]
             + syn_widgets_list
         )
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         new_drive_box = VBox(
             [tstart, tstop, n_drive_cells, cell_specific, seedcore] + syn_widgets_list
         )
@@ -3050,6 +3053,7 @@ def _create_widgets_for_poisson(
 def _create_widgets_for_evoked(
     name,
     location,
+    choose_tab_drive_or_opt,  # which tab to build for, including which kwargs to use
     data={},
     weights_ampa=None,
     weights_nmda=None,
@@ -3060,7 +3064,6 @@ def _create_widgets_for_evoked(
     drive_tab_var_layout=None,
     drive_tab_var_style=None,
     # Optimization-tab-specific kwargs
-    for_opt=False,
     opt_tab_quad_hbox_layout=None,
     opt_tab_column_titles=None,
     initial_constraint_range_percentage=None,
@@ -3076,10 +3079,10 @@ def _create_widgets_for_evoked(
 ):
     """Create all widgets (& observers) for an Evoked drive.
 
-    When ``for_opt=False`` (default), this creates the widgets for the Drives
-    tab. When ``for_opt=True``, this creates the widgets for the Optimization
-    tab, including constraint widgets and observers that mirror the Drives-tab
-    widgets.
+    When ``choose_tab_drive_or_opt=="drive"``, this creates the widgets for the Drives
+    tab. When ``choose_tab_drive_or_opt=="opt"``, this creates the widgets for the
+    Optimization tab, including constraint widgets and observers that mirror the
+    Drives-tab widgets.
     """
     default_data = {
         "mu": 0,
@@ -3092,7 +3095,7 @@ def _create_widgets_for_evoked(
     data.update({"n_drive_cells": n_drive_cells, "cell_specific": cell_specific})
     default_data = _update_nested_dict(default_data, data)
 
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
         # Note that opt_tab_quad_hbox_layout and opt_tab_column_titles are not needed
         # here.
@@ -3108,7 +3111,7 @@ def _create_widgets_for_evoked(
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
         )
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         simple_widget_kwargs = dict(
             layout=drive_tab_var_layout, style=drive_tab_var_style
         )
@@ -3124,7 +3127,7 @@ def _create_widgets_for_evoked(
 
     # mu and sigma widgets
     # --------------------------------------------------------------------------
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         new_drive_widgets.update(
             _create_opt_widgets_for_drive_var(
                 "mu",
@@ -3139,7 +3142,7 @@ def _create_widgets_for_evoked(
                 **complex_opt_widget_kwargs,
             )
         )
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         mu = BoundedFloatText(
             value=default_data["mu"],
             description="Mean time:",
@@ -3160,7 +3163,7 @@ def _create_widgets_for_evoked(
 
     # numspikes widget
     # --------------------------------------------------------------------------
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         numspikes = BoundedIntText(
             value=default_data["numspikes"],
             description="No. Spikes:",
@@ -3169,7 +3172,7 @@ def _create_widgets_for_evoked(
             **simple_widget_kwargs,
         )
         _make_opt_observers(numspikes, "numspikes", drive_widgets, drive_idx)
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         numspikes = IntText(
             value=default_data["numspikes"],
             description="No. Spikes:",
@@ -3193,7 +3196,7 @@ def _create_widgets_for_evoked(
         value=default_data["seedcore"], description="Seed: ", **simple_widget_kwargs
     )
 
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         _make_opt_observers(n_drive_cells, "n_drive_cells", drive_widgets, drive_idx)
         _make_opt_observers(cell_specific, "is_cell_specific", drive_widgets, drive_idx)
         _make_opt_observers(seedcore, "seedcore", drive_widgets, drive_idx)
@@ -3214,21 +3217,21 @@ def _create_widgets_for_evoked(
 
     # Synaptic widgets
     # --------------------------------------------------------------------------
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         syn_args = complex_opt_widget_kwargs
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         syn_args = dict(
             drive_tab_var_layout=drive_tab_var_layout,
             drive_tab_var_style=drive_tab_var_style,
         )
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
         location,
+        choose_tab_drive_or_opt,
         data={
             "weights_ampa": weights_ampa,
             "weights_nmda": weights_nmda,
             "delays": delays,
         },
-        for_opt=for_opt,
         opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
         **syn_args,
     )
@@ -3236,7 +3239,7 @@ def _create_widgets_for_evoked(
 
     # Build the VBox layout
     # --------------------------------------------------------------------------
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         new_drive_box = VBox(
             [
                 opt_tab_column_titles,
@@ -3253,7 +3256,7 @@ def _create_widgets_for_evoked(
             ]
             + syn_widgets_list
         )
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         new_drive_box = VBox(
             [
                 mu,
@@ -3272,12 +3275,12 @@ def _create_widgets_for_evoked(
 def _create_widgets_for_tonic(
     name,
     tstop_widget,
+    choose_tab_drive_or_opt,  # which tab to build for, including which kwargs to use
     data=None,
     # Drive-tab-specific kwargs
     drive_tab_var_layout=None,
     drive_tab_var_style=None,
     # Optimization-tab-specific kwargs
-    for_opt=False,
     opt_tab_quad_hbox_layout=None,
     opt_tab_column_titles=None,
     initial_constraint_range_percentage=None,
@@ -3293,14 +3296,14 @@ def _create_widgets_for_tonic(
 ):
     """Create all widgets (& observers) for a Tonic drive.
 
-    When ``for_opt=False`` (default), this creates the widgets for the Drives
-    tab. When ``for_opt=True``, this creates the widgets for the Optimization
-    tab, including constraint widgets and observers that mirror the Drives-tab
-    widgets.
+    When ``choose_tab_drive_or_opt=="drive"``, this creates the widgets for the Drives
+    tab. When ``choose_tab_drive_or_opt=="opt"``, this creates the widgets for the
+    Optimization tab, including constraint widgets and observers that mirror the
+    Drives-tab widgets.
     """
     cell_types = ["L2_basket", "L2_pyramidal", "L5_basket", "L5_pyramidal"]
 
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
         # Note that opt_tab_quad_hbox_layout and opt_tab_column_titles are not needed
         # here.
@@ -3316,13 +3319,13 @@ def _create_widgets_for_tonic(
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
         )
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         simple_widget_kwargs = dict(
             layout=drive_tab_var_layout, style=drive_tab_var_style
         )
         # No complex widget kwargs needed for non-Optimization widgets
 
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         # Note that unlike the similar "weights_ampa" etc., the drive_widgets
         # use "amplitude" in the singular, not plural "amplitudes".
         default_data = {
@@ -3337,7 +3340,7 @@ def _create_widgets_for_tonic(
         }
         if isinstance(data, dict):
             default_data = _update_nested_dict(default_data, data)
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         default_values = {"amplitude": 0, "t0": 0, "tstop": tstop_widget.value}
         t0 = default_values["t0"]
         tstop = default_values["tstop"]
@@ -3347,7 +3350,7 @@ def _create_widgets_for_tonic(
 
     # t0, tstop widgets
     # --------------------------------------------------------------------------
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         t0_widget = BoundedFloatText(
             value=default_data["t0"],
             description="Start time (ms):",
@@ -3363,7 +3366,7 @@ def _create_widgets_for_tonic(
             **simple_widget_kwargs,
         )
         _make_opt_observers(tstop_w, "tstop", drive_widgets, drive_idx)
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         amplitudes = dict()
         for cell_type in cell_types:
             amplitude = default_data[cell_type]["amplitude"]
@@ -3408,7 +3411,7 @@ def _create_widgets_for_tonic(
 
     # Amplitude widgets
     # --------------------------------------------------------------------------
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         syn_widgets_dict = {
             "amplitude": {},
         }
@@ -3432,7 +3435,7 @@ def _create_widgets_for_tonic(
             )
         new_drive_widgets.update(syn_widgets_dict)
         syn_widgets_list = [HTML(value="<b>Amplitude (nA)</b>")] + amplitudes_list
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         new_drive_widgets["amplitude"] = amplitudes
         widgets_dict = {
             "amplitude": amplitudes,
@@ -3449,7 +3452,7 @@ def _create_widgets_for_tonic(
 
     # Build the VBox layout
     # --------------------------------------------------------------------------
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         new_drive_box = VBox(
             [
                 opt_tab_column_titles,
@@ -3458,7 +3461,7 @@ def _create_widgets_for_tonic(
             ]
             + syn_widgets_list
         )
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         new_drive_box = VBox(syn_widgets_list)
 
     return new_drive_widgets, new_drive_box
@@ -3469,6 +3472,7 @@ def _create_widgets_for_drive(
     name,
     tstop_widget,
     location,
+    choose_tab_drive_or_opt,
     drive_data,
     weights_ampa,
     weights_nmda,
@@ -3479,7 +3483,6 @@ def _create_widgets_for_drive(
     drive_tab_var_layout=None,
     drive_tab_var_style=None,
     # Optimization-tab-specific kwargs
-    for_opt=False,
     opt_tab_quad_hbox_layout=None,
     opt_tab_column_titles=None,
     initial_constraint_range_percentage=None,
@@ -3495,13 +3498,13 @@ def _create_widgets_for_drive(
 ):
     """Build & arrange all widgets for a single Drive.
 
-    When ``for_opt=False`` (default), this creates the widgets for the Drives
-    tab. When ``for_opt=True``, this creates the Optimization widgets with
-    constraint controls and observers that mirror the Drives-tab widgets.
+    When ``choose_tab_drive_or_opt=="drive"``, this creates the widgets for the Drives
+    tab. When ``choose_tab_drive_or_opt=="opt"``, this creates the Optimization widgets
+    with constraint controls and observers that mirror the Drives-tab widgets.
 
     Returns ``(new_drive_widgets, new_drive_box)`` — the widget dict and VBox layout.
     """
-    if for_opt:
+    if choose_tab_drive_or_opt == "opt":
         kwargs = dict(
             opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
             opt_tab_column_titles=opt_tab_column_titles,
@@ -3516,10 +3519,14 @@ def _create_widgets_for_drive(
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
         )
-    else:
+    elif choose_tab_drive_or_opt == "drive":
         kwargs = dict(
             drive_tab_var_layout=drive_tab_var_layout,
             drive_tab_var_style=drive_tab_var_style,
+        )
+    else:
+        raise ValueError(
+            f"Invalid value for choose_tab_drive_or_opt: {choose_tab_drive_or_opt}"
         )
 
     if drive_type in ("Rhythmic", "Bursty"):
@@ -3527,13 +3534,13 @@ def _create_widgets_for_drive(
             name,
             tstop_widget,
             location,
+            choose_tab_drive_or_opt,
             data=drive_data,
             weights_ampa=weights_ampa,
             weights_nmda=weights_nmda,
             delays=delays,
             n_drive_cells=n_drive_cells,
             cell_specific=cell_specific,
-            for_opt=for_opt,
             **kwargs,
         )
     elif drive_type == "Poisson":
@@ -3541,34 +3548,34 @@ def _create_widgets_for_drive(
             name,
             tstop_widget,
             location,
+            choose_tab_drive_or_opt,
             data=drive_data,
             weights_ampa=weights_ampa,
             weights_nmda=weights_nmda,
             delays=delays,
             n_drive_cells=n_drive_cells,
             cell_specific=cell_specific,
-            for_opt=for_opt,
             **kwargs,
         )
     elif drive_type in ("Evoked", "Gaussian"):
         new_drive_widgets, new_drive_box = _create_widgets_for_evoked(
             name,
             location,
+            choose_tab_drive_or_opt,
             data=drive_data,
             weights_ampa=weights_ampa,
             weights_nmda=weights_nmda,
             delays=delays,
             n_drive_cells=n_drive_cells,
             cell_specific=cell_specific,
-            for_opt=for_opt,
             **kwargs,
         )
     elif drive_type == "Tonic":
         new_drive_widgets, new_drive_box = _create_widgets_for_tonic(
             name,
             tstop_widget,
+            choose_tab_drive_or_opt,
             data=drive_data,
-            for_opt=for_opt,
             **kwargs,
         )
     else:
