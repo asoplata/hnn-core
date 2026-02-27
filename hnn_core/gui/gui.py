@@ -2012,23 +2012,26 @@ class HNNGUI:
 
         # Stylin'
         # ------------------------------------------------------------------------------
+        # Dummy vars that will be removed during the next commit
+        layout = ""
+        style = ""
         # Visual config for "main variable" widgets
-        var_layout = Layout(width="230px")
-        var_style = {"description_width": "120px"}
+        opt_tab_var_layout = Layout(width="230px")
+        opt_tab_var_style = {"description_width": "120px"}
         # Visual config for checkbox widgets
-        checkbox_layout = Layout(width="30px")
-        checkbox_style = {"description_width": "0px"}
+        opt_tab_checkbox_layout = Layout(width="30px")
+        opt_tab_checkbox_style = {"description_width": "0px"}
         # Visual config for min and max constraint widgets
-        minmax_layout = Layout(width="100px")
-        minmax_style = {"description_width": "30px"}
-        quadruple_entry_hbox_layout = Layout(
+        opt_tab_minmax_layout = Layout(width="100px")
+        opt_tab_minmax_style = {"description_width": "30px"}
+        opt_tab_quad_hbox_layout = Layout(
             display="flex",
             flex_flow="row",
             align_items="flex-start",
             width="480px",  # carefully curated...
         )
         html_tab = "&emsp;"
-        column_titles = HTML(
+        opt_tab_column_titles = HTML(
             value=f"""
             <div style='margin:0px 0px 0px 190px;'><b>Optimize against?</b>
             {html_tab}{html_tab}{html_tab}Constraints (in %):</div>
@@ -2039,8 +2042,8 @@ class HNNGUI:
             drive_type,
             name,
             self.widget_tstop,
-            var_layout,
-            var_style,
+            layout,
+            style,
             location,
             prespecified_drive_data,
             prespecified_weights_ampa,
@@ -2049,12 +2052,14 @@ class HNNGUI:
             prespecified_n_drive_cells,
             prespecified_cell_specific,
             for_opt=True,
-            checkbox_layout=checkbox_layout,
-            checkbox_style=checkbox_style,
-            minmax_layout=minmax_layout,
-            minmax_style=minmax_style,
-            quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
-            column_titles=column_titles,
+            opt_tab_var_layout=opt_tab_var_layout,
+            opt_tab_var_style=opt_tab_var_style,
+            opt_tab_checkbox_layout=opt_tab_checkbox_layout,
+            opt_tab_checkbox_style=opt_tab_checkbox_style,
+            opt_tab_minmax_layout=opt_tab_minmax_layout,
+            opt_tab_minmax_style=opt_tab_minmax_style,
+            opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
+            opt_tab_column_titles=opt_tab_column_titles,
             initial_constraint_range_percentage=initial_constraint_range_percentage,
             drive_idx=drive_idx,
             drive_widgets=self.drive_widgets,
@@ -2585,12 +2590,14 @@ def _create_widgets_for_rhythmic(
     n_drive_cells=None,
     cell_specific=None,
     for_opt=False,
-    checkbox_layout=None,
-    checkbox_style=None,
-    minmax_layout=None,
-    minmax_style=None,
-    quadruple_entry_hbox_layout=None,
-    column_titles=None,
+    opt_tab_var_layout=None,
+    opt_tab_var_style=None,
+    opt_tab_checkbox_layout=None,
+    opt_tab_checkbox_style=None,
+    opt_tab_minmax_layout=None,
+    opt_tab_minmax_style=None,
+    opt_tab_quad_hbox_layout=None,
+    opt_tab_column_titles=None,
     initial_constraint_range_percentage=None,
     drive_idx=None,
     drive_widgets=None,
@@ -2617,17 +2624,20 @@ def _create_widgets_for_rhythmic(
     data.update({"n_drive_cells": n_drive_cells, "cell_specific": cell_specific})
     default_data = _update_nested_dict(default_data, data)
 
-    kwargs = dict(layout=layout, style=style)
+    if for_opt:
+        kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
+    else:
+        kwargs = dict(layout=layout, style=style)
 
     if for_opt:
         _autogen_opt_widget_kwargs = dict(
             initial_constraint_range_percentage=initial_constraint_range_percentage,
-            var_layout=layout,
-            var_style=style,
-            checkbox_layout=checkbox_layout,
-            checkbox_style=checkbox_style,
-            minmax_layout=minmax_layout,
-            minmax_style=minmax_style,
+            opt_tab_var_layout=opt_tab_var_layout,
+            opt_tab_var_style=opt_tab_var_style,
+            opt_tab_checkbox_layout=opt_tab_checkbox_layout,
+            opt_tab_checkbox_style=opt_tab_checkbox_style,
+            opt_tab_minmax_layout=opt_tab_minmax_layout,
+            opt_tab_minmax_style=opt_tab_minmax_style,
             drive_idx=drive_idx,
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
@@ -2758,6 +2768,7 @@ def _create_widgets_for_rhythmic(
 
     # Synaptic widgets
     # --------------------------------------------------------------------------
+    # AES TODO
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
         layout,
         style,
@@ -2768,7 +2779,7 @@ def _create_widgets_for_rhythmic(
             "delays": delays,
         },
         for_opt=for_opt,
-        quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
+        quadruple_entry_hbox_layout=opt_tab_quad_hbox_layout,
         **(_autogen_opt_widget_kwargs if for_opt else {}),
     )
     new_drive_widgets.update(syn_widgets_dict)
@@ -2778,15 +2789,15 @@ def _create_widgets_for_rhythmic(
     if for_opt:
         new_drive_box = VBox(
             [
-                column_titles,
+                opt_tab_column_titles,
                 tstart,
                 tstart_std,
                 tstop,
                 _create_hbox_for_opt_var(
-                    "burst_rate", new_drive_widgets, quadruple_entry_hbox_layout
+                    "burst_rate", new_drive_widgets, opt_tab_quad_hbox_layout
                 ),
                 _create_hbox_for_opt_var(
-                    "burst_std", new_drive_widgets, quadruple_entry_hbox_layout
+                    "burst_std", new_drive_widgets, opt_tab_quad_hbox_layout
                 ),
                 numspikes,
                 n_drive_cells,
@@ -2827,12 +2838,14 @@ def _create_widgets_for_poisson(
     n_drive_cells=None,
     cell_specific=None,
     for_opt=False,
-    checkbox_layout=None,
-    checkbox_style=None,
-    minmax_layout=None,
-    minmax_style=None,
-    quadruple_entry_hbox_layout=None,
-    column_titles=None,
+    opt_tab_var_layout=None,
+    opt_tab_var_style=None,
+    opt_tab_checkbox_layout=None,
+    opt_tab_checkbox_style=None,
+    opt_tab_minmax_layout=None,
+    opt_tab_minmax_style=None,
+    opt_tab_quad_hbox_layout=None,
+    opt_tab_column_titles=None,
     initial_constraint_range_percentage=None,
     drive_idx=None,
     drive_widgets=None,
@@ -2861,17 +2874,20 @@ def _create_widgets_for_poisson(
     data.update({"n_drive_cells": n_drive_cells, "cell_specific": cell_specific})
     default_data = _update_nested_dict(default_data, data)
 
-    kwargs = dict(layout=layout, style=style)
+    if for_opt:
+        kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
+    else:
+        kwargs = dict(layout=layout, style=style)
 
     if for_opt:
         _autogen_opt_widget_kwargs = dict(
             initial_constraint_range_percentage=initial_constraint_range_percentage,
-            var_layout=layout,
-            var_style=style,
-            checkbox_layout=checkbox_layout,
-            checkbox_style=checkbox_style,
-            minmax_layout=minmax_layout,
-            minmax_style=minmax_style,
+            opt_tab_var_layout=opt_tab_var_layout,
+            opt_tab_var_style=opt_tab_var_style,
+            opt_tab_checkbox_layout=opt_tab_checkbox_layout,
+            opt_tab_checkbox_style=opt_tab_checkbox_style,
+            opt_tab_minmax_layout=opt_tab_minmax_layout,
+            opt_tab_minmax_style=opt_tab_minmax_style,
             drive_idx=drive_idx,
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
@@ -2951,7 +2967,7 @@ def _create_widgets_for_poisson(
             "delays": delays,
         },
         for_opt=for_opt,
-        quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
+        quadruple_entry_hbox_layout=opt_tab_quad_hbox_layout,
         if_poisson=True,
         **(_autogen_opt_widget_kwargs if for_opt else {}),
     )
@@ -2964,7 +2980,7 @@ def _create_widgets_for_poisson(
     if for_opt:
         new_drive_box = VBox(
             [
-                column_titles,
+                opt_tab_column_titles,
                 tstart,
                 tstop,
                 n_drive_cells,
@@ -2993,12 +3009,14 @@ def _create_widgets_for_evoked(
     n_drive_cells=None,
     cell_specific=None,
     for_opt=False,
-    checkbox_layout=None,
-    checkbox_style=None,
-    minmax_layout=None,
-    minmax_style=None,
-    quadruple_entry_hbox_layout=None,
-    column_titles=None,
+    opt_tab_var_layout=None,
+    opt_tab_var_style=None,
+    opt_tab_checkbox_layout=None,
+    opt_tab_checkbox_style=None,
+    opt_tab_minmax_layout=None,
+    opt_tab_minmax_style=None,
+    opt_tab_quad_hbox_layout=None,
+    opt_tab_column_titles=None,
     initial_constraint_range_percentage=None,
     drive_idx=None,
     drive_widgets=None,
@@ -3022,7 +3040,10 @@ def _create_widgets_for_evoked(
     data.update({"n_drive_cells": n_drive_cells, "cell_specific": cell_specific})
     default_data = _update_nested_dict(default_data, data)
 
-    kwargs = dict(layout=layout, style=style)
+    if for_opt:
+        kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
+    else:
+        kwargs = dict(layout=layout, style=style)
 
     # Initialize the drive widget dict
     new_drive_widgets = dict(
@@ -3037,12 +3058,12 @@ def _create_widgets_for_evoked(
     if for_opt:
         _autogen_opt_widget_kwargs = dict(
             initial_constraint_range_percentage=initial_constraint_range_percentage,
-            var_layout=layout,
-            var_style=style,
-            checkbox_layout=checkbox_layout,
-            checkbox_style=checkbox_style,
-            minmax_layout=minmax_layout,
-            minmax_style=minmax_style,
+            opt_tab_var_layout=opt_tab_var_layout,
+            opt_tab_var_style=opt_tab_var_style,
+            opt_tab_checkbox_layout=opt_tab_checkbox_layout,
+            opt_tab_checkbox_style=opt_tab_checkbox_style,
+            opt_tab_minmax_layout=opt_tab_minmax_layout,
+            opt_tab_minmax_style=opt_tab_minmax_style,
             drive_idx=drive_idx,
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
@@ -3142,7 +3163,7 @@ def _create_widgets_for_evoked(
             "delays": delays,
         },
         for_opt=for_opt,
-        quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
+        quadruple_entry_hbox_layout=opt_tab_quad_hbox_layout,
         **(_autogen_opt_widget_kwargs if for_opt else {}),
     )
     new_drive_widgets.update(syn_widgets_dict)
@@ -3152,12 +3173,12 @@ def _create_widgets_for_evoked(
     if for_opt:
         new_drive_box = VBox(
             [
-                column_titles,
+                opt_tab_column_titles,
                 _create_hbox_for_opt_var(
-                    "mu", new_drive_widgets, quadruple_entry_hbox_layout
+                    "mu", new_drive_widgets, opt_tab_quad_hbox_layout
                 ),
                 _create_hbox_for_opt_var(
-                    "sigma", new_drive_widgets, quadruple_entry_hbox_layout
+                    "sigma", new_drive_widgets, opt_tab_quad_hbox_layout
                 ),
                 numspikes,
                 n_drive_cells,
@@ -3189,12 +3210,14 @@ def _create_widgets_for_tonic(
     style,
     data=None,
     for_opt=False,
-    checkbox_layout=None,
-    checkbox_style=None,
-    minmax_layout=None,
-    minmax_style=None,
-    quadruple_entry_hbox_layout=None,
-    column_titles=None,
+    opt_tab_var_layout=None,
+    opt_tab_var_style=None,
+    opt_tab_checkbox_layout=None,
+    opt_tab_checkbox_style=None,
+    opt_tab_minmax_layout=None,
+    opt_tab_minmax_style=None,
+    opt_tab_quad_hbox_layout=None,
+    opt_tab_column_titles=None,
     initial_constraint_range_percentage=None,
     drive_idx=None,
     drive_widgets=None,
@@ -3209,17 +3232,20 @@ def _create_widgets_for_tonic(
     """
     cell_types = ["L2_basket", "L2_pyramidal", "L5_basket", "L5_pyramidal"]
 
-    kwargs = dict(layout=layout, style=style)
+    if for_opt:
+        kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
+    else:
+        kwargs = dict(layout=layout, style=style)
 
     if for_opt:
         _autogen_opt_widget_kwargs = dict(
             initial_constraint_range_percentage=initial_constraint_range_percentage,
-            var_layout=layout,
-            var_style=style,
-            checkbox_layout=checkbox_layout,
-            checkbox_style=checkbox_style,
-            minmax_layout=minmax_layout,
-            minmax_style=minmax_style,
+            opt_tab_var_layout=opt_tab_var_layout,
+            opt_tab_var_style=opt_tab_var_style,
+            opt_tab_checkbox_layout=opt_tab_checkbox_layout,
+            opt_tab_checkbox_style=opt_tab_checkbox_style,
+            opt_tab_minmax_layout=opt_tab_minmax_layout,
+            opt_tab_minmax_style=opt_tab_minmax_style,
             drive_idx=drive_idx,
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
@@ -3319,7 +3345,7 @@ def _create_widgets_for_tonic(
                 _create_hbox_for_opt_var(
                     cell_type,
                     syn_widgets_dict["amplitude"],
-                    quadruple_entry_hbox_layout,
+                    opt_tab_quad_hbox_layout,
                 )
             )
         new_drive_widgets.update(syn_widgets_dict)
@@ -3344,7 +3370,7 @@ def _create_widgets_for_tonic(
     if for_opt:
         new_drive_box = VBox(
             [
-                column_titles,
+                opt_tab_column_titles,
                 t0_widget,
                 tstop_w,
             ]
@@ -3370,12 +3396,14 @@ def _create_widgets_for_drive(
     n_drive_cells,
     cell_specific,
     for_opt=False,
-    checkbox_layout=None,
-    checkbox_style=None,
-    minmax_layout=None,
-    minmax_style=None,
-    quadruple_entry_hbox_layout=None,
-    column_titles=None,
+    opt_tab_var_layout=None,
+    opt_tab_var_style=None,
+    opt_tab_checkbox_layout=None,
+    opt_tab_checkbox_style=None,
+    opt_tab_minmax_layout=None,
+    opt_tab_minmax_style=None,
+    opt_tab_quad_hbox_layout=None,
+    opt_tab_column_titles=None,
     initial_constraint_range_percentage=None,
     drive_idx=None,
     drive_widgets=None,
@@ -3391,12 +3419,14 @@ def _create_widgets_for_drive(
     """
     opt_kwargs = dict(
         for_opt=for_opt,
-        checkbox_layout=checkbox_layout,
-        checkbox_style=checkbox_style,
-        minmax_layout=minmax_layout,
-        minmax_style=minmax_style,
-        quadruple_entry_hbox_layout=quadruple_entry_hbox_layout,
-        column_titles=column_titles,
+        opt_tab_var_layout=opt_tab_var_layout,
+        opt_tab_var_style=opt_tab_var_style,
+        opt_tab_checkbox_layout=opt_tab_checkbox_layout,
+        opt_tab_checkbox_style=opt_tab_checkbox_style,
+        opt_tab_minmax_layout=opt_tab_minmax_layout,
+        opt_tab_minmax_style=opt_tab_minmax_style,
+        opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
+        opt_tab_column_titles=opt_tab_column_titles,
         initial_constraint_range_percentage=initial_constraint_range_percentage,
         drive_idx=drive_idx,
         drive_widgets=drive_widgets,
@@ -4372,12 +4402,12 @@ def _create_opt_widgets_for_drive_var(
     syn_type=None,
     init_bool=False,
     initial_constraint_range_percentage=None,
-    var_layout=None,
-    var_style=None,
-    checkbox_layout=None,
-    checkbox_style=None,
-    minmax_layout=None,
-    minmax_style=None,
+    opt_tab_var_layout=None,
+    opt_tab_var_style=None,
+    opt_tab_checkbox_layout=None,
+    opt_tab_checkbox_style=None,
+    opt_tab_minmax_layout=None,
+    opt_tab_minmax_style=None,
     drive_idx=None,
     drive_widgets=None,
     prior_opt_widget_values=None,
@@ -4433,13 +4463,13 @@ def _create_opt_widgets_for_drive_var(
         min=0,
         max=1e6,
         step=0.01,
-        layout=var_layout,
-        style=var_style,
+        layout=opt_tab_var_layout,
+        style=opt_tab_var_style,
     )
     opt_checkbox_widget = Checkbox(
         value=(prior_checkbox if prior_checkbox else init_bool),
-        layout=checkbox_layout,
-        style=checkbox_style,
+        layout=opt_tab_checkbox_layout,
+        style=opt_tab_checkbox_style,
     )
     opt_min_widget = BoundedFloatText(
         value=(
@@ -4451,8 +4481,8 @@ def _create_opt_widgets_for_drive_var(
         min=0,
         max=100,
         step=1,
-        layout=minmax_layout,
-        style=minmax_style,
+        layout=opt_tab_minmax_layout,
+        style=opt_tab_minmax_style,
     )
     opt_max_widget = BoundedFloatText(
         value=(
@@ -4464,8 +4494,8 @@ def _create_opt_widgets_for_drive_var(
         min=100,
         max=1000,
         step=1,
-        layout=minmax_layout,
-        style=minmax_style,
+        layout=opt_tab_minmax_layout,
+        style=opt_tab_minmax_style,
     )
 
     # Connect the main var_widget to its observed Drives tab equivalent, and vice-versa
