@@ -1493,7 +1493,9 @@ class HNNGUI:
             if not prespecified_drive_name
             else prespecified_drive_name
         )
-        style = {"description_width": "125px"}
+        drive_tab_var_layout = self.layout["drive_textbox"]
+        drive_tab_var_style = {"description_width": "125px"}
+
         prespecified_drive_data = (
             {} if not prespecified_drive_data else prespecified_drive_data
         )
@@ -1503,8 +1505,6 @@ class HNNGUI:
             drive_type,
             name,
             self.widget_tstop,
-            self.layout["drive_textbox"],
-            style,
             location,
             prespecified_drive_data,
             prespecified_weights_ampa,
@@ -1512,6 +1512,8 @@ class HNNGUI:
             prespecified_delays,
             prespecified_n_drive_cells,
             prespecified_cell_specific,
+            drive_tab_var_layout=drive_tab_var_layout,
+            drive_tab_var_style=drive_tab_var_style,
         )
 
         # Add delete button and assign its call-back function
@@ -2012,9 +2014,6 @@ class HNNGUI:
 
         # Stylin'
         # ------------------------------------------------------------------------------
-        # Dummy vars that will be removed during the next commit
-        layout = ""
-        style = ""
         # Visual config for "main variable" widgets
         opt_tab_var_layout = Layout(width="230px")
         opt_tab_var_style = {"description_width": "120px"}
@@ -2042,8 +2041,6 @@ class HNNGUI:
             drive_type,
             name,
             self.widget_tstop,
-            layout,
-            style,
             location,
             prespecified_drive_data,
             prespecified_weights_ampa,
@@ -2052,15 +2049,15 @@ class HNNGUI:
             prespecified_n_drive_cells,
             prespecified_cell_specific,
             for_opt=True,
+            opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
+            opt_tab_column_titles=opt_tab_column_titles,
+            initial_constraint_range_percentage=initial_constraint_range_percentage,
             opt_tab_var_layout=opt_tab_var_layout,
             opt_tab_var_style=opt_tab_var_style,
             opt_tab_checkbox_layout=opt_tab_checkbox_layout,
             opt_tab_checkbox_style=opt_tab_checkbox_style,
             opt_tab_minmax_layout=opt_tab_minmax_layout,
             opt_tab_minmax_style=opt_tab_minmax_style,
-            opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
-            opt_tab_column_titles=opt_tab_column_titles,
-            initial_constraint_range_percentage=initial_constraint_range_percentage,
             drive_idx=drive_idx,
             drive_widgets=self.drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
@@ -2353,10 +2350,12 @@ def _get_connectivity_widgets(conn_data, global_gain_textfields):
 
 
 def _create_synaptic_widgets(
-    layout,
-    style,
     location,
     data=None,
+    # Drive-tab-specific kwargs
+    drive_tab_var_layout=None,
+    drive_tab_var_style=None,
+    # Optimization-tab-specific kwargs
     for_opt=False,
     if_poisson=False,
     opt_tab_quad_hbox_layout=None,
@@ -2430,7 +2429,9 @@ def _create_synaptic_widgets(
             prior_opt_widget_values=prior_opt_widget_values,
         )
     else:
-        simple_widget_kwargs = dict(layout=layout, style=style)
+        simple_widget_kwargs = dict(
+            layout=drive_tab_var_layout, style=drive_tab_var_style
+        )
         # No complex widget kwargs needed for non-Optimization widgets
 
     cell_types = ["L5_pyramidal", "L2_pyramidal", "L5_basket", "L2_basket"]
@@ -2606,8 +2607,6 @@ def _cell_spec_change(change, widget):
 def _create_widgets_for_rhythmic(
     name,
     tstop_widget,
-    layout,
-    style,
     location,
     data={},
     weights_ampa=None,
@@ -2615,6 +2614,10 @@ def _create_widgets_for_rhythmic(
     delays=None,
     n_drive_cells=None,
     cell_specific=None,
+    # Drive-tab-specific kwargs
+    drive_tab_var_layout=None,
+    drive_tab_var_style=None,
+    # Optimization-tab-specific kwargs
     for_opt=False,
     opt_tab_quad_hbox_layout=None,
     opt_tab_column_titles=None,
@@ -2652,6 +2655,8 @@ def _create_widgets_for_rhythmic(
 
     if for_opt:
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
+        # Note that opt_tab_quad_hbox_layout and opt_tab_column_titles are not needed
+        # here.
         complex_opt_widget_kwargs = dict(
             initial_constraint_range_percentage=initial_constraint_range_percentage,
             opt_tab_var_layout=opt_tab_var_layout,
@@ -2665,7 +2670,9 @@ def _create_widgets_for_rhythmic(
             prior_opt_widget_values=prior_opt_widget_values,
         )
     else:
-        simple_widget_kwargs = dict(layout=layout, style=style)
+        simple_widget_kwargs = dict(
+            layout=drive_tab_var_layout, style=drive_tab_var_style
+        )
         # No complex widget kwargs needed for non-Optimization widgets
 
     # Initialize the drive widget dict
@@ -2795,9 +2802,14 @@ def _create_widgets_for_rhythmic(
 
     # Synaptic widgets
     # --------------------------------------------------------------------------
+    if for_opt:
+        syn_args = complex_opt_widget_kwargs
+    else:
+        syn_args = dict(
+            drive_tab_var_layout=drive_tab_var_layout,
+            drive_tab_var_style=drive_tab_var_style,
+        )
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
-        layout,
-        style,
         location,
         data={
             "weights_ampa": weights_ampa,
@@ -2806,7 +2818,7 @@ def _create_widgets_for_rhythmic(
         },
         for_opt=for_opt,
         opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
-        **(complex_opt_widget_kwargs if for_opt else {}),
+        **syn_args,
     )
     new_drive_widgets.update(syn_widgets_dict)
 
@@ -2854,8 +2866,6 @@ def _create_widgets_for_rhythmic(
 def _create_widgets_for_poisson(
     name,
     tstop_widget,
-    layout,
-    style,
     location,
     data={},
     weights_ampa=None,
@@ -2863,6 +2873,10 @@ def _create_widgets_for_poisson(
     delays=None,
     n_drive_cells=None,
     cell_specific=None,
+    # Drive-tab-specific kwargs
+    drive_tab_var_layout=None,
+    drive_tab_var_style=None,
+    # Optimization-tab-specific kwargs
     for_opt=False,
     opt_tab_quad_hbox_layout=None,
     opt_tab_column_titles=None,
@@ -2902,6 +2916,8 @@ def _create_widgets_for_poisson(
 
     if for_opt:
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
+        # Note that opt_tab_quad_hbox_layout and opt_tab_column_titles are not needed
+        # here.
         complex_opt_widget_kwargs = dict(
             initial_constraint_range_percentage=initial_constraint_range_percentage,
             opt_tab_var_layout=opt_tab_var_layout,
@@ -2915,7 +2931,9 @@ def _create_widgets_for_poisson(
             prior_opt_widget_values=prior_opt_widget_values,
         )
     else:
-        simple_widget_kwargs = dict(layout=layout, style=style)
+        simple_widget_kwargs = dict(
+            layout=drive_tab_var_layout, style=drive_tab_var_style
+        )
         # No complex widget kwargs needed for non-Optimization widgets
 
     # Initialize the drive widget dict
@@ -2984,9 +3002,14 @@ def _create_widgets_for_poisson(
 
     # Synaptic widgets
     # --------------------------------------------------------------------------
+    if for_opt:
+        syn_args = complex_opt_widget_kwargs
+    else:
+        syn_args = dict(
+            drive_tab_var_layout=drive_tab_var_layout,
+            drive_tab_var_style=drive_tab_var_style,
+        )
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
-        layout,
-        style,
         location,
         data={
             "weights_ampa": weights_ampa,
@@ -2996,7 +3019,7 @@ def _create_widgets_for_poisson(
         for_opt=for_opt,
         opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
         if_poisson=True,
-        **(complex_opt_widget_kwargs if for_opt else {}),
+        **syn_args,
     )
     new_drive_widgets.update(syn_widgets_dict)
     if not for_opt:
@@ -3026,8 +3049,6 @@ def _create_widgets_for_poisson(
 
 def _create_widgets_for_evoked(
     name,
-    layout,
-    style,
     location,
     data={},
     weights_ampa=None,
@@ -3035,6 +3056,10 @@ def _create_widgets_for_evoked(
     delays=None,
     n_drive_cells=None,
     cell_specific=None,
+    # Drive-tab-specific kwargs
+    drive_tab_var_layout=None,
+    drive_tab_var_style=None,
+    # Optimization-tab-specific kwargs
     for_opt=False,
     opt_tab_quad_hbox_layout=None,
     opt_tab_column_titles=None,
@@ -3069,6 +3094,8 @@ def _create_widgets_for_evoked(
 
     if for_opt:
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
+        # Note that opt_tab_quad_hbox_layout and opt_tab_column_titles are not needed
+        # here.
         complex_opt_widget_kwargs = dict(
             initial_constraint_range_percentage=initial_constraint_range_percentage,
             opt_tab_var_layout=opt_tab_var_layout,
@@ -3082,7 +3109,9 @@ def _create_widgets_for_evoked(
             prior_opt_widget_values=prior_opt_widget_values,
         )
     else:
-        simple_widget_kwargs = dict(layout=layout, style=style)
+        simple_widget_kwargs = dict(
+            layout=drive_tab_var_layout, style=drive_tab_var_style
+        )
         # No complex widget kwargs needed for non-Optimization widgets
 
     # Initialize the drive widget dict
@@ -3185,9 +3214,14 @@ def _create_widgets_for_evoked(
 
     # Synaptic widgets
     # --------------------------------------------------------------------------
+    if for_opt:
+        syn_args = complex_opt_widget_kwargs
+    else:
+        syn_args = dict(
+            drive_tab_var_layout=drive_tab_var_layout,
+            drive_tab_var_style=drive_tab_var_style,
+        )
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
-        layout,
-        style,
         location,
         data={
             "weights_ampa": weights_ampa,
@@ -3196,7 +3230,7 @@ def _create_widgets_for_evoked(
         },
         for_opt=for_opt,
         opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
-        **(complex_opt_widget_kwargs if for_opt else {}),
+        **syn_args,
     )
     new_drive_widgets.update(syn_widgets_dict)
 
@@ -3238,9 +3272,11 @@ def _create_widgets_for_evoked(
 def _create_widgets_for_tonic(
     name,
     tstop_widget,
-    layout,
-    style,
     data=None,
+    # Drive-tab-specific kwargs
+    drive_tab_var_layout=None,
+    drive_tab_var_style=None,
+    # Optimization-tab-specific kwargs
     for_opt=False,
     opt_tab_quad_hbox_layout=None,
     opt_tab_column_titles=None,
@@ -3266,6 +3302,8 @@ def _create_widgets_for_tonic(
 
     if for_opt:
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
+        # Note that opt_tab_quad_hbox_layout and opt_tab_column_titles are not needed
+        # here.
         complex_opt_widget_kwargs = dict(
             initial_constraint_range_percentage=initial_constraint_range_percentage,
             opt_tab_var_layout=opt_tab_var_layout,
@@ -3279,7 +3317,9 @@ def _create_widgets_for_tonic(
             prior_opt_widget_values=prior_opt_widget_values,
         )
     else:
-        simple_widget_kwargs = dict(layout=layout, style=style)
+        simple_widget_kwargs = dict(
+            layout=drive_tab_var_layout, style=drive_tab_var_style
+        )
         # No complex widget kwargs needed for non-Optimization widgets
 
     if for_opt:
@@ -3428,8 +3468,6 @@ def _create_widgets_for_drive(
     drive_type,
     name,
     tstop_widget,
-    layout,
-    style,
     location,
     drive_data,
     weights_ampa,
@@ -3437,16 +3475,20 @@ def _create_widgets_for_drive(
     delays,
     n_drive_cells,
     cell_specific,
+    # Drive-tab-specific kwargs
+    drive_tab_var_layout=None,
+    drive_tab_var_style=None,
+    # Optimization-tab-specific kwargs
     for_opt=False,
+    opt_tab_quad_hbox_layout=None,
+    opt_tab_column_titles=None,
+    initial_constraint_range_percentage=None,
     opt_tab_var_layout=None,
     opt_tab_var_style=None,
     opt_tab_checkbox_layout=None,
     opt_tab_checkbox_style=None,
     opt_tab_minmax_layout=None,
     opt_tab_minmax_style=None,
-    opt_tab_quad_hbox_layout=None,
-    opt_tab_column_titles=None,
-    initial_constraint_range_percentage=None,
     drive_idx=None,
     drive_widgets=None,
     prior_opt_widget_values=None,
@@ -3459,28 +3501,31 @@ def _create_widgets_for_drive(
 
     Returns ``(new_drive_widgets, new_drive_box)`` — the widget dict and VBox layout.
     """
-    opt_kwargs = dict(
-        for_opt=for_opt,
-        opt_tab_var_layout=opt_tab_var_layout,
-        opt_tab_var_style=opt_tab_var_style,
-        opt_tab_checkbox_layout=opt_tab_checkbox_layout,
-        opt_tab_checkbox_style=opt_tab_checkbox_style,
-        opt_tab_minmax_layout=opt_tab_minmax_layout,
-        opt_tab_minmax_style=opt_tab_minmax_style,
-        opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
-        opt_tab_column_titles=opt_tab_column_titles,
-        initial_constraint_range_percentage=initial_constraint_range_percentage,
-        drive_idx=drive_idx,
-        drive_widgets=drive_widgets,
-        prior_opt_widget_values=prior_opt_widget_values,
-    )
+    if for_opt:
+        kwargs = dict(
+            opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
+            opt_tab_column_titles=opt_tab_column_titles,
+            initial_constraint_range_percentage=initial_constraint_range_percentage,
+            opt_tab_var_layout=opt_tab_var_layout,
+            opt_tab_var_style=opt_tab_var_style,
+            opt_tab_checkbox_layout=opt_tab_checkbox_layout,
+            opt_tab_checkbox_style=opt_tab_checkbox_style,
+            opt_tab_minmax_layout=opt_tab_minmax_layout,
+            opt_tab_minmax_style=opt_tab_minmax_style,
+            drive_idx=drive_idx,
+            drive_widgets=drive_widgets,
+            prior_opt_widget_values=prior_opt_widget_values,
+        )
+    else:
+        kwargs = dict(
+            drive_tab_var_layout=drive_tab_var_layout,
+            drive_tab_var_style=drive_tab_var_style,
+        )
 
     if drive_type in ("Rhythmic", "Bursty"):
         new_drive_widgets, new_drive_box = _create_widgets_for_rhythmic(
             name,
             tstop_widget,
-            layout,
-            style,
             location,
             data=drive_data,
             weights_ampa=weights_ampa,
@@ -3488,14 +3533,13 @@ def _create_widgets_for_drive(
             delays=delays,
             n_drive_cells=n_drive_cells,
             cell_specific=cell_specific,
-            **opt_kwargs,
+            for_opt=for_opt,
+            **kwargs,
         )
     elif drive_type == "Poisson":
         new_drive_widgets, new_drive_box = _create_widgets_for_poisson(
             name,
             tstop_widget,
-            layout,
-            style,
             location,
             data=drive_data,
             weights_ampa=weights_ampa,
@@ -3503,13 +3547,12 @@ def _create_widgets_for_drive(
             delays=delays,
             n_drive_cells=n_drive_cells,
             cell_specific=cell_specific,
-            **opt_kwargs,
+            for_opt=for_opt,
+            **kwargs,
         )
     elif drive_type in ("Evoked", "Gaussian"):
         new_drive_widgets, new_drive_box = _create_widgets_for_evoked(
             name,
-            layout,
-            style,
             location,
             data=drive_data,
             weights_ampa=weights_ampa,
@@ -3517,16 +3560,16 @@ def _create_widgets_for_drive(
             delays=delays,
             n_drive_cells=n_drive_cells,
             cell_specific=cell_specific,
-            **opt_kwargs,
+            for_opt=for_opt,
+            **kwargs,
         )
     elif drive_type == "Tonic":
         new_drive_widgets, new_drive_box = _create_widgets_for_tonic(
             name,
             tstop_widget,
-            layout,
-            style,
             data=drive_data,
-            **opt_kwargs,
+            for_opt=for_opt,
+            **kwargs,
         )
     else:
         raise ValueError(f"Unknown drive type {drive_type}")
