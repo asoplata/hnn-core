@@ -119,6 +119,7 @@ def test_external_drive_times():
         )
 
 
+
 def test_drive_seeds(setup_net):
     """Test that unique spike times are generated across trials"""
     net = setup_net
