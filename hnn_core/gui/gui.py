@@ -2738,7 +2738,7 @@ def _create_widgets_for_rhythmic(
     tstop = BoundedFloatText(
         value=default_data["tstop"],
         description="Stop time (ms)",
-        max=tstop_widget.value if not choose_tab_drive_or_opt == "opt" else 1e6,
+        max=tstop_widget.value,
         **simple_widget_kwargs,
     )
 
@@ -2957,7 +2957,7 @@ def _create_widgets_for_poisson(
     )
     tstop = BoundedFloatText(
         value=default_data["tstop"],
-        max=tstop_widget.value if choose_tab_drive_or_opt == "drive" else 1e6,
+        max=tstop_widget.value,
         description="Stop time (ms)",
         **simple_widget_kwargs,
     )
