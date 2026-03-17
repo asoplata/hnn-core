@@ -2681,11 +2681,11 @@ def _create_widgets_for_rhythmic(
         simple_widget_kwargs = dict(
             layout=drive_tab_var_layout, style=drive_tab_var_style
         )
+        # No complex widget kwargs needed for non-Optimization widgets
         syn_widget_kwargs = dict(
             drive_tab_var_layout=drive_tab_var_layout,
             drive_tab_var_style=drive_tab_var_style,
         )
-        # No complex widget kwargs needed for non-Optimization widgets
 
     # Initialize the drive widget dict
     new_drive_widgets = dict(
@@ -2828,7 +2828,9 @@ def _create_widgets_for_rhythmic(
         )
     )
 
-    # Synaptic widgets
+    # Add the synaptic widgets. If creating them for the Optimization tab, we are
+    # interested in constraining/optimizing against all synaptic parameters, and
+    # therefore need to create widgets for all:
     # --------------------------------------------------------------------------
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
         location,
@@ -2843,7 +2845,7 @@ def _create_widgets_for_rhythmic(
     )
     new_drive_widgets.update(syn_widgets_dict)
 
-    # Build the VBox layout
+    # Finally, decide the "VBox" positioning of all of the above widgets
     # --------------------------------------------------------------------------
     if choose_tab_drive_or_opt == "opt":
         new_drive_box = VBox(
@@ -2960,11 +2962,11 @@ def _create_widgets_for_poisson(
         simple_widget_kwargs = dict(
             layout=drive_tab_var_layout, style=drive_tab_var_style
         )
+        # No complex widget kwargs needed for non-Optimization widgets
         syn_widget_kwargs = dict(
             drive_tab_var_layout=drive_tab_var_layout,
             drive_tab_var_style=drive_tab_var_style,
         )
-        # No complex widget kwargs needed for non-Optimization widgets
 
     # Initialize the drive widget dict
     new_drive_widgets = dict(
@@ -3036,7 +3038,9 @@ def _create_widgets_for_poisson(
         )
     )
 
-    # Synaptic widgets
+    # Add the synaptic widgets. If creating them for the Optimization tab, we are
+    # interested in constraining/optimizing against all synaptic parameters, and
+    # therefore need to create widgets for all:
     # --------------------------------------------------------------------------
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
         location,
@@ -3051,10 +3055,11 @@ def _create_widgets_for_poisson(
         **syn_widget_kwargs,
     )
     new_drive_widgets.update(syn_widgets_dict)
+    # AES TODO
     if choose_tab_drive_or_opt == "drive":
         new_drive_widgets["rate_constant"] = syn_widgets_dict["rate_constant"]
 
-    # Build the VBox layout
+    # Finally, decide the "VBox" positioning of all of the above widgets
     # --------------------------------------------------------------------------
     if choose_tab_drive_or_opt == "opt":
         new_drive_box = VBox(
@@ -3146,11 +3151,11 @@ def _create_widgets_for_evoked(
         simple_widget_kwargs = dict(
             layout=drive_tab_var_layout, style=drive_tab_var_style
         )
+        # No complex widget kwargs needed for non-Optimization widgets
         syn_widget_kwargs = dict(
             drive_tab_var_layout=drive_tab_var_layout,
             drive_tab_var_style=drive_tab_var_style,
         )
-        # No complex widget kwargs needed for non-Optimization widgets
 
     # Initialize the drive widget dict
     new_drive_widgets = dict(
@@ -3255,7 +3260,9 @@ def _create_widgets_for_evoked(
         )
     )
 
-    # Synaptic widgets
+    # Add the synaptic widgets. If creating them for the Optimization tab, we are
+    # interested in constraining/optimizing against all synaptic parameters, and
+    # therefore need to create widgets for all:
     # --------------------------------------------------------------------------
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
         location,
@@ -3270,7 +3277,7 @@ def _create_widgets_for_evoked(
     )
     new_drive_widgets.update(syn_widgets_dict)
 
-    # Build the VBox layout
+    # Finally, decide the "VBox" positioning of all of the above widgets
     # --------------------------------------------------------------------------
     if choose_tab_drive_or_opt == "opt":
         new_drive_box = VBox(
@@ -3487,7 +3494,7 @@ def _create_widgets_for_tonic(
             + list(amplitudes.values())
         )
 
-    # Build the VBox layout
+    # Finally, decide the "VBox" positioning of all of the above widgets
     # --------------------------------------------------------------------------
     if choose_tab_drive_or_opt == "opt":
         new_drive_box = VBox(
