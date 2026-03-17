@@ -2754,6 +2754,15 @@ def _create_widgets_for_rhythmic(
         _make_opt_observers(tstart_std, "tstart_std", drive_widgets, drive_idx)
         _make_opt_observers(tstop, "tstop", drive_widgets, drive_idx)
 
+    # Update our outgoing collection of widgets:
+    new_drive_widgets.update(
+        dict(
+            tstart=tstart,
+            tstart_std=tstart_std,
+            tstop=tstop,
+        )
+    )
+
     # numspikes widget
     # --------------------------------------------------------------------------
     # Numspikes is a special case, since it MUST be an integer, but our
@@ -2772,6 +2781,9 @@ def _create_widgets_for_rhythmic(
     # Simulation tab equivalents:
     if choose_tab_drive_or_opt == "opt":
         _make_opt_observers(numspikes, "numspikes", drive_widgets, drive_idx)
+
+    # Update our outgoing collection of widgets:
+    new_drive_widgets.update(dict(numspikes=numspikes))
 
     # n_drive_cells, cell_specific, seedcore widgets
     # --------------------------------------------------------------------------
@@ -2802,12 +2814,9 @@ def _create_widgets_for_rhythmic(
         partial(_cell_spec_change, widget=n_drive_cells), names="value"
     )
 
+    # Update our outgoing collection of widgets:
     new_drive_widgets.update(
         dict(
-            tstart=tstart,
-            tstart_std=tstart_std,
-            tstop=tstop,
-            numspikes=numspikes,
             n_drive_cells=n_drive_cells,
             is_cell_specific=cell_specific,
             seedcore=seedcore,
@@ -2983,6 +2992,9 @@ def _create_widgets_for_poisson(
         _make_opt_observers(tstart, "tstart", drive_widgets, drive_idx)
         _make_opt_observers(tstop, "tstop", drive_widgets, drive_idx)
 
+    # Update our outgoing collection of widgets:
+    new_drive_widgets.update(dict(tstart=tstart, tstop=tstop))
+
     # n_drive_cells, cell_specific, seedcore widgets
     # --------------------------------------------------------------------------
     n_drive_cells = IntText(
@@ -3012,10 +3024,9 @@ def _create_widgets_for_poisson(
         partial(_cell_spec_change, widget=n_drive_cells), names="value"
     )
 
+    # Update our outgoing collection of widgets:
     new_drive_widgets.update(
         dict(
-            tstart=tstart,
-            tstop=tstop,
             n_drive_cells=n_drive_cells,
             is_cell_specific=cell_specific,
             seedcore=seedcore,
@@ -3202,6 +3213,9 @@ def _create_widgets_for_evoked(
             **simple_widget_kwargs,
         )
 
+    # Update our outgoing collection of widgets:
+    new_drive_widgets.update(dict(numspikes=numspikes))
+
     # n_drive_cells, cell_specific, seedcore widgets
     # --------------------------------------------------------------------------
     n_drive_cells = IntText(
@@ -3231,9 +3245,9 @@ def _create_widgets_for_evoked(
         partial(_cell_spec_change, widget=n_drive_cells), names="value"
     )
 
+    # Update our outgoing collection of widgets:
     new_drive_widgets.update(
         dict(
-            numspikes=numspikes,
             n_drive_cells=n_drive_cells,
             is_cell_specific=cell_specific,
             seedcore=seedcore,
