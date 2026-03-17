@@ -2676,9 +2676,14 @@ def _create_widgets_for_rhythmic(
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
         )
+        syn_widget_kwargs = complex_opt_widget_kwargs
     elif choose_tab_drive_or_opt == "drive":
         simple_widget_kwargs = dict(
             layout=drive_tab_var_layout, style=drive_tab_var_style
+        )
+        syn_widget_kwargs = dict(
+            drive_tab_var_layout=drive_tab_var_layout,
+            drive_tab_var_style=drive_tab_var_style,
         )
         # No complex widget kwargs needed for non-Optimization widgets
 
@@ -2825,13 +2830,6 @@ def _create_widgets_for_rhythmic(
 
     # Synaptic widgets
     # --------------------------------------------------------------------------
-    if choose_tab_drive_or_opt == "opt":
-        syn_args = complex_opt_widget_kwargs
-    elif choose_tab_drive_or_opt == "drive":
-        syn_args = dict(
-            drive_tab_var_layout=drive_tab_var_layout,
-            drive_tab_var_style=drive_tab_var_style,
-        )
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
         location,
         choose_tab_drive_or_opt,
@@ -2841,7 +2839,7 @@ def _create_widgets_for_rhythmic(
             "delays": delays,
         },
         opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
-        **syn_args,
+        **syn_widget_kwargs,
     )
     new_drive_widgets.update(syn_widgets_dict)
 
@@ -2957,9 +2955,14 @@ def _create_widgets_for_poisson(
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
         )
+        syn_widget_kwargs = complex_opt_widget_kwargs
     elif choose_tab_drive_or_opt == "drive":
         simple_widget_kwargs = dict(
             layout=drive_tab_var_layout, style=drive_tab_var_style
+        )
+        syn_widget_kwargs = dict(
+            drive_tab_var_layout=drive_tab_var_layout,
+            drive_tab_var_style=drive_tab_var_style,
         )
         # No complex widget kwargs needed for non-Optimization widgets
 
@@ -3035,13 +3038,6 @@ def _create_widgets_for_poisson(
 
     # Synaptic widgets
     # --------------------------------------------------------------------------
-    if choose_tab_drive_or_opt == "opt":
-        syn_args = complex_opt_widget_kwargs
-    elif choose_tab_drive_or_opt == "drive":
-        syn_args = dict(
-            drive_tab_var_layout=drive_tab_var_layout,
-            drive_tab_var_style=drive_tab_var_style,
-        )
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
         location,
         choose_tab_drive_or_opt,
@@ -3052,7 +3048,7 @@ def _create_widgets_for_poisson(
         },
         opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
         if_poisson=True,
-        **syn_args,
+        **syn_widget_kwargs,
     )
     new_drive_widgets.update(syn_widgets_dict)
     if choose_tab_drive_or_opt == "drive":
@@ -3145,9 +3141,14 @@ def _create_widgets_for_evoked(
             drive_widgets=drive_widgets,
             prior_opt_widget_values=prior_opt_widget_values,
         )
+        syn_widget_kwargs = complex_opt_widget_kwargs
     elif choose_tab_drive_or_opt == "drive":
         simple_widget_kwargs = dict(
             layout=drive_tab_var_layout, style=drive_tab_var_style
+        )
+        syn_widget_kwargs = dict(
+            drive_tab_var_layout=drive_tab_var_layout,
+            drive_tab_var_style=drive_tab_var_style,
         )
         # No complex widget kwargs needed for non-Optimization widgets
 
@@ -3256,13 +3257,6 @@ def _create_widgets_for_evoked(
 
     # Synaptic widgets
     # --------------------------------------------------------------------------
-    if choose_tab_drive_or_opt == "opt":
-        syn_args = complex_opt_widget_kwargs
-    elif choose_tab_drive_or_opt == "drive":
-        syn_args = dict(
-            drive_tab_var_layout=drive_tab_var_layout,
-            drive_tab_var_style=drive_tab_var_style,
-        )
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
         location,
         choose_tab_drive_or_opt,
@@ -3272,7 +3266,7 @@ def _create_widgets_for_evoked(
             "delays": delays,
         },
         opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
-        **syn_args,
+        **syn_widget_kwargs,
     )
     new_drive_widgets.update(syn_widgets_dict)
 
