@@ -2642,6 +2642,8 @@ def _create_widgets_for_rhythmic(
     for the Optimization tab, including constraint widgets and observers that mirror the
     Drives-tab widgets.
     """
+    # Initialize our data dict with default values, then overwrite with any passed
+    # values:
     default_data = {
         "tstart": 0.0,
         "tstart_std": 0.0,
@@ -2656,6 +2658,8 @@ def _create_widgets_for_rhythmic(
     data.update({"n_drive_cells": n_drive_cells, "cell_specific": cell_specific})
     default_data = _update_nested_dict(default_data, data)
 
+    # Set our layout and styling preferences for the widgets according to which tab
+    # we're building for:
     if choose_tab_drive_or_opt == "opt":
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
         # Note that opt_tab_quad_hbox_layout and opt_tab_column_titles are not needed
@@ -2717,6 +2721,7 @@ def _create_widgets_for_rhythmic(
             max=1e6,
             **simple_widget_kwargs,
         )
+        # Update our outgoing collection of widgets:
         new_drive_widgets.update(dict(burst_rate=burst_rate, burst_std=burst_std))
 
     # tstart, tstart_std, tstop widgets
@@ -2742,6 +2747,8 @@ def _create_widgets_for_rhythmic(
         **simple_widget_kwargs,
     )
 
+    # In the Optimization tab case, we want to cross-link these widgets with their
+    # Simulation tab equivalents:
     if choose_tab_drive_or_opt == "opt":
         _make_opt_observers(tstart, "tstart", drive_widgets, drive_idx)
         _make_opt_observers(tstart_std, "tstart_std", drive_widgets, drive_idx)
@@ -2749,7 +2756,7 @@ def _create_widgets_for_rhythmic(
 
     # numspikes widget
     # --------------------------------------------------------------------------
-    # AES: numspikes is a special case, since it MUST be an integer, but our
+    # Numspikes is a special case, since it MUST be an integer, but our
     # Optimization's constraints-updating functions currently assume all constraints are
     # floats, since they update according to fractional values. Therefore, we cannot
     # currently pass it to our constraints to use in Optimization currently.
@@ -2761,6 +2768,8 @@ def _create_widgets_for_rhythmic(
         **simple_widget_kwargs,
     )
 
+    # In the Optimization tab case, we want to cross-link these widgets with their
+    # Simulation tab equivalents:
     if choose_tab_drive_or_opt == "opt":
         _make_opt_observers(numspikes, "numspikes", drive_widgets, drive_idx)
 
@@ -2781,6 +2790,8 @@ def _create_widgets_for_rhythmic(
         value=default_data["seedcore"], description="Seed", **simple_widget_kwargs
     )
 
+    # In the Optimization tab case, we want to cross-link these widgets with their
+    # Simulation tab equivalents:
     if choose_tab_drive_or_opt == "opt":
         _make_opt_observers(n_drive_cells, "n_drive_cells", drive_widgets, drive_idx)
         _make_opt_observers(cell_specific, "is_cell_specific", drive_widgets, drive_idx)
@@ -2901,6 +2912,8 @@ def _create_widgets_for_poisson(
     Optimization tab, including constraint widgets and observers that mirror the
     Drives-tab widgets.
     """
+    # Initialize our data dict with default values, then overwrite with any passed
+    # values:
     default_data = {
         "tstart": 0.0,
         "tstop": tstop_widget.value,
@@ -2917,6 +2930,8 @@ def _create_widgets_for_poisson(
     data.update({"n_drive_cells": n_drive_cells, "cell_specific": cell_specific})
     default_data = _update_nested_dict(default_data, data)
 
+    # Set our layout and styling preferences for the widgets according to which tab
+    # we're building for:
     if choose_tab_drive_or_opt == "opt":
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
         # Note that opt_tab_quad_hbox_layout and opt_tab_column_titles are not needed
@@ -2962,6 +2977,8 @@ def _create_widgets_for_poisson(
         **simple_widget_kwargs,
     )
 
+    # In the Optimization tab case, we want to cross-link these widgets with their
+    # Simulation tab equivalents:
     if choose_tab_drive_or_opt == "opt":
         _make_opt_observers(tstart, "tstart", drive_widgets, drive_idx)
         _make_opt_observers(tstop, "tstop", drive_widgets, drive_idx)
@@ -2983,6 +3000,8 @@ def _create_widgets_for_poisson(
         value=default_data["seedcore"], description="Seed", **simple_widget_kwargs
     )
 
+    # In the Optimization tab case, we want to cross-link these widgets with their
+    # Simulation tab equivalents:
     if choose_tab_drive_or_opt == "opt":
         _make_opt_observers(n_drive_cells, "n_drive_cells", drive_widgets, drive_idx)
         _make_opt_observers(cell_specific, "is_cell_specific", drive_widgets, drive_idx)
@@ -3084,6 +3103,8 @@ def _create_widgets_for_evoked(
     Optimization tab, including constraint widgets and observers that mirror the
     Drives-tab widgets.
     """
+    # Initialize our data dict with default values, then overwrite with any passed
+    # values:
     default_data = {
         "mu": 0,
         "sigma": 1,
@@ -3095,6 +3116,8 @@ def _create_widgets_for_evoked(
     data.update({"n_drive_cells": n_drive_cells, "cell_specific": cell_specific})
     default_data = _update_nested_dict(default_data, data)
 
+    # Set our layout and styling preferences for the widgets according to which tab
+    # we're building for:
     if choose_tab_drive_or_opt == "opt":
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
         # Note that opt_tab_quad_hbox_layout and opt_tab_column_titles are not needed
@@ -3196,6 +3219,8 @@ def _create_widgets_for_evoked(
         value=default_data["seedcore"], description="Seed: ", **simple_widget_kwargs
     )
 
+    # In the Optimization tab case, we want to cross-link these widgets with their
+    # Simulation tab equivalents:
     if choose_tab_drive_or_opt == "opt":
         _make_opt_observers(n_drive_cells, "n_drive_cells", drive_widgets, drive_idx)
         _make_opt_observers(cell_specific, "is_cell_specific", drive_widgets, drive_idx)
@@ -3303,6 +3328,8 @@ def _create_widgets_for_tonic(
     """
     cell_types = ["L2_basket", "L2_pyramidal", "L5_basket", "L5_pyramidal"]
 
+    # Set our layout and styling preferences for the widgets according to which tab
+    # we're building for:
     if choose_tab_drive_or_opt == "opt":
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
         # Note that opt_tab_quad_hbox_layout and opt_tab_column_titles are not needed
@@ -3325,6 +3352,8 @@ def _create_widgets_for_tonic(
         )
         # No complex widget kwargs needed for non-Optimization widgets
 
+    # Initialize our data dict with default values, then overwrite with any passed
+    # values:
     if choose_tab_drive_or_opt == "opt":
         # Note that unlike the similar "weights_ampa" etc., the drive_widgets
         # use "amplitude" in the singular, not plural "amplitudes".
