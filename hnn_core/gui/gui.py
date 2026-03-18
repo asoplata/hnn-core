@@ -2929,12 +2929,6 @@ def _create_widgets_for_poisson(
         "n_drive_cells": 1,
         "cell_specific": True,
         "seedcore": 14,
-        "rate_constant": {
-            "L2_pyramidal": 40.0,
-            "L5_pyramidal": 40.0,
-            "L2_basket": 40.0,
-            "L5_basket": 40.0,
-        },
     }
     data.update({"n_drive_cells": n_drive_cells, "cell_specific": cell_specific})
     default_data = _update_nested_dict(default_data, data)
@@ -3042,14 +3036,21 @@ def _create_widgets_for_poisson(
     # interested in constraining/optimizing against all synaptic parameters, and
     # therefore need to create widgets for all:
     # --------------------------------------------------------------------------
+    syn_data = {
+        "weights_ampa": weights_ampa,
+        "weights_nmda": weights_nmda,
+        "delays": delays,
+    }
+    # Since `rate_constant` is a Poisson-specific parameter, and its data is not passed
+    # as an explicit argument to this _create_widgets_for_poisson, we extract its data
+    # from `default_data` only if it's present. If it's not, then it will be filled in
+    # by the default values inside _create_synaptic_widgets.
+    if "rate_constant" in default_data.keys():
+        syn_data["rate_constant"] = default_data["rate_constant"]
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
         location,
         choose_tab_drive_or_opt,
-        data={
-            "weights_ampa": weights_ampa,
-            "weights_nmda": weights_nmda,
-            "delays": delays,
-        },
+        data=syn_data,
         opt_tab_quad_hbox_layout=opt_tab_quad_hbox_layout,
         if_poisson=True,
         **syn_widget_kwargs,
