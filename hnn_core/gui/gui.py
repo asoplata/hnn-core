@@ -2415,7 +2415,9 @@ def _create_synaptic_widgets(
         )
 
     if isinstance(data, dict):
-        default_data = _update_nested_dict(default_data, data)
+        data = _update_nested_dict(default_data, data)
+    else:
+        data = default_data
 
     if choose_tab_drive_or_opt == "opt":
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
@@ -2458,7 +2460,7 @@ def _create_synaptic_widgets(
             syn_widgets_dict["weights_ampa"].update(
                 _create_opt_widgets_for_drive_var(
                     cell_type,
-                    default_data["weights_ampa"][cell_type],
+                    data["weights_ampa"][cell_type],
                     f"{cell_type}:",
                     syn_type="weights_ampa",
                     **complex_opt_widget_kwargs,
@@ -2475,7 +2477,7 @@ def _create_synaptic_widgets(
             syn_widgets_dict["weights_nmda"].update(
                 _create_opt_widgets_for_drive_var(
                     cell_type,
-                    default_data["weights_nmda"][cell_type],
+                    data["weights_nmda"][cell_type],
                     f"{cell_type}:",
                     syn_type="weights_nmda",
                     **complex_opt_widget_kwargs,
@@ -2492,7 +2494,7 @@ def _create_synaptic_widgets(
             syn_widgets_dict["delays"].update(
                 _create_opt_widgets_for_drive_var(
                     cell_type,
-                    default_data["delays"][cell_type],
+                    data["delays"][cell_type],
                     f"{cell_type}:",
                     syn_type="delays",
                     **complex_opt_widget_kwargs,
@@ -2510,7 +2512,7 @@ def _create_synaptic_widgets(
                 syn_widgets_dict["rate_constant"].update(
                     _create_opt_widgets_for_drive_var(
                         cell_type,
-                        default_data["rate_constant"][cell_type],
+                        data["rate_constant"][cell_type],
                         f"{cell_type}:",
                         syn_type="rate_constant",
                         **complex_opt_widget_kwargs,
@@ -2541,7 +2543,7 @@ def _create_synaptic_widgets(
         weights_ampa, weights_nmda, delays = dict(), dict(), dict()
         for cell_type in cell_types:
             weights_ampa[f"{cell_type}"] = BoundedFloatText(
-                value=default_data["weights_ampa"][cell_type],
+                value=data["weights_ampa"][cell_type],
                 description=f"{cell_type}:",
                 min=0,
                 max=1e6,
@@ -2549,7 +2551,7 @@ def _create_synaptic_widgets(
                 **simple_widget_kwargs,
             )
             weights_nmda[f"{cell_type}"] = BoundedFloatText(
-                value=default_data["weights_nmda"][cell_type],
+                value=data["weights_nmda"][cell_type],
                 description=f"{cell_type}:",
                 min=0,
                 max=1e6,
@@ -2557,7 +2559,7 @@ def _create_synaptic_widgets(
                 **simple_widget_kwargs,
             )
             delays[f"{cell_type}"] = BoundedFloatText(
-                value=default_data["delays"][cell_type],
+                value=data["delays"][cell_type],
                 description=f"{cell_type}:",
                 min=0,
                 max=1e6,
@@ -2574,7 +2576,7 @@ def _create_synaptic_widgets(
             rate_constant = dict()
             for cell_type in cell_types:
                 rate_constant[f"{cell_type}"] = BoundedFloatText(
-                    value=default_data["rate_constant"][cell_type],
+                    value=data["rate_constant"][cell_type],
                     description=f"{cell_type}:",
                     min=0,
                     max=1e6,
@@ -2652,7 +2654,7 @@ def _create_widgets_for_evoked(
         "seedcore": 14,
     }
     data.update({"n_drive_cells": n_drive_cells, "cell_specific": cell_specific})
-    default_data = _update_nested_dict(default_data, data)
+    data = _update_nested_dict(default_data, data)
 
     # Set our layout and styling preferences for the widgets according to which tab
     # we're building for:
@@ -2697,20 +2699,20 @@ def _create_widgets_for_evoked(
         new_drive_widgets.update(
             _create_opt_widgets_for_drive_var(
                 "mu",
-                default_data["mu"],
+                data["mu"],
                 "Mean time (ms):",
                 **complex_opt_widget_kwargs,
             )
             | _create_opt_widgets_for_drive_var(
                 "sigma",
-                default_data["sigma"],
+                data["sigma"],
                 "Std dev time (ms):",
                 **complex_opt_widget_kwargs,
             )
         )
     elif choose_tab_drive_or_opt == "drive":
         mu = BoundedFloatText(
-            value=default_data["mu"],
+            value=data["mu"],
             description="Mean time:",
             min=0,
             max=1e6,
@@ -2718,7 +2720,7 @@ def _create_widgets_for_evoked(
             **simple_widget_kwargs,
         )
         sigma = BoundedFloatText(
-            value=default_data["sigma"],
+            value=data["sigma"],
             description="Std dev time:",
             min=0,
             max=1e6,
@@ -2731,7 +2733,7 @@ def _create_widgets_for_evoked(
     # --------------------------------------------------------------------------
     if choose_tab_drive_or_opt == "opt":
         numspikes = BoundedIntText(
-            value=default_data["numspikes"],
+            value=data["numspikes"],
             description="No. Spikes:",
             min=0,
             max=int(1e6),
@@ -2740,7 +2742,7 @@ def _create_widgets_for_evoked(
         _make_opt_observers(numspikes, "numspikes", drive_widgets, drive_idx)
     elif choose_tab_drive_or_opt == "drive":
         numspikes = IntText(
-            value=default_data["numspikes"],
+            value=data["numspikes"],
             description="No. Spikes:",
             **simple_widget_kwargs,
         )
@@ -2751,18 +2753,18 @@ def _create_widgets_for_evoked(
     # n_drive_cells, cell_specific, seedcore widgets
     # --------------------------------------------------------------------------
     n_drive_cells = IntText(
-        value=default_data["n_drive_cells"],
+        value=data["n_drive_cells"],
         description="No. Drive Cells:",
-        disabled=default_data["cell_specific"],
+        disabled=data["cell_specific"],
         **simple_widget_kwargs,
     )
     cell_specific = Checkbox(
-        value=default_data["cell_specific"],
+        value=data["cell_specific"],
         description="Cell-Specific",
         **simple_widget_kwargs,
     )
     seedcore = IntText(
-        value=default_data["seedcore"], description="Seed: ", **simple_widget_kwargs
+        value=data["seedcore"], description="Seed: ", **simple_widget_kwargs
     )
 
     # In the Optimization tab case, we want to cross-link these widgets with their
@@ -2883,7 +2885,7 @@ def _create_widgets_for_poisson(
         "seedcore": 14,
     }
     data.update({"n_drive_cells": n_drive_cells, "cell_specific": cell_specific})
-    default_data = _update_nested_dict(default_data, data)
+    data = _update_nested_dict(default_data, data)
 
     # Set our layout and styling preferences for the widgets according to which tab
     # we're building for:
@@ -2924,14 +2926,14 @@ def _create_widgets_for_poisson(
     # tstart, tstop widgets
     # --------------------------------------------------------------------------
     tstart = BoundedFloatText(
-        value=default_data["tstart"],
+        value=data["tstart"],
         description="Start time (ms)",
         min=0,
         max=1e6,
         **simple_widget_kwargs,
     )
     tstop = BoundedFloatText(
-        value=default_data["tstop"],
+        value=data["tstop"],
         max=tstop_widget.value,
         description="Stop time (ms)",
         **simple_widget_kwargs,
@@ -2949,18 +2951,18 @@ def _create_widgets_for_poisson(
     # n_drive_cells, cell_specific, seedcore widgets
     # --------------------------------------------------------------------------
     n_drive_cells = IntText(
-        value=default_data["n_drive_cells"],
+        value=data["n_drive_cells"],
         description="No. Drive Cells:",
-        disabled=default_data["cell_specific"],
+        disabled=data["cell_specific"],
         **simple_widget_kwargs,
     )
     cell_specific = Checkbox(
-        value=default_data["cell_specific"],
+        value=data["cell_specific"],
         description="Cell-Specific",
         **simple_widget_kwargs,
     )
     seedcore = IntText(
-        value=default_data["seedcore"], description="Seed", **simple_widget_kwargs
+        value=data["seedcore"], description="Seed", **simple_widget_kwargs
     )
 
     # In the Optimization tab case, we want to cross-link these widgets with their
@@ -3083,7 +3085,7 @@ def _create_widgets_for_rhythmic(
         "seedcore": 14,
     }
     data.update({"n_drive_cells": n_drive_cells, "cell_specific": cell_specific})
-    default_data = _update_nested_dict(default_data, data)
+    data = _update_nested_dict(default_data, data)
 
     # Set our layout and styling preferences for the widgets according to which tab
     # we're building for:
@@ -3127,27 +3129,27 @@ def _create_widgets_for_rhythmic(
         new_drive_widgets.update(
             _create_opt_widgets_for_drive_var(
                 "burst_rate",
-                default_data["burst_rate"],
+                data["burst_rate"],
                 "Burst rate (Hz)",
                 **complex_opt_widget_kwargs,
             )
             | _create_opt_widgets_for_drive_var(
                 "burst_std",
-                default_data["burst_std"],
+                data["burst_std"],
                 "Burst std dev (Hz)",
                 **complex_opt_widget_kwargs,
             )
         )
     elif choose_tab_drive_or_opt == "drive":
         burst_rate = BoundedFloatText(
-            value=default_data["burst_rate"],
+            value=data["burst_rate"],
             description="Burst rate (Hz)",
             min=0,
             max=1e6,
             **simple_widget_kwargs,
         )
         burst_std = BoundedFloatText(
-            value=default_data["burst_std"],
+            value=data["burst_std"],
             description="Burst std dev (Hz)",
             min=0,
             max=1e6,
@@ -3159,21 +3161,21 @@ def _create_widgets_for_rhythmic(
     # tstart, tstart_std, tstop widgets
     # --------------------------------------------------------------------------
     tstart = BoundedFloatText(
-        value=default_data["tstart"],
+        value=data["tstart"],
         description="Start time (ms)",
         min=0,
         max=1e6,
         **simple_widget_kwargs,
     )
     tstart_std = BoundedFloatText(
-        value=default_data["tstart_std"],
+        value=data["tstart_std"],
         description="Start time dev (ms)",
         min=0,
         max=1e6,
         **simple_widget_kwargs,
     )
     tstop = BoundedFloatText(
-        value=default_data["tstop"],
+        value=data["tstop"],
         description="Stop time (ms)",
         max=tstop_widget.value,
         **simple_widget_kwargs,
@@ -3202,7 +3204,7 @@ def _create_widgets_for_rhythmic(
     # floats, since they update according to fractional values. Therefore, we cannot
     # currently pass it to our constraints to use in Optimization currently.
     numspikes = BoundedIntText(
-        value=default_data["numspikes"],
+        value=data["numspikes"],
         description="No. Spikes:",
         min=0,
         max=int(1e6),
@@ -3220,18 +3222,18 @@ def _create_widgets_for_rhythmic(
     # n_drive_cells, cell_specific, seedcore widgets
     # --------------------------------------------------------------------------
     n_drive_cells = IntText(
-        value=default_data["n_drive_cells"],
+        value=data["n_drive_cells"],
         description="No. Drive Cells:",
-        disabled=default_data["cell_specific"],
+        disabled=data["cell_specific"],
         **simple_widget_kwargs,
     )
     cell_specific = Checkbox(
-        value=default_data["cell_specific"],
+        value=data["cell_specific"],
         description="Cell-Specific",
         **simple_widget_kwargs,
     )
     seedcore = IntText(
-        value=default_data["seedcore"], description="Seed", **simple_widget_kwargs
+        value=data["seedcore"], description="Seed", **simple_widget_kwargs
     )
 
     # In the Optimization tab case, we want to cross-link these widgets with their
@@ -3383,21 +3385,22 @@ def _create_widgets_for_tonic(
                 "L2_basket": 0.0,
             },
         }
-        if isinstance(data, dict):
-            default_data = _update_nested_dict(default_data, data)
     elif choose_tab_drive_or_opt == "drive":
         default_values = {"amplitude": 0, "t0": 0, "tstop": tstop_widget.value}
         t0 = default_values["t0"]
         tstop = default_values["tstop"]
         default_data = {cell_type: default_values for cell_type in cell_types}
-        if isinstance(data, dict):
-            default_data = _update_nested_dict(default_data, data)
+
+    if isinstance(data, dict):
+        data = _update_nested_dict(default_data, data)
+    else:
+        data = default_data
 
     # t0, tstop widgets
     # --------------------------------------------------------------------------
     if choose_tab_drive_or_opt == "opt":
         t0_widget = BoundedFloatText(
-            value=default_data["t0"],
+            value=data["t0"],
             description="Start time (ms):",
             min=0,
             max=1e6,
@@ -3405,7 +3408,7 @@ def _create_widgets_for_tonic(
         )
         _make_opt_observers(t0_widget, "t0", drive_widgets, drive_idx)
         tstop_w = BoundedFloatText(
-            value=default_data["tstop"],
+            value=data["tstop"],
             description="Stop time (ms):",
             max=1e6,
             **simple_widget_kwargs,
@@ -3414,7 +3417,7 @@ def _create_widgets_for_tonic(
     elif choose_tab_drive_or_opt == "drive":
         amplitudes = dict()
         for cell_type in cell_types:
-            amplitude = default_data[cell_type]["amplitude"]
+            amplitude = data[cell_type]["amplitude"]
             amplitudes[cell_type] = BoundedFloatText(
                 value=amplitude,
                 description=cell_type,
@@ -3426,8 +3429,8 @@ def _create_widgets_for_tonic(
             # Reset the global t0 and stop with values from the 'data' keyword.
             # It should be same across all the cell-types.
             if amplitude > 0:
-                t0 = default_data[cell_type]["t0"]
-                tstop = default_data[cell_type]["tstop"]
+                t0 = data[cell_type]["t0"]
+                tstop = data[cell_type]["tstop"]
 
         t0_widget = BoundedFloatText(
             value=t0,
@@ -3465,7 +3468,7 @@ def _create_widgets_for_tonic(
             syn_widgets_dict["amplitude"].update(
                 _create_opt_widgets_for_drive_var(
                     cell_type,
-                    default_data["amplitude"][cell_type],
+                    data["amplitude"][cell_type],
                     f"{cell_type}:",
                     syn_type="amplitude",
                     **complex_opt_widget_kwargs,
