@@ -2657,29 +2657,19 @@ def _create_widgets_for_evoked(
         )
         new_drive_widgets.update(dict(mu=mu, sigma=sigma))
 
-    # numspikes widget
+    # numspikes, n_drive_cells, cell_specific, seedcore widgets
     # --------------------------------------------------------------------------
-    if choose_tab_drive_or_opt == "opt":
-        numspikes = BoundedIntText(
-            value=data["numspikes"],
-            description="No. Spikes:",
-            min=0,
-            max=int(1e6),
-            **simple_widget_kwargs,
-        )
-        _make_opt_observers(numspikes, "numspikes", drive_widgets, drive_idx)
-    elif choose_tab_drive_or_opt == "drive":
-        numspikes = IntText(
-            value=data["numspikes"],
-            description="No. Spikes:",
-            **simple_widget_kwargs,
-        )
-
-    # Update our outgoing collection of widgets:
-    new_drive_widgets.update(dict(numspikes=numspikes))
-
-    # n_drive_cells, cell_specific, seedcore widgets
-    # --------------------------------------------------------------------------
+    # Numspikes is a special case, since it MUST be an integer, but our
+    # Optimization's constraints-updating functions currently assume all constraints are
+    # floats, since they update according to fractional values. Therefore, we cannot
+    # currently pass it to our constraints to use in Optimization currently.
+    numspikes = BoundedIntText(
+        value=data["numspikes"],
+        description="No. Spikes:",
+        min=0,
+        max=int(1e6),
+        **simple_widget_kwargs,
+    )
     n_drive_cells = IntText(
         value=data["n_drive_cells"],
         description="No. Drive Cells:",
@@ -2692,12 +2682,13 @@ def _create_widgets_for_evoked(
         **simple_widget_kwargs,
     )
     seedcore = IntText(
-        value=data["seedcore"], description="Seed: ", **simple_widget_kwargs
+        value=data["seedcore"], description="Seed:", **simple_widget_kwargs
     )
 
     # In the Optimization tab case, we want to cross-link these widgets with their
     # Simulation tab equivalents:
     if choose_tab_drive_or_opt == "opt":
+        _make_opt_observers(numspikes, "numspikes", drive_widgets, drive_idx)
         _make_opt_observers(n_drive_cells, "n_drive_cells", drive_widgets, drive_idx)
         _make_opt_observers(cell_specific, "is_cell_specific", drive_widgets, drive_idx)
         _make_opt_observers(seedcore, "seedcore", drive_widgets, drive_idx)
@@ -2710,6 +2701,7 @@ def _create_widgets_for_evoked(
     # Update our outgoing collection of widgets:
     new_drive_widgets.update(
         dict(
+            numspikes=numspikes,
             n_drive_cells=n_drive_cells,
             is_cell_specific=cell_specific,
             seedcore=seedcore,
@@ -2890,7 +2882,7 @@ def _create_widgets_for_poisson(
         **simple_widget_kwargs,
     )
     seedcore = IntText(
-        value=data["seedcore"], description="Seed", **simple_widget_kwargs
+        value=data["seedcore"], description="Seed:", **simple_widget_kwargs
     )
 
     # In the Optimization tab case, we want to cross-link these widgets with their
@@ -3125,7 +3117,7 @@ def _create_widgets_for_rhythmic(
         )
     )
 
-    # numspikes widget
+    # numspikes, n_drive_cells, cell_specific, seedcore widgets
     # --------------------------------------------------------------------------
     # Numspikes is a special case, since it MUST be an integer, but our
     # Optimization's constraints-updating functions currently assume all constraints are
@@ -3138,17 +3130,6 @@ def _create_widgets_for_rhythmic(
         max=int(1e6),
         **simple_widget_kwargs,
     )
-
-    # In the Optimization tab case, we want to cross-link these widgets with their
-    # Simulation tab equivalents:
-    if choose_tab_drive_or_opt == "opt":
-        _make_opt_observers(numspikes, "numspikes", drive_widgets, drive_idx)
-
-    # Update our outgoing collection of widgets:
-    new_drive_widgets.update(dict(numspikes=numspikes))
-
-    # n_drive_cells, cell_specific, seedcore widgets
-    # --------------------------------------------------------------------------
     n_drive_cells = IntText(
         value=data["n_drive_cells"],
         description="No. Drive Cells:",
@@ -3161,12 +3142,13 @@ def _create_widgets_for_rhythmic(
         **simple_widget_kwargs,
     )
     seedcore = IntText(
-        value=data["seedcore"], description="Seed", **simple_widget_kwargs
+        value=data["seedcore"], description="Seed:", **simple_widget_kwargs
     )
 
     # In the Optimization tab case, we want to cross-link these widgets with their
     # Simulation tab equivalents:
     if choose_tab_drive_or_opt == "opt":
+        _make_opt_observers(numspikes, "numspikes", drive_widgets, drive_idx)
         _make_opt_observers(n_drive_cells, "n_drive_cells", drive_widgets, drive_idx)
         _make_opt_observers(cell_specific, "is_cell_specific", drive_widgets, drive_idx)
         _make_opt_observers(seedcore, "seedcore", drive_widgets, drive_idx)
@@ -3179,6 +3161,7 @@ def _create_widgets_for_rhythmic(
     # Update our outgoing collection of widgets:
     new_drive_widgets.update(
         dict(
+            numspikes=numspikes,
             n_drive_cells=n_drive_cells,
             is_cell_specific=cell_specific,
             seedcore=seedcore,
