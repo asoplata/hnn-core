@@ -2419,6 +2419,7 @@ def _create_synaptic_widgets(
     else:
         data = default_data
 
+    # Setup our styling
     if choose_tab_drive_or_opt == "opt":
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
         complex_opt_widget_kwargs = dict(
@@ -2443,6 +2444,7 @@ def _create_synaptic_widgets(
     if location == "distal":
         cell_types.remove("L5_basket")
 
+    # Initialize the key output container, which will contain all the widgets
     syn_widgets_dict = {
         "weights_ampa": {},
         "weights_nmda": {},
@@ -2452,148 +2454,77 @@ def _create_synaptic_widgets(
         syn_widgets_dict["rate_constant"] = {}
 
     if choose_tab_drive_or_opt == "opt":
-        ampa_weights_list, nmda_weights_list, delays_list = [], [], []
+        opt_widgets_box_list = {
+            "weights_ampa": [],
+            "weights_nmda": [],
+            "delays": [],
+        }
         if if_poisson:
-            rate_constant_list = []
+            opt_widgets_box_list["rate_constant"] = []
+
         for cell_type in cell_types:
-            # AMPA weights
-            syn_widgets_dict["weights_ampa"].update(
-                _create_opt_widgets_for_drive_var(
-                    cell_type,
-                    data["weights_ampa"][cell_type],
-                    f"{cell_type}:",
-                    syn_type="weights_ampa",
-                    **complex_opt_widget_kwargs,
-                )
-            )
-            ampa_weights_list.append(
-                _create_hbox_for_opt_var(
-                    cell_type,
-                    syn_widgets_dict["weights_ampa"],
-                    opt_tab_quad_hbox_layout,
-                )
-            )
-            # NMDA weights
-            syn_widgets_dict["weights_nmda"].update(
-                _create_opt_widgets_for_drive_var(
-                    cell_type,
-                    data["weights_nmda"][cell_type],
-                    f"{cell_type}:",
-                    syn_type="weights_nmda",
-                    **complex_opt_widget_kwargs,
-                )
-            )
-            nmda_weights_list.append(
-                _create_hbox_for_opt_var(
-                    cell_type,
-                    syn_widgets_dict["weights_nmda"],
-                    opt_tab_quad_hbox_layout,
-                )
-            )
-            # Synaptic delays
-            syn_widgets_dict["delays"].update(
-                _create_opt_widgets_for_drive_var(
-                    cell_type,
-                    data["delays"][cell_type],
-                    f"{cell_type}:",
-                    syn_type="delays",
-                    **complex_opt_widget_kwargs,
-                )
-            )
-            delays_list.append(
-                _create_hbox_for_opt_var(
-                    cell_type,
-                    syn_widgets_dict["delays"],
-                    opt_tab_quad_hbox_layout,
-                )
-            )
-            if if_poisson:
-                # Poisson rate constants
-                syn_widgets_dict["rate_constant"].update(
+            for syn_param_type in syn_widgets_dict.keys():
+                syn_widgets_dict[syn_param_type].update(
                     _create_opt_widgets_for_drive_var(
                         cell_type,
-                        data["rate_constant"][cell_type],
+                        data[syn_param_type][cell_type],
                         f"{cell_type}:",
-                        syn_type="rate_constant",
+                        syn_type=syn_param_type,
                         **complex_opt_widget_kwargs,
                     )
                 )
-                rate_constant_list.append(
+                opt_widgets_box_list[syn_param_type].append(
                     _create_hbox_for_opt_var(
                         cell_type,
-                        syn_widgets_dict["rate_constant"],
+                        syn_widgets_dict[syn_param_type],
                         opt_tab_quad_hbox_layout,
                     )
                 )
 
         syn_widgets_list = (
             [HTML(value="<b>AMPA weights</b>")]
-            + ampa_weights_list
+            + opt_widgets_box_list["weights_ampa"]
             + [HTML(value="<b>NMDA weights</b>")]
-            + nmda_weights_list
+            + opt_widgets_box_list["weights_nmda"]
             + [HTML(value="<b>Synaptic delays</b>")]
-            + delays_list
+            + opt_widgets_box_list["delays"]
             + (
-                [HTML(value="<b>Rate constants</b>")] + rate_constant_list
+                (
+                    [HTML(value="<b>Rate constants</b>")]
+                    + opt_widgets_box_list["rate_constant"]
+                )
                 if if_poisson
                 else []
             )
         )
     elif choose_tab_drive_or_opt == "drive":
-        weights_ampa, weights_nmda, delays = dict(), dict(), dict()
         for cell_type in cell_types:
-            weights_ampa[f"{cell_type}"] = BoundedFloatText(
-                value=data["weights_ampa"][cell_type],
-                description=f"{cell_type}:",
-                min=0,
-                max=1e6,
-                step=0.01,
-                **simple_widget_kwargs,
-            )
-            weights_nmda[f"{cell_type}"] = BoundedFloatText(
-                value=data["weights_nmda"][cell_type],
-                description=f"{cell_type}:",
-                min=0,
-                max=1e6,
-                step=0.01,
-                **simple_widget_kwargs,
-            )
-            delays[f"{cell_type}"] = BoundedFloatText(
-                value=data["delays"][cell_type],
-                description=f"{cell_type}:",
-                min=0,
-                max=1e6,
-                step=0.1,
-                **simple_widget_kwargs,
-            )
-
-        syn_widgets_dict = {
-            "weights_ampa": weights_ampa,
-            "weights_nmda": weights_nmda,
-            "delays": delays,
-        }
-        if if_poisson:
-            rate_constant = dict()
-            for cell_type in cell_types:
-                rate_constant[f"{cell_type}"] = BoundedFloatText(
-                    value=data["rate_constant"][cell_type],
-                    description=f"{cell_type}:",
-                    min=0,
-                    max=1e6,
-                    step=0.01,
-                    **simple_widget_kwargs,
+            for syn_param_type in syn_widgets_dict.keys():
+                syn_widgets_dict[syn_param_type].update(
+                    {
+                        f"{cell_type}": BoundedFloatText(
+                            value=data[syn_param_type][cell_type],
+                            description=f"{cell_type}:",
+                            min=0,
+                            max=1e6,
+                            step=0.01,
+                            **simple_widget_kwargs,
+                        )
+                    }
                 )
-            syn_widgets_dict["rate_constant"] = rate_constant
 
         syn_widgets_list = (
             [HTML(value="<b>AMPA weights</b>")]
-            + list(weights_ampa.values())
+            + list(syn_widgets_dict["weights_ampa"].values())
             + [HTML(value="<b>NMDA weights</b>")]
-            + list(weights_nmda.values())
+            + list(syn_widgets_dict["weights_nmda"].values())
             + [HTML(value="<b>Synaptic delays</b>")]
-            + list(delays.values())
+            + list(syn_widgets_dict["delays"].values())
             + (
-                [HTML(value="<b>Rate constants</b>")] + list(rate_constant.values())
+                (
+                    [HTML(value="<b>Rate constants</b>")]
+                    + list(syn_widgets_dict["rate_constant"].values())
+                )
                 if if_poisson
                 else []
             )
