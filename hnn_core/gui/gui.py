@@ -3238,8 +3238,20 @@ def _create_widgets_for_tonic(
     """
     cell_types = ["L2_basket", "L2_pyramidal", "L5_basket", "L5_pyramidal"]
 
-    # Set our layout and styling preferences for the widgets according to which tab
-    # we're building for:
+    # AES TODO: The original API for this function that creates the tonic bias widgets
+    # had a small misconfiguration in its "data" argument. Specifically, it expected
+    # "data" to consist of keys which are cell types and values which are dictionaries,
+    # where the dictionaries include values for `t0`, `tstop`, and `amplitude`. However,
+    # if you view the use of `add_tonic_bias` in `_init_network_from_widgets`, a
+    # specific `amplitude` is used for each cell type, but the `t0` and `tstop` values
+    # are shared across all cell types. Fixing this misconfiguration would require
+    # changing how the "data" argument of this function is created and handled, and
+    # refactoring of how the "Drives tab" case is handled (which is brought over from
+    # the original code). Due to a current deadline, I will not be refactoring the tonic
+    # Drive tab and Optimization code together.
+
+    # Set our layout and styling preferences for the widgets
+    # according to which tab we're building for:
     if choose_tab_drive_or_opt == "opt":
         simple_widget_kwargs = dict(layout=opt_tab_var_layout, style=opt_tab_var_style)
         # Note that opt_tab_quad_hbox_layout and opt_tab_column_titles are not needed
@@ -3356,7 +3368,7 @@ def _create_widgets_for_tonic(
             "amplitude": {},
         }
         amplitudes_list = []
-        for cell_type in ["L5_pyramidal", "L2_pyramidal", "L5_basket", "L2_basket"]:
+        for cell_type in cell_types:
             syn_widgets_dict["amplitude"].update(
                 _create_opt_widgets_for_drive_var(
                     cell_type,
@@ -3396,6 +3408,7 @@ def _create_widgets_for_tonic(
         new_drive_box = VBox(
             [
                 opt_tab_column_titles,
+                HTML(value="<b>Times (ms):</b>"),
                 t0_widget,
                 tstop_w,
             ]
