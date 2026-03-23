@@ -2355,7 +2355,7 @@ def _get_connectivity_widgets(conn_data, global_gain_textfields):
 def _create_synaptic_widgets(
     location,
     choose_tab_drive_or_opt,  # which tab to build for, including which kwargs to use
-    data=None,
+    data={},
     # Drive-tab-specific kwargs
     drive_tab_var_layout=None,
     drive_tab_var_style=None,
@@ -2414,10 +2414,7 @@ def _create_synaptic_widgets(
             }
         )
 
-    if isinstance(data, dict):
-        data = _update_nested_dict(default_data, data)
-    else:
-        data = default_data
+    data = _update_nested_dict(default_data, data)
 
     # Setup our styling
     if choose_tab_drive_or_opt == "opt":
