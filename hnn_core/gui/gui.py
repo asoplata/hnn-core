@@ -2621,7 +2621,7 @@ def _create_widgets_for_evoked(
         sync_within_trial=False,
     )
 
-    # mu and sigma widgets
+    # mu and sigma widgets (including extra Optimization widgets)
     # --------------------------------------------------------------------------
     if choose_tab_drive_or_opt == "opt":
         new_drive_widgets.update(
@@ -2657,7 +2657,7 @@ def _create_widgets_for_evoked(
         )
         new_drive_widgets.update(dict(mu=mu, sigma=sigma))
 
-    # numspikes, n_drive_cells, cell_specific, seedcore widgets
+    # Non-optimized widgets: numspikes, n_drive_cells, cell_specific, seedcore
     # --------------------------------------------------------------------------
     # Numspikes is a special case, since it MUST be an integer, but our
     # Optimization's constraints-updating functions currently assume all constraints are
@@ -2796,7 +2796,7 @@ def _create_widgets_for_poisson(
     Drives-tab widgets.
     """
     # Initialize our data dict with default values, then overwrite with any passed
-    # values:
+    # values. The default rate constants are available in `_create_synaptic_widgets`.
     default_data = {
         "tstart": 0.0,
         "tstop": tstop_widget.value,
@@ -2843,7 +2843,7 @@ def _create_widgets_for_poisson(
         location=location,  # notice this is not a widget but a str!
     )
 
-    # tstart, tstop widgets
+    # Non-optimized widgets: tstart, tstop, n_drive_cells, cell_specific, seedcore
     # --------------------------------------------------------------------------
     tstart = BoundedFloatText(
         value=data["tstart"],
@@ -2858,18 +2858,6 @@ def _create_widgets_for_poisson(
         description="Stop time (ms)",
         **simple_widget_kwargs,
     )
-
-    # In the Optimization tab case, we want to cross-link these widgets with their
-    # Simulation tab equivalents:
-    if choose_tab_drive_or_opt == "opt":
-        _make_opt_observers(tstart, "tstart", drive_widgets, drive_idx)
-        _make_opt_observers(tstop, "tstop", drive_widgets, drive_idx)
-
-    # Update our outgoing collection of widgets:
-    new_drive_widgets.update(dict(tstart=tstart, tstop=tstop))
-
-    # n_drive_cells, cell_specific, seedcore widgets
-    # --------------------------------------------------------------------------
     n_drive_cells = IntText(
         value=data["n_drive_cells"],
         description="No. Drive Cells:",
@@ -2888,6 +2876,8 @@ def _create_widgets_for_poisson(
     # In the Optimization tab case, we want to cross-link these widgets with their
     # Simulation tab equivalents:
     if choose_tab_drive_or_opt == "opt":
+        _make_opt_observers(tstart, "tstart", drive_widgets, drive_idx)
+        _make_opt_observers(tstop, "tstop", drive_widgets, drive_idx)
         _make_opt_observers(n_drive_cells, "n_drive_cells", drive_widgets, drive_idx)
         _make_opt_observers(cell_specific, "is_cell_specific", drive_widgets, drive_idx)
         _make_opt_observers(seedcore, "seedcore", drive_widgets, drive_idx)
@@ -2900,6 +2890,8 @@ def _create_widgets_for_poisson(
     # Update our outgoing collection of widgets:
     new_drive_widgets.update(
         dict(
+            tstart=tstart,
+            tstop=tstop,
             n_drive_cells=n_drive_cells,
             is_cell_specific=cell_specific,
             seedcore=seedcore,
@@ -2919,6 +2911,10 @@ def _create_widgets_for_poisson(
     # as an explicit argument to this _create_widgets_for_poisson, we extract its data
     # from `default_data` only if it's present. If it's not, then it will be filled in
     # by the default values inside _create_synaptic_widgets.
+    #
+    # Similarly, because "rate_constant" is extracted the same way that other synaptic
+    # parameters are inside `_init_network_from_widgets`, we can package it along with
+    # the other synaptic parameters.
     if "rate_constant" in default_data.keys():
         syn_data["rate_constant"] = default_data["rate_constant"]
     syn_widgets_list, syn_widgets_dict = _create_synaptic_widgets(
@@ -2930,9 +2926,6 @@ def _create_widgets_for_poisson(
         **syn_widget_kwargs,
     )
     new_drive_widgets.update(syn_widgets_dict)
-    # AES TODO
-    if choose_tab_drive_or_opt == "drive":
-        new_drive_widgets["rate_constant"] = syn_widgets_dict["rate_constant"]
 
     # Finally, decide the "VBox" positioning of all of the above widgets
     # --------------------------------------------------------------------------
@@ -3043,7 +3036,7 @@ def _create_widgets_for_rhythmic(
         location=location,
     )
 
-    # burst_rate and burst_std widgets
+    # burst_rate and burst_std widgets (including extra Optimization widgets)
     # --------------------------------------------------------------------------
     if choose_tab_drive_or_opt == "opt":
         new_drive_widgets.update(
@@ -3078,7 +3071,8 @@ def _create_widgets_for_rhythmic(
         # Update our outgoing collection of widgets:
         new_drive_widgets.update(dict(burst_rate=burst_rate, burst_std=burst_std))
 
-    # tstart, tstart_std, tstop widgets
+    # Non-optimized widgets: tstart, tstart_std, tstop, numspikes, n_drive_cells,
+    # cell_specific, and seedcore
     # --------------------------------------------------------------------------
     tstart = BoundedFloatText(
         value=data["tstart"],
@@ -3100,29 +3094,10 @@ def _create_widgets_for_rhythmic(
         max=tstop_widget.value,
         **simple_widget_kwargs,
     )
-
-    # In the Optimization tab case, we want to cross-link these widgets with their
-    # Simulation tab equivalents:
-    if choose_tab_drive_or_opt == "opt":
-        _make_opt_observers(tstart, "tstart", drive_widgets, drive_idx)
-        _make_opt_observers(tstart_std, "tstart_std", drive_widgets, drive_idx)
-        _make_opt_observers(tstop, "tstop", drive_widgets, drive_idx)
-
-    # Update our outgoing collection of widgets:
-    new_drive_widgets.update(
-        dict(
-            tstart=tstart,
-            tstart_std=tstart_std,
-            tstop=tstop,
-        )
-    )
-
-    # numspikes, n_drive_cells, cell_specific, seedcore widgets
-    # --------------------------------------------------------------------------
-    # Numspikes is a special case, since it MUST be an integer, but our
-    # Optimization's constraints-updating functions currently assume all constraints are
-    # floats, since they update according to fractional values. Therefore, we cannot
-    # currently pass it to our constraints to use in Optimization currently.
+    # Numspikes is a special case, since it MUST be an integer, but our Optimization's
+    # constraints-updating functions currently assume all constraints are floats, since
+    # they update according to fractional values. Therefore, we cannot currently pass it
+    # to our constraints to use in Optimization currently.
     numspikes = BoundedIntText(
         value=data["numspikes"],
         description="No. Spikes:",
@@ -3148,6 +3123,9 @@ def _create_widgets_for_rhythmic(
     # In the Optimization tab case, we want to cross-link these widgets with their
     # Simulation tab equivalents:
     if choose_tab_drive_or_opt == "opt":
+        _make_opt_observers(tstart, "tstart", drive_widgets, drive_idx)
+        _make_opt_observers(tstart_std, "tstart_std", drive_widgets, drive_idx)
+        _make_opt_observers(tstop, "tstop", drive_widgets, drive_idx)
         _make_opt_observers(numspikes, "numspikes", drive_widgets, drive_idx)
         _make_opt_observers(n_drive_cells, "n_drive_cells", drive_widgets, drive_idx)
         _make_opt_observers(cell_specific, "is_cell_specific", drive_widgets, drive_idx)
@@ -3161,6 +3139,9 @@ def _create_widgets_for_rhythmic(
     # Update our outgoing collection of widgets:
     new_drive_widgets.update(
         dict(
+            tstart=tstart,
+            tstart_std=tstart_std,
+            tstop=tstop,
             numspikes=numspikes,
             n_drive_cells=n_drive_cells,
             is_cell_specific=cell_specific,
