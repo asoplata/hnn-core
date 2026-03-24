@@ -906,6 +906,23 @@ class Cell:
                     #    - the mechanism exists on the segment
                     #    _ the ref variable exists for the segment mechanism
                     else:
+                        mech_obj = getattr(segment, mech, None) # temp variable to store the mechanism object
+                        # e.g., mech = "hh2" exists on that segment, then mech_obj = segment.hh2, else None
+
+                        rec_target = None
+
+                        # First try mechanism-level reference, e.g. segment.hh2._ref_il
+                        if mech_obj is not None and hasattr(mech_obj, ref):
+                            rec_target = getattr(mech_obj, ref)
+
+                        # Fallback to segment-level reference, e.g. segment._ref_ina
+                        elif hasattr(segment, ref):
+                            rec_target = getattr(segment, ref)
+
+                        if rec_target is not None:
+                            currents[sec_name][seg_key] = h.Vector()
+                            currents[sec_name][seg_key].record(rec_target)
+                        '''
                         if hasattr(segment, mech) and hasattr(
                             getattr(segment, mech), ref
                         ):
@@ -920,6 +937,18 @@ class Cell:
                                     ref,
                                 )
                             )
+                        '''
+                        '''
+                        if self.gid == 50 and mech == "hh2" and sec_name == "soma" and seg_key == "seg_1":
+                            print(
+                                f"gid={self.gid} {sec_name}/{seg_key}: "
+                                f"hh2._ref_il={hasattr(segment.hh2, '_ref_il') if hasattr(segment, 'hh2') else 'NA'}, "
+                                f"hh2._ref_ina={hasattr(segment.hh2, '_ref_ina') if hasattr(segment, 'hh2') else 'NA'}, "
+                                f"seg._ref_ina={hasattr(segment, '_ref_ina')}, "
+                                f"hh2._ref_ik={hasattr(segment.hh2, '_ref_ik') if hasattr(segment, 'hh2') else 'NA'}, "
+                                f"seg._ref_ik={hasattr(segment, '_ref_ik')}"
+                            )
+                        '''
             # if not recording at the segment level, record from the
             # midpoint of the section
             else:
