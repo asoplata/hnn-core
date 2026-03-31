@@ -839,7 +839,6 @@ class Cell:
                 - keys will follow the format: "seg_x_0.500"
             If False, record only from the midpoint (0.5)
         """
-
         # create an attribute on self to hold the currents
         if record_flag == "soma":
             setattr(self, name, dict.fromkeys(["soma"]))
@@ -1043,10 +1042,18 @@ class Cell:
         record_ca : 'all' | 'soma' | False
             Option to record calcium concentration from all sections ('all'),
             or just the soma ('soma'). Default: False.
+        record_agg_i_mem :
+            Option to record total transmembrane current from all segments.
+            Default: False.
+        record_agg_ina, record_agg_ik, record_agg_i_cap, record_ina_hh2, 
+        record_ik_hh2, record_ik_kca, record_ik_km, record_ica_ca, 
+        record_ica_cat, record_il_hh2, record_i_ar : 'all' | 'soma' | False
+            Option to record currents from all sections ('all'), or just
+            the soma ('soma'). Default: False.
         """
 
         section_names = list(self.sections.keys())
-
+        
         # Logic checks if just recording soma, sections, or both
         if record_vsec == "soma":
             self.vsec = dict.fromkeys(["soma"])
