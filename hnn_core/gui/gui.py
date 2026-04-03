@@ -941,7 +941,7 @@ class HNNGUI:
             style=self.layout["opt_dropdown_style"],
         ).add_class("opt-objective-function")
         self.widget_opt_solver = Dropdown(
-            options=["bayesian", "cobyla"],
+            options=["bayesian", "cobyla", "cma"],
             value="bayesian",
             description="Solver:",
             disabled=False,
@@ -5703,8 +5703,12 @@ def run_opt_button_clicked(
                 override_hwthreading_option=False,
                 override_oversubscribe_option=False,
             )
+            # AES @ntolley look here
+            cma_n_jobs = 1
         else:
             backend = JoblibBackend(n_jobs=n_jobs.value)
+            # AES @ntolley look here
+            cma_n_jobs = n_jobs.value
             print(f"Using Joblib with {n_jobs.value} core(s).")
 
         with backend:
@@ -5731,6 +5735,7 @@ def run_opt_button_clicked(
                         n_trials=opt_target_widgets["n_trials"].value,
                         smooth_window_len=opt_smoothing,
                         scale_factor=opt_scaling,
+                        n_jobs=cma_n_jobs,  # AES @ntolley look here
                     )
                     optim.fit(**obj_fun_kwargs)
                 elif opt_obj_fun == "maximize_psd":

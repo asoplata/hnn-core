@@ -1730,7 +1730,7 @@ def test_diff_gui_vs_api_networks_simulations():
     [
         (backend, solver)
         for backend in ("MPI", "Joblib")
-        for solver in ("bayesian", "cobyla")
+        for solver in ("bayesian", "cobyla", "cma")
     ],
 )
 def test_gui_run_optimization(backend_selection, opt_solver):
