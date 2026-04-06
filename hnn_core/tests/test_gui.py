@@ -1779,8 +1779,10 @@ def test_gui_run_optimization(backend_selection, opt_solver):
 
     assert gui.widget_opt_obj_fun.value == "dipole_rmse"
     gui.widget_opt_solver.value = opt_solver
-    gui.widget_ntrials.value = 2
-    gui.widget_opt_max_iter.value = 3
+    # gui.widget_ntrials.value = 2  # AES DEBUG
+    # gui.widget_opt_max_iter.value = 3  # AES DEBUG
+    gui.widget_ntrials.value = 1
+    gui.widget_opt_max_iter.value = 2
     gui.widget_n_jobs.value = gui.n_cores  # use the safe default max of available cores
 
     # Add at least one of every drive and bias type

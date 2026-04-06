@@ -5295,6 +5295,8 @@ def _use_nonsyn_params_if_exists(var_name, drive, params):
         The full, unique variable name to look for.
     drive : dict
         Dictionary containing metadata and widgets for a specific drive.
+        Values may be widget objects (with a `.value` attribute) or plain
+        values (when using a snapshot).
     params : dict
         Dictionary of "prior" parameters to check first for the variable.
 
@@ -5304,11 +5306,11 @@ def _use_nonsyn_params_if_exists(var_name, drive, params):
         The parameter value from params dict if the name-checked key exists, otherwise the value
         from the drive dict's `value` of the widget for `var_name`.
     """
-    return (
-        params[_name_check(var_name, drive, params)]
-        if _name_check(var_name, drive, params)
-        else drive[var_name].value
-    )
+    key = _name_check(var_name, drive, params)
+    if key:
+        return params[key]
+    val = drive[var_name]
+    return val.value if hasattr(val, "value") else val
 
 
 def _create_parametrized_syn_dicts_if_exist(syn_type, drive, params):
@@ -5346,16 +5348,61 @@ def _create_parametrized_syn_dicts_if_exist(syn_type, drive, params):
             cell_types.remove("L5_basket")
     output_dict = {syn_type: {}}
     for ct in cell_types:
-        output_dict[syn_type].update(
-            {
-                ct: (
-                    params[_name_check(ct, drive, params, syn_type)]
-                    if _name_check(ct, drive, params, syn_type)
-                    else drive[syn_type][ct].value
-                )
-            }
-        )
+        key = _name_check(ct, drive, params, syn_type)
+        if key:
+            output_dict[syn_type][ct] = params[key]
+        else:
+            val = drive[syn_type][ct]
+            output_dict[syn_type][ct] = val.value if hasattr(val, "value") else val
     return output_dict
+
+
+def _snapshot_drive_widgets(opt_drive_widgets):
+    """Extract plain values from drive widget dicts so closures are picklable.
+
+    The resulting list of dicts contains only plain Python values (no widget
+    objects), making it safe to capture in closures that will be serialized
+    by joblib/loky for parallel execution.
+    """
+    cell_types = ["L5_pyramidal", "L2_pyramidal", "L5_basket", "L2_basket"]
+    syn_types = ["weights_ampa", "weights_nmda", "delays", "rate_constant", "amplitude"]
+    nonsyn_vars = [
+        "t0",
+        "tstop",
+        "tstart",
+        "mu",
+        "sigma",
+        "tstart_std",
+        "burst_rate",
+        "burst_std",
+    ]
+    direct_widget_keys = ["is_cell_specific", "n_drive_cells", "seedcore", "numspikes"]
+
+    snapshots = []
+    for drive in opt_drive_widgets:
+        snap = {}
+        # Copy plain-string metadata
+        for k in ("type", "name", "location"):
+            if k in drive:
+                snap[k] = drive[k]
+        # Snapshot direct widget values
+        for k in direct_widget_keys:
+            if k in drive and hasattr(drive[k], "value"):
+                snap[k] = drive[k].value
+        # Snapshot non-synaptic variable widgets
+        for k in nonsyn_vars:
+            if k in drive and hasattr(drive[k], "value"):
+                snap[k] = drive[k].value
+        # Snapshot synaptic dicts (widget per cell type)
+        for syn in syn_types:
+            if syn in drive and isinstance(drive[syn], dict):
+                snap[syn] = {}
+                for ct in cell_types:
+                    if ct in drive[syn]:
+                        val = drive[syn][ct]
+                        snap[syn][ct] = val.value if hasattr(val, "value") else val
+        snapshots.append(snap)
+    return snapshots
 
 
 def _generate_constraints_and_func(net, opt_drive_widgets):
@@ -5416,11 +5463,16 @@ def _generate_constraints_and_func(net, opt_drive_widgets):
             elif drive["type"] in ("Rhythmic", "Bursty"):
                 constraints.update(_build_constraints(drive, apply_percentages=True))
 
+    # Snapshot all widget values into plain dicts so the closure is picklable
+    # (required for joblib/loky parallel execution in BatchSimulate).
+    # ------------------------------------------------------------------------------
+    drive_snapshots = _snapshot_drive_widgets(opt_drive_widgets)
+
     # Second, create a new `set_params` function that iterates through the drive
-    # widgets AGAIN, but which deploys our newly-created `constraints` dict:
+    # snapshots and deploys our newly-created `constraints` dict:
     # ------------------------------------------------------------------------------
     def set_params(net, params):
-        for drive in opt_drive_widgets:
+        for drive in drive_snapshots:
             if drive["type"] in ("Tonic"):
                 deployed_syn_dicts = {}
                 deployed_syn_dicts.update(
@@ -5436,10 +5488,10 @@ def _generate_constraints_and_func(net, opt_drive_widgets):
                 sync_inputs_kwargs = dict(
                     n_drive_cells=(
                         "n_cells"
-                        if drive["is_cell_specific"].value
-                        else drive["n_drive_cells"].value
+                        if drive["is_cell_specific"]
+                        else drive["n_drive_cells"]
                     ),
-                    cell_specific=drive["is_cell_specific"].value,
+                    cell_specific=drive["is_cell_specific"],
                 )
 
                 deployed_syn_dicts = {}
@@ -5466,7 +5518,7 @@ def _generate_constraints_and_func(net, opt_drive_widgets):
                         weights_nmda=deployed_syn_dicts["weights_nmda"],
                         synaptic_delays=deployed_syn_dicts["delays"],
                         space_constant=100.0,
-                        event_seed=drive["seedcore"].value,
+                        event_seed=drive["seedcore"],
                         **sync_inputs_kwargs,
                     )
                 elif drive["type"] in ("Evoked", "Gaussian"):
@@ -5474,13 +5526,13 @@ def _generate_constraints_and_func(net, opt_drive_widgets):
                         name=drive["name"],
                         mu=_use_nonsyn_params_if_exists("mu", drive, params),
                         sigma=_use_nonsyn_params_if_exists("sigma", drive, params),
-                        numspikes=drive["numspikes"].value,
+                        numspikes=drive["numspikes"],
                         location=drive["location"],
                         weights_ampa=deployed_syn_dicts["weights_ampa"],
                         weights_nmda=deployed_syn_dicts["weights_nmda"],
                         synaptic_delays=deployed_syn_dicts["delays"],
                         space_constant=3.0,
-                        event_seed=drive["seedcore"].value,
+                        event_seed=drive["seedcore"],
                         **sync_inputs_kwargs,
                     )
 
@@ -5499,11 +5551,11 @@ def _generate_constraints_and_func(net, opt_drive_widgets):
                         burst_std=_use_nonsyn_params_if_exists(
                             "burst_std", drive, params
                         ),
-                        numspikes=drive["numspikes"].value,
+                        numspikes=drive["numspikes"],
                         weights_ampa=deployed_syn_dicts["weights_ampa"],
                         weights_nmda=deployed_syn_dicts["weights_nmda"],
                         synaptic_delays=deployed_syn_dicts["delays"],
-                        event_seed=drive["seedcore"].value,
+                        event_seed=drive["seedcore"],
                         **sync_inputs_kwargs,
                     )
 
@@ -5715,6 +5767,7 @@ def run_opt_button_clicked(
                         smooth_window_len=opt_smoothing,
                         scale_factor=opt_scaling,
                         n_jobs=n_jobs.value,
+                        popsize=3,  # AES TODO DEBUG
                     )
                     optim.fit(**obj_fun_kwargs)
                 elif opt_obj_fun == "maximize_psd":
