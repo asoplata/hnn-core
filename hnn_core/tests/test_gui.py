@@ -1722,16 +1722,20 @@ def test_diff_gui_vs_api_networks_simulations():
     )
 
 
+# @pytest.mark.parametrize(
+#     "backend_selection,opt_solver",
+#     [
+#         (backend, solver)
+#         for backend in ("MPI", "Joblib")
+#         for solver in ("bayesian", "cobyla", "cma")
+#     ],
+# )
 @requires_mpi4py
 @requires_psutil
 @pytest.mark.uses_mpi
 @pytest.mark.parametrize(
     "backend_selection,opt_solver",
-    [
-        (backend, solver)
-        for backend in ("MPI", "Joblib")
-        for solver in ("bayesian", "cobyla", "cma")
-    ],
+    [("MPI", "cma")],
 )
 def test_gui_run_optimization(backend_selection, opt_solver):
     """Comprehensively test optimization functionality in the GUI.

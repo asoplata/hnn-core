@@ -5690,28 +5690,7 @@ def run_opt_button_clicked(
             max_iter=opt_max_iter,
         )
 
-        # Setup simulation backends
-        # ------------------------------------------------------------------------------
-        if backend_selection.value == "MPI":
-            # 'use_hwthreading_if_found' and 'sensible_default_cores' have
-            # already been set elsewhere, and do not need to be re-set here.
-            # Hardware-threading and oversubscription will always be disabled
-            # to prevent edge cases in the GUI.
-            backend = MPIBackend(
-                n_procs=n_jobs.value,
-                mpi_cmd=mpi_cmd.value,
-                override_hwthreading_option=False,
-                override_oversubscribe_option=False,
-            )
-            # AES @ntolley look here
-            cma_n_jobs = 1
-        else:
-            backend = JoblibBackend(n_jobs=n_jobs.value)
-            # AES @ntolley look here
-            cma_n_jobs = n_jobs.value
-            print(f"Using Joblib with {n_jobs.value} core(s).")
-
-        with backend:
+        if opt_solver == "cma":
             simulation_status_bar.value = simulation_status_contents["opt_running"]
             logger.info("Optimization started.")
             logger.info(f"Solver: {opt_solver}")
@@ -5735,7 +5714,7 @@ def run_opt_button_clicked(
                         n_trials=opt_target_widgets["n_trials"].value,
                         smooth_window_len=opt_smoothing,
                         scale_factor=opt_scaling,
-                        n_jobs=cma_n_jobs,  # AES @ntolley look here
+                        n_jobs=n_jobs.value,
                     )
                     optim.fit(**obj_fun_kwargs)
                 elif opt_obj_fun == "maximize_psd":
@@ -5859,6 +5838,174 @@ def run_opt_button_clicked(
                 simulation_status_bar.value = simulation_status_contents["failed"]
             else:
                 simulation_status_bar.value = simulation_status_contents["finished"]
+
+        else:
+            # Setup simulation backends
+            # ------------------------------------------------------------------------------
+            if backend_selection.value == "MPI":
+                # 'use_hwthreading_if_found' and 'sensible_default_cores' have
+                # already been set elsewhere, and do not need to be re-set here.
+                # Hardware-threading and oversubscription will always be disabled
+                # to prevent edge cases in the GUI.
+                backend = MPIBackend(
+                    n_procs=n_jobs.value,
+                    mpi_cmd=mpi_cmd.value,
+                    override_hwthreading_option=False,
+                    override_oversubscribe_option=False,
+                )
+            else:
+                backend = JoblibBackend(n_jobs=n_jobs.value)
+                print(f"Using Joblib with {n_jobs.value} core(s).")
+
+            with backend:
+                simulation_status_bar.value = simulation_status_contents["opt_running"]
+                logger.info("Optimization started.")
+                logger.info(f"Solver: {opt_solver}")
+                logger.info(f"Objective function: {opt_obj_fun}")
+                logger.info(f"Max iterations: {opt_max_iter}")
+                logger.info(f"Simulation duration: {opt_tstop} ms")
+
+                # Execute optimization
+                # --------------------------------------------------------------------------
+                # Store PSD parameters for history tracking
+                psd_f_bands = None
+                psd_relative_bandpower = None
+
+                try:
+                    if opt_obj_fun in ("dipole_corr", "dipole_rmse"):
+                        # AES: Not including the kwarg for "verbose" since the GUI log is
+                        # already pretty "busy"
+                        obj_fun_kwargs = dict(
+                            dt=dt.value,
+                            target=target_dipole,
+                            n_trials=opt_target_widgets["n_trials"].value,
+                            smooth_window_len=opt_smoothing,
+                            scale_factor=opt_scaling,
+                        )
+                        optim.fit(**obj_fun_kwargs)
+                    elif opt_obj_fun == "maximize_psd":
+                        if opt_target_widgets["psd_target_band2_checkbox"].value:
+                            f_bands = [
+                                (
+                                    opt_target_widgets["psd_target_band1_min"].value,
+                                    opt_target_widgets["psd_target_band1_max"].value,
+                                ),
+                                (
+                                    opt_target_widgets["psd_target_band2_min"].value,
+                                    opt_target_widgets["psd_target_band2_max"].value,
+                                ),
+                            ]
+                            relative_bandpower = [
+                                opt_target_widgets["psd_target_band1_proportion"].value,
+                                opt_target_widgets["psd_target_band2_proportion"].value,
+                            ]
+                        else:
+                            f_bands = [
+                                (
+                                    opt_target_widgets["psd_target_band1_min"].value,
+                                    opt_target_widgets["psd_target_band1_max"].value,
+                                )
+                            ]
+                            relative_bandpower = [
+                                opt_target_widgets["psd_target_band1_proportion"].value,
+                            ]
+
+                        # Store for history tracking
+                        psd_f_bands = f_bands
+                        psd_relative_bandpower = relative_bandpower
+
+                        # Note: `maximize_psd` does not currently support multiple trials.
+                        obj_fun_kwargs = dict(
+                            dt=dt.value,
+                            f_bands=f_bands,
+                            relative_bandpower=relative_bandpower,
+                            smooth_window_len=opt_smoothing,
+                            scale_factor=opt_scaling,
+                        )
+                        optim.fit(**obj_fun_kwargs)
+
+                except Exception as e:
+                    logger.error(
+                        f"Optimization fitting failed due to exception: '{e}'",
+                        exc_info=True,
+                    )
+                    simulation_status_bar.value = simulation_status_contents["failed"]
+                    raise
+
+                # --------------------------------------------------------------------------
+                # Now, let's resimulate the final version of the optimized network for usage
+                # and display it in the GUI
+                #
+                # First, let's make our new simulation name.
+                if (_sim_name + "_optimized") in simulation_data.keys():
+                    # Let's handle our output simulation name in the case that there are
+                    # pre-existing datasets with the names we want to use, such as if they
+                    # are executing a second round of Optimization, or their simulation name
+                    # just happens to end in "_optimized" by coincidence:
+                    if (_sim_name + "_optimized" + "_1") in simulation_data.keys():
+                        predecessor_sim_suffix_number = []
+                        for key in simulation_data.keys():
+                            match = re.search(r"_(\d+)$", key)
+                            if match:
+                                predecessor_sim_suffix_number.append(
+                                    int(match.group(1))
+                                )
+                        new_name = (
+                            _sim_name
+                            + "_optimized"
+                            + f"_{max(predecessor_sim_suffix_number) + 1}"
+                        )
+                    else:
+                        new_name = _sim_name + "_optimized" + "_1"
+                else:
+                    new_name = _sim_name + "_optimized"
+
+                # Now let's use the final version of the optimized Network, and use it to
+                # simulate
+                simulation_data[new_name]["net"] = optim.net_
+                simulation_data[new_name]["dpls"] = simulate_dipole(
+                    simulation_data[new_name]["net"],
+                    tstop=tstop.value,
+                    dt=dt.value,
+                    n_trials=opt_target_widgets["n_trials"].value,
+                )
+                # Finally, update the list of simulations to include our new one:
+                sim_names = [
+                    sim_name
+                    for sim_name in simulation_data
+                    if simulation_data[sim_name]["net"] is not None
+                ]
+                simulations_list_widget.options = sim_names
+                simulations_list_widget.value = sim_names[-1]
+
+                # Report back to the user, now that all simulations/output are completed:
+                logger.info(
+                    textwrap.dedent(f"""
+                    Optimization finished!
+                    Don't forget to "Save Network"!
+                    First objective function result: {optim.obj_[0]}
+                    Last objective function result: {optim.obj_[-1]}
+                    Diff: {abs(optim.obj_[-1] - optim.obj_[0])}
+                    """)
+                )
+                # Check if optimization showed ANY difference in the objective function. If
+                # it did not, then we made no progress.
+                #
+                # TODO: If we want to include something like the following in our automated
+                # testing, then we need to be sure (or at least very confident) that the
+                # same inputs will produce the same outputs (i.e. that our optimization is
+                # deterministic). Is it?
+                if np.all(optim.obj_ == optim.obj_[0]):
+                    logger.warning(
+                        textwrap.dedent("""
+                        The objective function did not change over the course of the
+                        optimization. You probably need to increase the number of max
+                        iterations in order to start converging.
+                        """).replace("\n", " ")
+                    )
+                    simulation_status_bar.value = simulation_status_contents["failed"]
+                else:
+                    simulation_status_bar.value = simulation_status_contents["finished"]
 
         # ------------------------------------------------------------------------------
         # The remainder of this function is just repeating some post-run visualization
