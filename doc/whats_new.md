@@ -5,7 +5,7 @@ orphan: true
 (whats_new)=
 # What's new?
 
-<!-- Protip: the Github PRs webpage does NOT give you the true order of *when* PRs were
+<!--  Protip: the Github PRs webpage does NOT give you the true order of *when* PRs were
 merged into `master`! Use `git log` instead and cross-reference instead. -->
 
 <!-- template below for new release notes: -->
