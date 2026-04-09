@@ -11,11 +11,29 @@ from hnn_core import (
 from hnn_core.cells_default import pyramidal
 from hnn_core.network_builder import load_custom_mechanisms
 from hnn_core.network_models import add_erp_drives_to_jones_model
+from hnn_core.dipole import TransmembraneRecordingConfig
 
 net = jones_2009_model()
 add_erp_drives_to_jones_model(net)
 
 n_trials = 1
+
+# new
+tm_record_cfg = TransmembraneRecordingConfig(
+    record_agg_i_mem="all",   # aggregated total transmembrane current
+    # record_agg_ina="all",
+    # record_agg_ik="all",
+    record_agg_i_cap="all",   # aggregated capacitive current
+    record_ina_hh2="all",
+    record_ik_hh2="all",
+    record_ik_kca="all",
+    record_ik_km="all",
+    record_ica_ca="all",
+    record_ica_cat="all",
+    record_il_hh2="all",      # aggregated leak current
+    record_i_ar="all",
+)
+#
 
 if "dpls" not in locals():
     with JoblibBackend(8):
@@ -23,18 +41,7 @@ if "dpls" not in locals():
             net,
             tstop=50,#170.0,
             n_trials=n_trials,
-            record_agg_i_mem="all", # aggregated total transmembrane current
-            # record_agg_ina="all",
-            # record_agg_ik="all",
-            record_agg_i_cap="all", # aggregated capacitive current
-            record_ina_hh2="all",
-            record_ik_hh2="all",
-            record_ik_kca="all",
-            record_ik_km="all",
-            record_ica_ca="all",
-            record_ica_cat="all",
-            record_il_hh2="all", # aggregated leak current
-            record_i_ar="all",
+            record_imem=tm_record_cfg,
             record_isec="all",
         )
 

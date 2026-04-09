@@ -503,6 +503,7 @@ class NetworkBuilder(object):
         record_vsec = self.net._params["record_vsec"]
         record_isec = self.net._params["record_isec"]
         record_ca = self.net._params["record_ca"]
+        record_imem = self.net._params["record_imem"]
         # [new]
         record_agg_i_mem = self.net._params["record_agg_i_mem"]
         record_agg_ina = self.net._params["record_agg_ina"]
@@ -522,6 +523,7 @@ class NetworkBuilder(object):
             record_vsec=record_vsec,
             record_isec=record_isec,
             record_ca=record_ca,
+            record_imem=record_imem,
             # [new]
             record_agg_i_mem=record_agg_i_mem,
             record_agg_ina=record_agg_ina,
@@ -613,6 +615,7 @@ class NetworkBuilder(object):
         record_vsec=False,
         record_isec=False,
         record_ca=False,
+        record_imem=False,
         # [new]
         record_agg_i_mem=False,
         record_agg_ina=False,
@@ -666,6 +669,25 @@ class NetworkBuilder(object):
                             **self.net.external_biases[bias][src_type]
                         )
                 cell.record(
+                    record_vsec=record_vsec,
+                    record_isec=record_isec,
+                    record_ca=record_ca,
+                    record_imem=record_imem,
+                    record_agg_i_mem=record_agg_i_mem,
+                    record_agg_ina=record_agg_ina,
+                    record_agg_ik=record_agg_ik,
+                    record_agg_i_cap=record_agg_i_cap,
+                    record_ina_hh2=record_ina_hh2,
+                    record_ik_hh2=record_ik_hh2,
+                    record_ik_kca=record_ik_kca,
+                    record_ik_km=record_ik_km,
+                    record_ica_ca=record_ica_ca,
+                    record_ica_cat=record_ica_cat,
+                    record_il_hh2=record_il_hh2,
+                    record_i_ar=record_i_ar,
+                )
+                '''
+                cell.record(
                     record_vsec,
                     record_isec,
                     record_ca,
@@ -684,6 +706,7 @@ class NetworkBuilder(object):
                     record_i_ar,
                     # [end new]
                 )
+                '''
 
                 # this call could belong in init of a _Cell (with threshold)?
                 nrn_netcon = cell.setup_source_netcon(threshold)

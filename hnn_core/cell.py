@@ -1014,6 +1014,7 @@ class Cell:
         record_vsec=False,
         record_isec=False,
         record_ca=False,
+        record_imem=None,
         # [new]
         record_agg_i_mem=False,
         record_agg_ina=False,
@@ -1045,11 +1046,14 @@ class Cell:
         record_agg_i_mem :
             Option to record total transmembrane current from all segments.
             Default: False.
-        record_agg_ina, record_agg_ik, record_agg_i_cap, record_ina_hh2, 
-        record_ik_hh2, record_ik_kca, record_ik_km, record_ica_ca, 
-        record_ica_cat, record_il_hh2, record_i_ar : 'all' | 'soma' | False
-            Option to record currents from all sections ('all'), or just
-            the soma ('soma'). Default: False.
+        record_imem : dict or None
+            Grouped transmembrane recording configuration. If provided, its 
+            values override the individual transmembrane recording arguments.
+        #record_agg_ina, record_agg_ik, record_agg_i_cap, record_ina_hh2, 
+        #record_ik_hh2, record_ik_kca, record_ik_km, record_ica_ca, 
+        #record_ica_cat, record_il_hh2, record_i_ar : 'all' | 'soma' | False
+        #    Option to record currents from all sections ('all'), or just
+        #    the soma ('soma'). Default: False.
         """
 
         section_names = list(self.sections.keys())
@@ -1097,13 +1101,27 @@ class Cell:
                     self.ca[sec_name] = h.Vector()
                     self.ca[sec_name].record(self._nrn_sections[sec_name](0.5)._ref_cai)
 
-        # [new]
-        # transmembrane currents
-        if record_agg_i_mem:
+        if record_imem is None:
+            record_imem = {
+                "agg_i_mem": record_agg_i_mem,
+                "agg_ina": record_agg_ina,
+                "agg_ik": record_agg_ik,
+                "agg_i_cap": record_agg_i_cap,
+                "ina_hh2": record_ina_hh2,
+                "ik_hh2": record_ik_hh2,
+                "ik_kca": record_ik_kca,
+                "ik_km": record_ik_km,
+                "ica_ca": record_ica_ca,
+                "ica_cat": record_ica_cat,
+                "il_hh2": record_il_hh2,
+                "i_ar": record_i_ar,
+            }
+
+        if record_imem["agg_i_mem"]:
             self._setup_imem_recording()
 
         self._record_transmembrane_currents(
-            record_agg_ina,
+            record_imem["agg_ina"],
             "agg_ina",
             section_names,
             ref="_ref_ina",
@@ -1111,7 +1129,7 @@ class Cell:
         )
 
         self._record_transmembrane_currents(
-            record_agg_ik,
+            record_imem["agg_ik"],
             "agg_ik",
             section_names,
             ref="_ref_ik",
@@ -1119,25 +1137,24 @@ class Cell:
         )
 
         self._record_transmembrane_currents(
-            record_agg_i_cap,
-            "agg_i_cap",
+            record_imem["agg_i_cap"],
+            "agg_i_cap",            
             section_names,
-            mech=None,
             ref="_ref_i_cap",
             per_segment=True,
         )
 
         self._record_transmembrane_currents(
-            record_ina_hh2,
+            record_imem["ina_hh2"],
             "ina_hh2",
             section_names,
             mech="hh2",
             ref="_ref_ina",
             per_segment=True,
-        )
+        )   
 
         self._record_transmembrane_currents(
-            record_ik_hh2,
+            record_imem["ik_hh2"],
             "ik_hh2",
             section_names,
             mech="hh2",
@@ -1146,16 +1163,16 @@ class Cell:
         )
 
         self._record_transmembrane_currents(
-            record_ik_kca,
+            record_imem["ik_kca"],
             "ik_kca",
             section_names,
-            mech="kca",
+            mech="kca", 
             ref="_ref_ik",
             per_segment=True,
         )
 
         self._record_transmembrane_currents(
-            record_ik_km,
+            record_imem["ik_km"],
             "ik_km",
             section_names,
             mech="km",
@@ -1164,16 +1181,16 @@ class Cell:
         )
 
         self._record_transmembrane_currents(
-            record_ica_ca,
+            record_imem["ica_ca"],
             "ica_ca",
             section_names,
             mech="ca",
-            ref="_ref_ica",
+            ref="_ref_ica", 
             per_segment=True,
-        )
+        )  
 
         self._record_transmembrane_currents(
-            record_ica_cat,
+            record_imem["ica_cat"],
             "ica_cat",
             section_names,
             mech="cat",
@@ -1182,7 +1199,7 @@ class Cell:
         )
 
         self._record_transmembrane_currents(
-            record_il_hh2,
+            record_imem["il_hh2"],
             "il_hh2",
             section_names,
             mech="hh2",
@@ -1191,14 +1208,13 @@ class Cell:
         )
 
         self._record_transmembrane_currents(
-            record_i_ar,
+            record_imem["i_ar"],
             "i_ar",
             section_names,
             mech="ar",
             ref="_ref_i",
             per_segment=True,
         )
-        # [end new]
 
     def syn_create(self, secloc, e, tau1, tau2):
         """Create an h.Exp2Syn synapse.

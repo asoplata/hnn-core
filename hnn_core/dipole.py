@@ -5,6 +5,7 @@
 
 import os
 import warnings
+from dataclasses import dataclass
 from io import StringIO
 
 import numpy as np
@@ -14,6 +15,43 @@ from .externals.mne import _check_option
 
 from .viz import plot_dipole, plot_psd, plot_tfr_morlet
 
+# provisional, to be moved to a more appropriate location in the future
+@dataclass 
+class TransmembraneRecordingConfig: 
+    """Configuration for optional transmembrane current recordings.
+
+    Each attribute specifies whether a given current should be recorded
+    from all sections ("all"), soma only ("soma"), or not recorded (False).
+    """
+    record_agg_i_mem: str | bool = False
+    record_agg_ina: str | bool = False
+    record_agg_ik: str | bool = False
+    record_agg_i_cap: str | bool = False
+    record_ina_hh2: str | bool = False
+    record_ik_hh2: str | bool = False
+    record_ik_kca: str | bool = False
+    record_ik_km: str | bool = False
+    record_ica_ca: str | bool = False
+    record_ica_cat: str | bool = False
+    record_il_hh2: str | bool = False
+    record_i_ar: str | bool = False
+
+def _imem_config_to_dict(record_imem):
+    """Convert transmembrane recording config to a dictionary."""
+    return {
+        "agg_i_mem": record_imem.record_agg_i_mem,
+        "agg_ina": record_imem.record_agg_ina,
+        "agg_ik": record_imem.record_agg_ik,
+        "agg_i_cap": record_imem.record_agg_i_cap,
+        "ina_hh2": record_imem.record_ina_hh2,
+        "ik_hh2": record_imem.record_ik_hh2,
+        "ik_kca": record_imem.record_ik_kca,
+        "ik_km": record_imem.record_ik_km,
+        "ica_ca": record_imem.record_ica_ca,
+        "ica_cat": record_imem.record_ica_cat,
+        "il_hh2": record_imem.record_il_hh2,
+        "i_ar": record_imem.record_i_ar,
+    }
 
 def simulate_dipole(
     net,
@@ -23,6 +61,7 @@ def simulate_dipole(
     record_vsec=False,
     record_isec=False,
     record_ca=False,
+    record_imem=None,
     # [new]
     record_agg_i_mem=False,
     record_agg_ina=False,
@@ -62,6 +101,10 @@ def simulate_dipole(
     record_ca : 'all' | 'soma' | False
         Option to record calcium concentration from all sections ('all'),
         or just the soma ('soma'). Default: False.
+    record_imem : TransmembraneRecordingConfig | None
+        Configuration for optional transmembrane current recordings.
+        If provided, its values override the individual transmembrane
+        recording arguments. Default: None.
     postproc : bool
         If True, smoothing (``dipole_smooth_win``) and scaling
         (``dipole_scalefctr``) values are read from the parameter file, and
@@ -116,7 +159,54 @@ def simulate_dipole(
     net._instantiate_drives(n_trials=n_trials, tstop=tstop)
     net._reset_rec_arrays()
 
-    record_flags =  [("record_vsec", record_vsec), ("record_isec", record_isec), ("record_ca", record_ca), ("record_agg_i_mem", record_agg_i_mem), ("record_agg_ina", record_agg_ina), ("record_agg_ik", record_agg_ik), ("record_agg_i_cap", record_agg_i_cap), ("record_ina_hh2", record_ina_hh2), ("record_ik_hh2", record_ik_hh2), ("record_ik_kca", record_ik_kca), ("record_ik_km", record_ik_km), ("record_ica_ca", record_ica_ca), ("record_ica_cat", record_ica_cat), ("record_il_hh2", record_il_hh2), ("record_i_ar", record_i_ar)]
+    if record_imem is not None:
+        if not isinstance(record_imem, TransmembraneRecordingConfig):
+            raise TypeError(
+                "record_imem must be an instance of "
+                "TransmembraneRecordingConfig or None"
+            )
+    else:
+        record_imem = TransmembraneRecordingConfig(
+            record_agg_i_mem=record_agg_i_mem,
+            record_agg_ina=record_agg_ina,
+            record_agg_ik=record_agg_ik,
+            record_agg_i_cap=record_agg_i_cap,
+            record_ina_hh2=record_ina_hh2,
+            record_ik_hh2=record_ik_hh2,
+            record_ik_kca=record_ik_kca,
+            record_ik_km=record_ik_km,
+            record_ica_ca=record_ica_ca,
+            record_ica_cat=record_ica_cat,
+            record_il_hh2=record_il_hh2,
+            record_i_ar=record_i_ar,
+        )
+
+    imem_recordings = _imem_config_to_dict(record_imem)
+    
+    #record_flags =  [("record_vsec", record_vsec), ("record_isec", record_isec), ("record_ca", record_ca), ("record_agg_i_mem", record_agg_i_mem), ("record_agg_ina", record_agg_ina), ("record_agg_ik", record_agg_ik), ("record_agg_i_cap", record_agg_i_cap), ("record_ina_hh2", record_ina_hh2), ("record_ik_hh2", record_ik_hh2), ("record_ik_kca", record_ik_kca), ("record_ik_km", record_ik_km), ("record_ica_ca", record_ica_ca), ("record_ica_cat", record_ica_cat), ("record_il_hh2", record_il_hh2), ("record_i_ar", record_i_ar)]
+    #for (name, val) in record_flags:
+    #    _check_option(name, val, ["all", "soma", False])
+    #    net._params[name] = val
+    # record_flags is a list of tuples where the first element is the name of the flag and the second element is the value of the flag. We can use this list to check the options and set the parameters in a loop instead of writing multiple lines of code for each flag.
+    record_flags = [
+        ("record_vsec", record_vsec),
+        ("record_isec", record_isec),
+        ("record_ca", record_ca),
+        ("record_agg_i_mem", imem_recordings["agg_i_mem"]),
+        ("record_agg_ina", imem_recordings["agg_ina"]),
+        ("record_agg_ik", imem_recordings["agg_ik"]),
+        ("record_agg_i_cap", imem_recordings["agg_i_cap"]),
+        ("record_ina_hh2", imem_recordings["ina_hh2"]),
+        ("record_ik_hh2", imem_recordings["ik_hh2"]),
+        ("record_ik_kca", imem_recordings["ik_kca"]),
+        ("record_ik_km", imem_recordings["ik_km"]),
+        ("record_ica_ca", imem_recordings["ica_ca"]),
+        ("record_ica_cat", imem_recordings["ica_cat"]),
+        ("record_il_hh2", imem_recordings["il_hh2"]),
+        ("record_i_ar", imem_recordings["i_ar"]),
+    ]
+    
+    net._params["record_imem"] = imem_recordings
     for (name, val) in record_flags:
         _check_option(name, val, ["all", "soma", False])
         net._params[name] = val
