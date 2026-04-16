@@ -860,30 +860,23 @@ class Cell:
                 - "soma" : only the soma
                 - "all"  : all sections in `section_names`
                 - None   : skip
-
         name : str
             the attribute name to hold the recordings; e.g., for name="ina",
             the recording would be accessed with "self.ina"
-
         section_names : list
             list of available section names
-
         mech : str or None
             The mechanism inside a section segment (e.g., "hh2") to use for recording
             If None, the current is recorded directly from the section
             itself (from the top-level variable)
-
         ref : str
             The name of the hoc reference variable to record from (e.g., "_ref_ina"
             for sodium)
-
         per_segment: bool
             If True, record from every segment in the section
                 - keys will follow the format: "seg_x_0.500"
             If False, record only from the midpoint (0.5)
-
         """
-
         # create an attribute on self to hold the currents
         if record_flag == "soma":
             setattr(self, name, dict.fromkeys(["soma"]))
@@ -950,6 +943,23 @@ class Cell:
                     #    - the mechanism exists on the segment
                     #    _ the ref variable exists for the segment mechanism
                     else:
+                        mech_obj = getattr(segment, mech, None) # temp variable to store the mechanism object
+                        # e.g., mech = "hh2" exists on that segment, then mech_obj = segment.hh2, else None
+
+                        rec_target = None
+
+                        # First try mechanism-level reference, e.g. segment.hh2._ref_il
+                        if mech_obj is not None and hasattr(mech_obj, ref):
+                            rec_target = getattr(mech_obj, ref)
+
+                        # Fallback to segment-level reference, e.g. segment._ref_ina
+                        elif hasattr(segment, ref):
+                            rec_target = getattr(segment, ref)
+
+                        if rec_target is not None:
+                            currents[sec_name][seg_key] = h.Vector()
+                            currents[sec_name][seg_key].record(rec_target)
+                        '''
                         if hasattr(segment, mech) and hasattr(
                             getattr(segment, mech), ref
                         ):
@@ -964,6 +974,18 @@ class Cell:
                                     ref,
                                 )
                             )
+                        '''
+                        '''
+                        if self.gid == 50 and mech == "hh2" and sec_name == "soma" and seg_key == "seg_1":
+                            print(
+                                f"gid={self.gid} {sec_name}/{seg_key}: "
+                                f"hh2._ref_il={hasattr(segment.hh2, '_ref_il') if hasattr(segment, 'hh2') else 'NA'}, "
+                                f"hh2._ref_ina={hasattr(segment.hh2, '_ref_ina') if hasattr(segment, 'hh2') else 'NA'}, "
+                                f"seg._ref_ina={hasattr(segment, '_ref_ina')}, "
+                                f"hh2._ref_ik={hasattr(segment.hh2, '_ref_ik') if hasattr(segment, 'hh2') else 'NA'}, "
+                                f"seg._ref_ik={hasattr(segment, '_ref_ik')}"
+                            )
+                        '''
             # if not recording at the segment level, record from the
             # midpoint of the section
             else:
@@ -985,7 +1007,7 @@ class Cell:
                         # attach the h.Vector() recorder
                         currents[sec_name] = h.Vector()
                         currents[sec_name].record(getattr(getattr(seg, mech), ref))
-
+                        
     def _setup_imem_recording(self):
         """
         This functions handles the recording of the *total* transmembrane current,
