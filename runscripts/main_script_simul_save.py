@@ -3,6 +3,8 @@ import numpy as np
 from IPython.core.getipython import get_ipython
 from matplotlib.lines import Line2D
 import pickle
+import postproc_tm_currents_extracellular_v2 as tme
+
 
 from hnn_core import (
     JoblibBackend,
@@ -19,11 +21,10 @@ add_erp_drives_to_jones_model(net)
 n_trials = 1
 
 # Laminar probe
-depths = np.arange(0, 2200, 100)
+depths = np.arange(0, 2200, 100) #depths = list(list(range(-125,2150,100)))
 electrode_pos = [(135, 135, z) for z in depths]
 net.add_electrode_array('probe1', electrode_pos)
 
-'''
 
 if "dpls" not in locals():
     with JoblibBackend(8):
@@ -55,6 +56,16 @@ dpl = dpls[0]
 #    layer=["L5"],
 #    show=False,
 #)
+
+
+# plot
+tme.plot_lfp_and_csd(
+    times,
+    lfp_na_l5,
+    csd_na_l5,
+    contact_positions=contact_positions,
+    titles=("LFP: L5 ina_hh2", "CSD: L5 ina_hh2"),
+)
 
 from types import SimpleNamespace
 import pickle
@@ -137,7 +148,7 @@ record_config = {
 }
 
 save_postproc_net(
-    "simulation_with_net_v5.pkl",
+    "simulation_with_net_v6.pkl",
     net=net,
     dpls=dpls,
     depths=depths,
@@ -147,9 +158,9 @@ save_postproc_net(
     scaling_factor=scaling_factor,
     record_config=record_config,
 )
+
+
 '''
-
-
 #import pickle
 
 with open("simulation_with_net_v5.pkl", "rb") as f:
@@ -174,15 +185,15 @@ csd_na_l5 = tme.reconstruct_csd(net, lfp_na_l5, array_name="probe1")
 times = np.asarray(net_loaded.cell_response.times)
 contact_positions = net.rec_arrays["probe1"].positions
 
-'''
-tme.plot_lfp_and_csd(
-    times,
-    lfp_na_l5,
-    csd_na_l5,
-    contact_positions=contact_positions,
-    titles=("LFP: L5 ina_hh2", "CSD: L5 ina_hh2"),
-)
-'''
+
+#tme.plot_lfp_and_csd(
+#    times,
+#    lfp_na_l5,
+#    csd_na_l5,
+#    contact_positions=contact_positions,
+#    titles=("LFP: L5 ina_hh2", "CSD: L5 ina_hh2"),
+#)
+
 
 
 #agg_i_mem includes all transmembrane currents, so should be identical to the LFP originally displayed
@@ -210,7 +221,7 @@ tme.plot_lfp_and_csd(
 
 
 
-'''
+
 # Synaptic: midpoint-segment approximation
 lfp_syn, src_syn, T_syn, I_syn = tme.reconstruct_synaptic_lfp(
     net_loaded,
