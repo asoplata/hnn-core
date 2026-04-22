@@ -5755,10 +5755,6 @@ def run_opt_button_clicked(
 
             # Execute optimization
             # --------------------------------------------------------------------------
-            # Store PSD parameters for history tracking
-            psd_f_bands = None
-            psd_relative_bandpower = None
-
             try:
                 if opt_obj_fun in ("dipole_corr", "dipole_rmse"):
                     # AES: Not including the kwarg for "verbose" since the GUI log is
@@ -5799,10 +5795,6 @@ def run_opt_button_clicked(
                         relative_bandpower = [
                             opt_target_widgets["psd_target_band1_proportion"].value,
                         ]
-
-                    # Store for history tracking
-                    psd_f_bands = f_bands
-                    psd_relative_bandpower = relative_bandpower
 
                     # Note: `maximize_psd` does not currently support multiple trials.
                     obj_fun_kwargs = dict(
@@ -5895,12 +5887,23 @@ def run_opt_button_clicked(
             else:
                 simulation_status_bar.value = simulation_status_contents["finished"]
 
+            if opt_obj_fun == "maximize_psd":
+                return new_name, f_bands, relative_bandpower
+            else:
+                return new_name
+
         # --------------------------------------------------------------------------
         if opt_solver == "cma":
             # Do not setup any backends, since CMA will use BatchSimulate to use its own
             # JoblibBackend internally.
-            main_execution(popsize=2)  # AES TODO DEBUG
-        else:
+            if opt_obj_fun == "maximize_psd":
+                # AES TODO DEBUG
+                new_name, psd_f_bands, psd_relative_bandpower = main_execution(
+                    popsize=2
+                )
+            else:
+                new_name = main_execution(popsize=2)
+
             # Setup non-CMA simulation backends
             if backend_selection.value == "MPI":
                 # 'use_hwthreading_if_found' and 'sensible_default_cores' have
@@ -5918,7 +5921,13 @@ def run_opt_button_clicked(
                 print(f"Using Joblib with {n_jobs.value} core(s).")
 
             with backend:
-                main_execution(popsize=None)
+                if opt_obj_fun == "maximize_psd":
+                    # AES TODO DEBUG
+                    new_name, psd_f_bands, psd_relative_bandpower = main_execution(
+                        popsize=None
+                    )
+                else:
+                    new_name = main_execution(popsize=None)
 
         # ------------------------------------------------------------------------------
         # The remainder of this function is just repeating some post-run visualization
