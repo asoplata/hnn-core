@@ -5286,56 +5286,112 @@ def _name_check(var, drive, params, syn_type=None):
         return None
 
 
-def _use_nonsyn_params_if_exists(var_name, drive, params):
-    """Retrieve a non-synaptice parameter value from `params` (if it exists), else from `drive`.
+def _use_params_if_exists(var_name, drive, params, syn_type=None):
+    """Get a parameter value from `params` (if exists), else from `drive`.
+
+    This is intended for use in the `set_params` closure used in
+    `_generate_constraints_and_func` in the GUI's Optimization running.
+
+    Note that `drive` should NOT contain actual Widgets, and instead must be picklable
+    such as output from `_snapshot_drive_widgets`!
+
+    Due to how the GUI handles drives with celltype-specific "synaptic" properties,
+    `drive` is accessed differently depending on if you are using the "synaptic" case or
+    not.
 
     Parameters
     ----------
     var_name : str
         The full, unique variable name to look for.
     drive : dict
-        Dictionary containing metadata and widgets for a specific drive.
-        Values may be widget objects (with a `.value` attribute) or plain
-        values (when using a snapshot).
+        Dictionary containing metadata and widgets for a specific drive. Values MUST be
+        picklable, meaning they should NOT be widgets, and instead be outputs of
+        `_snapshot_drive_widgets`!
     params : dict
         Dictionary of "prior" parameters to check first for the variable.
+    syn_type : {"weights_ampa", "weights_nmda", "delays", "rate_constant", "amplitude"},
+    optional
+        If passed, this acts as a trigger to access `drive` differently, since in the
+        GUI, drives with synaptic properties are organized with an additional nested
+        dictionary, like `drive[<syn_type>][<celltype>]`.
 
     Returns
     -------
     value : various
-        The parameter value from params dict if the name-checked key exists, otherwise the value
-        from the drive dict's `value` of the widget for `var_name`.
+        The parameter value from params dict if the name-checked key exists, otherwise
+        the value from the drive dict's `value` of the widget for `var_name`.
     """
-    key = _name_check(var_name, drive, params)
+    key = _name_check(var_name, drive, params, syn_type)
     if key:
+        # In this case, there appears to be a "prior" parameter for the passed var and
+        # drive, so let's use that:
         return params[key]
-    val = drive[var_name]
-    return val.value if hasattr(val, "value") else val
+
+    elif syn_type:
+        # We are in the weird "synaptic" case, so need to access `drive` differently
+        if hasattr(drive[syn_type][var_name], "value"):
+            raise ValueError(
+                "Values in `drive` must not be widgets! You should use "
+                "`_snapshot_drive_widgets` before passing to `drive`. If you are "
+                "doing so and still seeing this error, then something is wrong with "
+                "the snapshot creation."
+            )
+        else:
+            # If this is not a widget (in the case of drive "snapshots"), then just
+            # return the value itself:
+            return drive[syn_type][var_name]
+
+    else:
+        # We are in the normal non-synaptic case
+        if hasattr(drive[var_name], "value"):
+            raise ValueError(
+                "Values in `drive` must not be widgets! You should use "
+                "`_snapshot_drive_widgets` before passing to `drive`. If you are "
+                "doing so and still seeing this error, then something is wrong with "
+                "the snapshot creation."
+            )
+        else:
+            # If this is not a widget (in the case of drive "snapshots"), then just
+            # return the value itself:
+            return drive[var_name]
 
 
 def _create_parametrized_syn_dicts_if_exist(syn_type, drive, params):
-    """Create dict of synaptic parameters if they exist in `params`, else use values from `drive`.
+    """Create dict of synaptic parameters if they exist in `params`, else use values
+    from `drive`.
 
-    This function creates a dictionary of synaptic parameters for different cell types, checking if
-    parametrized versions exist in the `params` dict. If a parametrized version exists, it uses that
-    value; otherwise, it falls back to the drive's default value. In the special case of
-    'amplitude', it also excludes the `L5_basket` cell type if the drive location is 'distal'.
+    This function creates a dictionary of synaptic parameters for different cell types,
+    checking if parametrized versions exist in the `params` dict. If a parametrized
+    version exists, it uses that value; otherwise, it falls back to the drive's default
+    value. In the special case of 'amplitude', it also excludes the `L5_basket` cell
+    type if the drive location is 'distal'. This is necessary because celltype-specific
+    parameters of drives are nested inside `syn_type` dictionaries, unlike general
+    parameters.
+
+    Note that `drive` should NOT contain actual Widgets, and instead must be picklable
+    such as output from `_snapshot_drive_widgets`!
+
+    This is intended for use in the `set_params` closure used in
+    `_generate_constraints_and_func` in the GUI's Optimization running.
 
     Parameters
     ----------
     syn_type : {"weights_ampa", "weights_nmda", "delays", "rate_constant", "amplitude"}
         The type of synaptic parameter to create the dictionary for.
     drive : dict
-        Dictionary containing metadata and widgets for a specific drive.
+        Dictionary containing metadata and widgets for a specific drive. Values MUST be
+        picklable, meaning they should NOT be widgets, and instead be outputs of
+        `_snapshot_drive_widgets`!
     params : dict
-        Dictionary of "prior" parameters that may contain parametrized versions of synaptic
-        parameters.
+        Dictionary of "prior" parameters that *may* contain parametrized versions of
+        synaptic parameters.
 
     Returns
     -------
     output_dict : dict
-        A nested dictionary with `syn_type` as the outer key and cell types as inner keys, each
-        mapping to their respective values for the parameter inherent to `syn_type`.
+        A nested dictionary with `syn_type` as the outer key and cell types as inner
+        keys, each mapping to their respective values for the parameter inherent to
+        `syn_type`.
     """
     cell_types = [
         "L5_pyramidal",
@@ -5348,12 +5404,8 @@ def _create_parametrized_syn_dicts_if_exist(syn_type, drive, params):
             cell_types.remove("L5_basket")
     output_dict = {syn_type: {}}
     for ct in cell_types:
-        key = _name_check(ct, drive, params, syn_type)
-        if key:
-            output_dict[syn_type][ct] = params[key]
-        else:
-            val = drive[syn_type][ct]
-            output_dict[syn_type][ct] = val.value if hasattr(val, "value") else val
+        output_dict[syn_type][ct] = _use_params_if_exists(ct, drive, params, syn_type)
+
     return output_dict
 
 
@@ -5480,8 +5532,8 @@ def _generate_constraints_and_func(net, opt_drive_widgets):
                 )
                 net.add_tonic_bias(
                     amplitude=deployed_syn_dicts["amplitude"],
-                    t0=_use_nonsyn_params_if_exists("t0", drive, params),
-                    tstop=_use_nonsyn_params_if_exists("tstop", drive, params),
+                    t0=_use_params_if_exists("t0", drive, params),
+                    tstop=_use_params_if_exists("tstop", drive, params),
                     bias_name=drive["name"],
                 )
             else:
@@ -5510,8 +5562,8 @@ def _generate_constraints_and_func(net, opt_drive_widgets):
 
                     net.add_poisson_drive(
                         name=drive["name"],
-                        tstart=_use_nonsyn_params_if_exists("tstart", drive, params),
-                        tstop=_use_nonsyn_params_if_exists("tstop", drive, params),
+                        tstart=_use_params_if_exists("tstart", drive, params),
+                        tstop=_use_params_if_exists("tstop", drive, params),
                         rate_constant=deployed_syn_dicts["rate_constant"],
                         location=drive["location"],
                         weights_ampa=deployed_syn_dicts["weights_ampa"],
@@ -5524,8 +5576,8 @@ def _generate_constraints_and_func(net, opt_drive_widgets):
                 elif drive["type"] in ("Evoked", "Gaussian"):
                     net.add_evoked_drive(
                         name=drive["name"],
-                        mu=_use_nonsyn_params_if_exists("mu", drive, params),
-                        sigma=_use_nonsyn_params_if_exists("sigma", drive, params),
+                        mu=_use_params_if_exists("mu", drive, params),
+                        sigma=_use_params_if_exists("sigma", drive, params),
                         numspikes=drive["numspikes"],
                         location=drive["location"],
                         weights_ampa=deployed_syn_dicts["weights_ampa"],
@@ -5539,18 +5591,12 @@ def _generate_constraints_and_func(net, opt_drive_widgets):
                 elif drive["type"] in ("Rhythmic", "Bursty"):
                     net.add_bursty_drive(
                         name=drive["name"],
-                        tstart=_use_nonsyn_params_if_exists("tstart", drive, params),
-                        tstart_std=_use_nonsyn_params_if_exists(
-                            "tstart_std", drive, params
-                        ),
-                        tstop=_use_nonsyn_params_if_exists("tstop", drive, params),
+                        tstart=_use_params_if_exists("tstart", drive, params),
+                        tstart_std=_use_params_if_exists("tstart_std", drive, params),
+                        tstop=_use_params_if_exists("tstop", drive, params),
                         location=drive["location"],
-                        burst_rate=_use_nonsyn_params_if_exists(
-                            "burst_rate", drive, params
-                        ),
-                        burst_std=_use_nonsyn_params_if_exists(
-                            "burst_std", drive, params
-                        ),
+                        burst_rate=_use_params_if_exists("burst_rate", drive, params),
+                        burst_std=_use_params_if_exists("burst_std", drive, params),
                         numspikes=drive["numspikes"],
                         weights_ampa=deployed_syn_dicts["weights_ampa"],
                         weights_nmda=deployed_syn_dicts["weights_nmda"],
