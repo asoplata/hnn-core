@@ -5410,49 +5410,27 @@ def _create_parametrized_syn_dicts_if_exist(syn_type, drive, params):
 
 
 def _snapshot_drive_widgets(opt_drive_widgets):
-    """Extract plain values from drive widget dicts so closures are picklable.
+    """Extract plain values from the Opt tab's drive widget, so closures are picklable.
 
-    The resulting list of dicts contains only plain Python values (no widget
-    objects), making it safe to capture in closures that will be serialized
-    by joblib/loky for parallel execution.
+    The resulting list of dicts contains only plain Python values (no widget objects),
+    making it safe to capture in closures that will be serialized by joblib/loky for
+    parallel execution.
     """
-    cell_types = ["L5_pyramidal", "L2_pyramidal", "L5_basket", "L2_basket"]
-    syn_types = ["weights_ampa", "weights_nmda", "delays", "rate_constant", "amplitude"]
-    nonsyn_vars = [
-        "t0",
-        "tstop",
-        "tstart",
-        "mu",
-        "sigma",
-        "tstart_std",
-        "burst_rate",
-        "burst_std",
-    ]
-    direct_widget_keys = ["is_cell_specific", "n_drive_cells", "seedcore", "numspikes"]
-
     snapshots = []
     for drive in opt_drive_widgets:
         snap = {}
-        # Copy plain-string metadata
-        for k in ("type", "name", "location"):
-            if k in drive:
-                snap[k] = drive[k]
-        # Snapshot direct widget values
-        for k in direct_widget_keys:
-            if k in drive and hasattr(drive[k], "value"):
-                snap[k] = drive[k].value
-        # Snapshot non-synaptic variable widgets
-        for k in nonsyn_vars:
-            if k in drive and hasattr(drive[k], "value"):
-                snap[k] = drive[k].value
-        # Snapshot synaptic dicts (widget per cell type)
-        for syn in syn_types:
-            if syn in drive and isinstance(drive[syn], dict):
-                snap[syn] = {}
-                for ct in cell_types:
-                    if ct in drive[syn]:
-                        val = drive[syn][ct]
-                        snap[syn][ct] = val.value if hasattr(val, "value") else val
+        for drive_key, drive_val in drive.items():
+            if isinstance(drive_val, dict):
+                snap[drive_key] = {
+                    syn_key: syn_value.value
+                    if hasattr(syn_value, "value")
+                    else syn_value
+                    for syn_key, syn_value in drive_val.items()
+                }
+            elif hasattr(drive_val, "value"):
+                snap[drive_key] = drive_val.value
+            else:
+                snap[drive_key] = drive_val
         snapshots.append(snap)
     return snapshots
 
