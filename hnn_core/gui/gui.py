@@ -5768,7 +5768,6 @@ def run_opt_button_clicked(
 
         # Define the main execution function for the optimization, which is necessary
         # due to CMA and non-CMA solvers using different approaches to parallelization:
-        # AES TODO this is laaaaaazy for now
         def main_execution(popsize=None):
             simulation_status_bar.value = simulation_status_contents["opt_running"]
             logger.info("Optimization started.")
