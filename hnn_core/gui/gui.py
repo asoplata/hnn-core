@@ -5853,7 +5853,7 @@ def run_opt_button_clicked(
 
         # Define the main execution function for the optimization, which is necessary
         # due to CMA and non-CMA solvers using different approaches to parallelization:
-        def main_execution(popsize=None):
+        def main_execution(inside_backend_flag=False):
             simulation_status_bar.value = simulation_status_contents["opt_running"]
             logger.info("Optimization started.")
             logger.info(f"Solver: {opt_solver}")
@@ -5874,7 +5874,13 @@ def run_opt_button_clicked(
                         smooth_window_len=opt_smoothing,
                         scale_factor=opt_scaling,
                         n_jobs=n_jobs.value,
-                        popsize=popsize,  # AES TODO DEBUG
+                        seed=opt_solver_widgets["seed"].value,
+                        popsize=(
+                            None
+                            if inside_backend_flag
+                            else opt_solver_widgets["popsize"].value
+                        ),
+                        sigma0=opt_solver_widgets["sigma0"].value,
                     )
                     optim.fit(**obj_fun_kwargs)
                 elif opt_obj_fun == "maximize_psd":
@@ -6005,12 +6011,11 @@ def run_opt_button_clicked(
             # Do not setup any backends, since CMA will use BatchSimulate to use its own
             # JoblibBackend internally.
             if opt_obj_fun == "maximize_psd":
-                # AES TODO DEBUG
                 new_name, psd_f_bands, psd_relative_bandpower = main_execution(
-                    popsize=2
+                    inside_backend_flag=False
                 )
             else:
-                new_name = main_execution(popsize=2)
+                new_name = main_execution(inside_backend_flag=False)
 
             # Setup non-CMA simulation backends
             if backend_selection.value == "MPI":
@@ -6032,10 +6037,10 @@ def run_opt_button_clicked(
                 if opt_obj_fun == "maximize_psd":
                     # AES TODO DEBUG
                     new_name, psd_f_bands, psd_relative_bandpower = main_execution(
-                        popsize=None
+                        inside_backend_flag=True
                     )
                 else:
-                    new_name = main_execution(popsize=None)
+                    new_name = main_execution(inside_backend_flag=True)
 
         # ------------------------------------------------------------------------------
         # The remainder of this function is just repeating some post-run visualization
