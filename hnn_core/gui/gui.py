@@ -1025,6 +1025,7 @@ class HNNGUI:
         self.opt_drive_widgets = list()
         self.opt_drive_boxes = list()
         self.opt_target_widgets = {}
+        self.opt_solver_widgets = {}
         self.opt_drive_accordion = Accordion()
         self.opt_results = list()
 
@@ -1110,6 +1111,7 @@ class HNNGUI:
         self._cell_params_out = Output().add_class("cell-parameters-widgets")
         self._global_gain_out = Output().add_class("connectivity-gains-widgets")
         self._opt_target_out = Output().add_class("opt-target-input-widgets")
+        self._opt_solver_out = Output().add_class("opt-solver-input-widgets")
         self._opt_drives_out = Output().add_class("opt-drives-accordion-widgets")
 
         self._log_out = Output()
@@ -1365,6 +1367,7 @@ class HNNGUI:
                 self.widget_opt_smoothing.value,
                 self.widget_opt_scaling.value,
                 self.opt_target_widgets,
+                self.opt_solver_widgets,
             )
             # Re-load our NEW, optimized drive parameters after an optimization run:
             if result:
@@ -1451,6 +1454,9 @@ class HNNGUI:
         def _opt_obj_fun_change(value):
             self._update_opt_target_hbox(value.new)
 
+        def _opt_solver_change(value):
+            self._update_opt_solver_hbox(value.new)
+
         self.widget_backend_selection.observe(_handle_backend_change, "value")
         self.add_drive_button.on_click(_add_drive_button_clicked)
         self.delete_drive_button.on_click(_delete_drives_clicked)
@@ -1469,6 +1475,7 @@ class HNNGUI:
         # Many Optimization tab observations, including dual-linking widgets with their
         # equivalent in the Run tab:
         self.widget_opt_obj_fun.observe(_opt_obj_fun_change, "value")
+        self.widget_opt_solver.observe(_opt_solver_change, "value")
 
         link(
             (self.widget_opt_tstop, "value"),
@@ -1675,8 +1682,9 @@ class HNNGUI:
 
         1. The always-shown top-level optimization parameters
         2. The "target" parameters box (dynamic, depending on your objective function)
-        3. The always-shown "Run Optimization" and "Save Optimization History" buttons
-        4. The drives accordion (dynamic, depending on existing drives in the Drives
+        3. The "solver" parameters box (dynamic, depending on if using CMA)
+        4. The always-shown "Run Optimization" and "Save Optimization History" buttons
+        5. The drives accordion (dynamic, depending on existing drives in the Drives
            tab)
         """
         optimization_tab_contents = VBox(
@@ -1704,7 +1712,9 @@ class HNNGUI:
                 ),
                 # 2. Target parameters box (a dynamic Output widget)
                 self._opt_target_out,
-                # 3. Run and Save History buttons
+                # 3. Solver-specific parameters box (a dynamic Output widget)
+                self._opt_solver_out,
+                # 4. Run and Save History buttons
                 HBox(
                     [
                         self.run_opt_button,
@@ -1712,7 +1722,7 @@ class HNNGUI:
                     ],
                     layout=Layout(width="100%"),
                 ),
-                # 4. Drives accordion (a dynamic Output widget)
+                # 5. Drives accordion (a dynamic Output widget)
                 self._opt_drives_out,
             ]
         ).add_class("optimization-tab-contents")
@@ -2058,6 +2068,7 @@ class HNNGUI:
 
             # Add optimization
             self.update_opt_tab_target_widgets()
+            self.update_opt_tab_solver_widgets()
             self.update_opt_tab_accordion(self.params)
 
     def add_drive_tab_drive_widget(
@@ -2221,6 +2232,7 @@ class HNNGUI:
             elif load_type == "drives":
                 self.update_drive_tab_accordion(params)
                 self.update_opt_tab_target_widgets()
+                self.update_opt_tab_solver_widgets()
                 self.update_opt_tab_accordion(params)
             else:
                 raise ValueError
@@ -2269,6 +2281,27 @@ class HNNGUI:
         with self._opt_target_out:
             display(displayed_target_widgets)
 
+    def _update_opt_solver_hbox(self, opt_solver):
+        self._opt_solver_out.clear_output()
+
+        if opt_solver in ("bayesian", "cobyla"):
+            displayed_solver_widgets = VBox()
+        elif opt_solver == "cma":
+            displayed_solver_widgets = VBox(
+                [
+                    HBox(
+                        [
+                            self.opt_solver_widgets["seed"],
+                            self.opt_solver_widgets["popsize"],
+                            self.opt_solver_widgets["sigma0"],
+                        ]
+                    )
+                ]
+            )
+
+        with self._opt_solver_out:
+            display(displayed_solver_widgets)
+
     def update_opt_tab_target_widgets(self):
         # Preserve prior widget state for "target data" if widgets already exist
         # ------------------------------------------------------------------------------
@@ -2288,7 +2321,7 @@ class HNNGUI:
             value=prior_target_state.get("target_dipole_data", None),
             description="Target Data:",
             disabled=False,
-            layout=Layout(width="500px"),
+            layout=Layout(width="378px"),
             style={"description_width": "80px"},
         )
         # Set `_external_data_widget` to `opt_target_widgets["target_dipole_data"]` when simulation
@@ -2568,6 +2601,57 @@ class HNNGUI:
                 prior_opt_widget_values=prior_opt_widget_values,
                 **kwargs,
             )
+
+    def update_opt_tab_solver_widgets(self):
+        # Preserve prior widget state for "target data" if widgets already exist
+        # ------------------------------------------------------------------------------
+        prior_solver_state = {}
+        # solver data widgets are unfortunately reset after run. The below functions to restore the
+        # previous states:
+        if self.opt_solver_widgets:
+            # Save current state of all solver widgets
+            for key, widget in self.opt_solver_widgets.items():
+                if hasattr(widget, "value"):
+                    prior_solver_state[key] = widget.value
+
+        # The obj_fun="dipole_corr" and "dipole_rmse" cases are very simple
+        # ------------------------------------------------------------------------------
+        self.opt_solver_widgets["seed"] = BoundedIntText(
+            value=prior_solver_state.get("seed", 123),
+            description="CMA Solver seed:",
+            disabled=False,
+            min=0,
+            max=9e9,
+            layout=Layout(width="214px"),
+            style={"description_width": "120px"},
+        )
+
+        self.opt_solver_widgets["popsize"] = BoundedIntText(
+            value=prior_solver_state.get("popsize", 3),
+            description="Popsize:",
+            disabled=False,
+            min=0,
+            max=100,
+            layout=Layout(width="130px"),
+            style={"description_width": "60px"},
+        )
+
+        self.opt_solver_widgets["sigma0"] = BoundedFloatText(
+            value=prior_solver_state.get("sigma0", 0.25),
+            description="Sigma0:",
+            min=0,
+            max=1e6,
+            step=0.01,
+            disabled=False,
+            layout=Layout(width="150px"),
+            style={"description_width": "60px"},
+        )
+
+        # FINALLY, actually display all this stuff
+        # ------------------------------------------------------------------------------
+        self._update_opt_solver_hbox(
+            self.widget_opt_solver.value,
+        )
 
     def add_opt_tab_drive_widget(
         self,
@@ -5616,6 +5700,7 @@ def run_opt_button_clicked(
     opt_smoothing,
     opt_scaling,
     opt_target_widgets,
+    opt_solver_widgets,
 ):
     """Run an Optimization, then re-run its final simulation and plot its outputs.
 
