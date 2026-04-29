@@ -4,7 +4,10 @@ from IPython.core.getipython import get_ipython
 from matplotlib.lines import Line2D
 import pickle
 import postproc_tm_currents_extracellular_v2 as tme
-
+from hnn_core.extracellular import calculate_csd2d
+from hnn_core.viz import plot_laminar_csd 
+from hnn_core.viz import plot_laminar_lfp
+from types import SimpleNamespace
 
 from hnn_core import (
     JoblibBackend,
@@ -15,13 +18,16 @@ from hnn_core.cells_default import pyramidal
 from hnn_core.network_builder import load_custom_mechanisms
 from hnn_core.network_models import add_erp_drives_to_jones_model
 
+filename = "simulation_with_net_v7_deeper"
+
 net = jones_2009_model()
 add_erp_drives_to_jones_model(net)
 
 n_trials = 1
 
 # Laminar probe
-depths = np.arange(0, 2200, 100) #depths = list(list(range(-125,2150,100)))
+#depths = list(list(range(-125,2150,100))) #depths = np.arange(0, 2200, 100) 
+depths = np.arange(-625, 2150, 100)
 electrode_pos = [(135, 135, z) for z in depths]
 net.add_electrode_array('probe1', electrode_pos)
 
@@ -30,7 +36,7 @@ if "dpls" not in locals():
     with JoblibBackend(8):
         dpls = simulate_dipole(
             net,
-            tstop=50,#170.0,
+            tstop=250.0,
             n_trials=n_trials,
             record_agg_i_mem="all",   # aggregated total transmembrane current
             # record_agg_ina="all",
@@ -52,24 +58,35 @@ for dpl in dpls:
     dpl.scale(scaling_factor)
 
 dpl = dpls[0]
-#dpl_plot = dpl.plot(
+# dpl_plot = dpl.plot(
 #    layer=["L5"],
 #    show=False,
 #)
 
+lfp = net.rec_arrays['probe1'].voltages.mean(axis=0)
+#print(lfp)
+times = dpl.times
 
+delta = np.median(np.diff(depths))   # electrode spacing in um
+csd = calculate_csd2d(lfp, delta=delta)   # shape: (n_contacts, n_times)
+
+contact_labels = np.asarray(depths, dtype=int)
+
+fig, axes = plt.subplots(1, 2, figsize=(16, 4), constrained_layout=True)
+plot_laminar_lfp(times, lfp, contact_labels=contact_labels,ax=axes[0])
+axes[0].set_title("LFP")
+plot_laminar_csd(times, csd, contact_labels=contact_labels, vmin = -0.03, vmax = 0.03,ax=axes[1])
+axes[1].set_title("CSD")
+#plt.show()
+fig.savefig(f"/Users/annacattani/Documents/HNN/hnn-core/runscripts/data/{filename}.png", dpi=300, bbox_inches="tight")
 # plot
-tme.plot_lfp_and_csd(
-    times,
-    lfp_na_l5,
-    csd_na_l5,
-    contact_positions=contact_positions,
-    titles=("LFP: L5 ina_hh2", "CSD: L5 ina_hh2"),
-)
-
-from types import SimpleNamespace
-import pickle
-import numpy as np
+#fig = tme.plot_lfp_and_csd(
+#    times,
+#    lfp,
+#    csd,
+#    contact_positions=contact_labels,
+#    titles=("LFP", "CSD"),
+#)
 
 def extract_currents(cell_response):
     currents = {
@@ -148,7 +165,7 @@ record_config = {
 }
 
 save_postproc_net(
-    "simulation_with_net_v6.pkl",
+    f"/Users/annacattani/Documents/HNN/hnn-core/runscripts/data/{filename}.pkl",
     net=net,
     dpls=dpls,
     depths=depths,
