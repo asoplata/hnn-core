@@ -17,11 +17,8 @@ Assumptions / limitations
 - Synaptic currents are approximated as being located on the midpoint segment of
   the section. For even ``nseg``, the current is split equally over the two
   central segments by default.
-- The sign convention for capacitive current can differ depending on exactly how
-  you want to compare it to aggregate membrane current. A configurable sign flip
-  is provided, but should be validated against the branch behavior.
 
-This is a standalone analysis helper, not production HNN code.
+This is a standalone analysis helper.
 """
 
 from __future__ import annotations
@@ -73,8 +70,7 @@ class SourceInfo:
 def _default_template_builder(cell_type: str):
     """Build a template cell for geometry/area lookup.
 
-    Currently supports HNN pyramidal cell types. Basket cells can be added later
-    with a custom builder map if needed.
+    Currently supports HNN pyramidal cell types. Basket cells, being single-compartment, don't contribute to LFP/CSD
     """
     load_custom_mechanisms()
     if cell_type in {"L2_pyramidal", "L5_pyramidal"}:
@@ -83,7 +79,6 @@ def _default_template_builder(cell_type: str):
         return cell
     raise NotImplementedError(
         f"No default template builder for {cell_type!r}. "
-        "Pass a custom template_builders mapping if you want to support it."
     )
 
 
@@ -99,7 +94,6 @@ def _get_gid_soma_pos(net, cell_type: str, gid: int) -> np.ndarray:
     # gid_ranges tell where the gids for this cell type start
     start_gid = net.gid_ranges[cell_type][0]
     return np.asarray(net.pos_dict[cell_type][gid - start_gid], dtype=float)
-
 
 #returns standard segment-center x locations for a section with nseg segments, used for area lookup and midpoint-segment approximation
 def _segment_xs_for_section(nseg: int) -> np.ndarray:
@@ -235,7 +229,6 @@ def collect_synaptic_sources(
     section midpoint. For even nseg, it is split between the two central segments
     unless a different midpoint_mode is requested.
     """
-    #template_cells = _get_template_cells(cell_types, template_builders)
     sources: list[SourceInfo] = []
     currents_nA = []
 
@@ -245,7 +238,8 @@ def collect_synaptic_sources(
         for gid in net.gid_ranges[cell_type]:
             syn_data = _synaptic_data_for_gid(net, trial_idx, gid)
             for section, syn_dict in syn_data.items():
-                nseg = template_cell._nrn_sections[section].nseg
+                #nseg = template_cell._nrn_sections[section].nseg
+                nseg = template_cell.sections[section].nseg
                 seg_xs = _segment_xs_for_section(nseg)
                 midpoint_targets = _pick_midpoint_segments(nseg, mode=midpoint_mode)
 
@@ -269,6 +263,8 @@ def collect_synaptic_sources(
                             )
                         )
                         currents_nA.append(weight * syn_current_nA)
+
+    #print(sorted({s.syn_name for s in sources}))
 
     return sources, _ensure_2d_timeseries(currents_nA)
 
@@ -503,6 +499,51 @@ def reconstruct_synaptic_lfp(
     lfp = reconstruct_lfp_from_sources(T, I_nA)
     return lfp, sources, T, I_nA
 
+def reconstruct_synaptic_lfp_by_name(
+    net,
+    trial_idx=0,
+    cell_types=("L2_pyramidal", "L5_pyramidal"),
+    syn_names=None,
+    array_name="probe1",
+    midpoint_mode="split_even",
+):
+    sources, I_syn = collect_synaptic_sources(
+        net, trial_idx=trial_idx, cell_types=cell_types,
+        midpoint_mode=midpoint_mode,
+    )
+    if syn_names is not None:
+        sources, I_syn = filter_sources(sources, I_syn, syn_names=syn_names)
+    if len(sources) == 0:
+        raise ValueError(f"No synaptic sources matched syn_names={syn_names!r}.")
+    T_syn = build_transfer_resistance_matrix_for_sources(
+        net, sources, array_name=array_name)
+    
+    return reconstruct_lfp_from_sources(T_syn, I_syn), sources, T_syn, I_syn
+
+    '''
+    lfp_syn, sources, T_syn, I_syn = reconstruct_synaptic_lfp(
+        net,
+        trial_idx=trial_idx,
+        cell_types=cell_types,
+        array_name=array_name,
+        midpoint_mode=midpoint_mode,
+    )
+
+    if syn_names is not None:
+        sources, I_syn = filter_sources(
+            sources,
+            I_syn,
+            syn_names=syn_names,
+        )
+        T_syn = build_transfer_resistance_matrix_for_sources(
+            net,
+            sources,
+            array_name=array_name,
+        )
+        lfp_syn = reconstruct_lfp_from_sources(T_syn, I_syn)
+
+    return lfp_syn, sources, T_syn, I_syn
+    '''
 
 def reconstruct_csd(net, lfp: np.ndarray, array_name: str = "probe1") -> np.ndarray:
     z_coords = np.asarray(net.rec_arrays[array_name].positions)[:, 2]
@@ -539,9 +580,23 @@ def filter_sources(
     if gid_subset is not None:
         gid_subset = set(int(g) for g in gid_subset)
         keep &= np.array([src.gid in gid_subset for src in sources])
+    #if syn_names is not None:
+    #    syn_names = set(syn_names)
+    #    #keep &= np.array([src.syn_name in syn_names for src in sources])
+    #    keep = np.array([src.syn_name.endswith("_ampa") for src in sources])
+    #if syn_names is not None:
+    #    keep &= np.array([
+    #        any(src.syn_name.endswith(f"_{syn}") for syn in syn_names)
+    #        for src in sources
+    #    ])
     if syn_names is not None:
-        syn_names = set(syn_names)
-        keep &= np.array([src.syn_name in syn_names for src in sources])
+        syn_set = set(syn_names)
+        keep &= np.array([
+            src.syn_name is not None
+            and (src.syn_name in syn_set
+                or any(src.syn_name.endswith(f"_{s}") for s in syn_set))
+            for src in sources
+        ])
 
     filt_sources = [src for src, k in zip(sources, keep) if k]
     filt_I = current_matrix_nA[keep]
@@ -560,7 +615,163 @@ def summarize_sources(sources: Sequence[SourceInfo]):
         summary[key] = summary.get(key, 0) + 1
     return summary
 
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
+from hnn_core.viz import plot_laminar_lfp, plot_laminar_csd
 
+
+def _draw_cell_morphology(ax, net, cell_type='L5_pyramidal', gid=None,
+                          color_by_region=True, center_x=True,
+                          diam_scale=5.0):
+    """Draw one cell's sections as rectangles in the (x, z) plane."""
+    template = net.cell_types[cell_type]['cell_object']
+    if gid is None:
+        gid = list(net.gid_ranges[cell_type])[0]
+    start_gid = net.gid_ranges[cell_type][0]
+    soma_pos = np.asarray(net.pos_dict[cell_type][gid - start_gid], dtype=float)
+
+    region_colors = {
+        'soma':           'black',
+        'apical_trunk':   '#1f4e79',
+        'apical_oblique': '#5b9bd5',
+        'apical_1':       '#1f4e79',
+        'apical_2':       '#1f4e79',
+        'apical_tuft':    '#0b2540',
+        'basal_1':        '#a85432',
+        'basal_2':        '#d08770',
+        'basal_3':        '#d08770',
+    }
+    x_off = soma_pos[0] if center_x else 0.0
+
+    for name, sec in template.sections.items():
+        pts = np.asarray(sec._end_pts, dtype=float) + soma_pos
+        x0, z0 = pts[0, 0] - x_off, pts[0, 2]
+        x1, z1 = pts[1, 0] - x_off, pts[1, 2]
+        diam = float(sec.diam) * diam_scale  # exaggerate for visibility
+
+        dx, dz = x1 - x0, z1 - z0
+        L = np.hypot(dx, dz)
+        if L < 1e-6:
+            # zero-length projection (rare): draw a small axis-aligned square
+            h = diam / 2.0
+            corners = [(x0 - h, z0 - h), (x0 + h, z0 - h),
+                       (x0 + h, z0 + h), (x0 - h, z0 + h)]
+        else:
+            # unit vector along section, then perpendicular (90° in-plane)
+            ux, uz = dx / L, dz / L
+            px, pz = -uz, ux
+            hx, hz = px * diam / 2.0, pz * diam / 2.0
+            # Square (butt) ends — no rounded caps
+            corners = [(x0 + hx, z0 + hz),
+                       (x1 + hx, z1 + hz),
+                       (x1 - hx, z1 - hz),
+                       (x0 - hx, z0 - hz)]
+
+        face = region_colors.get(name, 'gray') if color_by_region else 'lightgray'
+        ax.add_patch(Polygon(
+            corners, closed=True,
+            facecolor=face, edgecolor='black',
+            lw=0.4, joinstyle='miter',          # sharp corners
+        ))
+    return gid, soma_pos
+
+
+def plot_lfp_and_csd(times, lfp, csd, net=None,
+                     cell_type='L5_pyramidal', gid=None,
+                     contact_positions=None,
+                     csd_vmin=None, csd_vmax=None,
+                     titles=("LFP", "CSD"),
+                     diam_scale=5.0):
+    """LFP | morphology | CSD."""
+    if contact_positions is None:
+        contact_labels = np.arange(lfp.shape[0], dtype=int)
+    else:
+        contact_labels = np.asarray([p[2] for p in contact_positions], dtype=int)
+
+    if net is None:
+        fig, axes = plt.subplots(1, 2, figsize=(16, 4), constrained_layout=True)
+        ax_morph, ax_lfp, ax_csd = None, axes[0], axes[1]
+    else:
+        fig = plt.figure(figsize=(18, 5), constrained_layout=True)
+        # LFP | morphology | CSD
+        gs = fig.add_gridspec(1, 3, width_ratios=[7.0, 1.2, 8.0])
+        ax_lfp   = fig.add_subplot(gs[0, 0])
+        ax_morph = fig.add_subplot(gs[0, 1])
+        ax_csd   = fig.add_subplot(gs[0, 2])
+
+    plot_laminar_lfp(times, lfp, contact_labels=contact_labels,
+                     ax=ax_lfp, show=False)
+    ax_lfp.set_title(titles[0])
+
+    plot_laminar_csd(times, csd, contact_labels=contact_labels, ax=ax_csd,
+                     vmin=csd_vmin, vmax=csd_vmax, show=False)
+    ax_csd.set_title(titles[1])
+
+    if ax_morph is not None:
+        gid_used, _ = _draw_cell_morphology(
+            ax_morph, net, cell_type=cell_type, gid=gid, diam_scale=diam_scale,
+        )
+        ax_morph.set_title(f'{cell_type}\n(gid={gid_used})', fontsize=10)
+        ax_morph.set_xlabel('x (µm)')
+
+        # Match depth range to the probe / CSD axis
+        z_min = float(min(contact_labels.min(), -125))
+        z_max = float(max(contact_labels.max(), 2050))
+        ax_morph.set_ylim(z_min, z_max)
+
+        # Autoscale x to fit the cell + a little padding
+        ax_morph.relim()
+        ax_morph.autoscale(axis='x', tight=False)
+
+        # Hide the morph y-tick labels — the CSD on the right shows the depth
+        ax_morph.tick_params(axis='y', labelleft=False)
+
+        # Light contact-position guides
+        for z in contact_labels:
+            ax_morph.axhline(z, color='lightgray', lw=0.3, zorder=0)
+
+    plt.show()
+    return fig, (ax_morph, ax_lfp, ax_csd)
+
+'''
+import matplotlib.pyplot as plt
+import numpy as np
+from hnn_core.viz import plot_laminar_lfp, plot_laminar_csd
+
+def plot_lfp_and_csd(times, lfp, csd, contact_positions=None, csd_vmin=None, csd_vmax=None,
+                     titles=("LFP", "CSD")):
+    fig, axes = plt.subplots(1, 2, figsize=(16, 4), constrained_layout=True)
+
+    if contact_positions is None:
+        contact_labels = np.arange(lfp.shape[0], dtype=int)
+    else:
+        contact_labels = np.asarray([pos[2] for pos in contact_positions], dtype=int)
+
+    plot_laminar_lfp(
+        times,
+        lfp,
+        contact_labels=contact_labels,
+        ax=axes[0],
+        show=False
+    )
+    axes[0].set_title(titles[0])
+
+    plot_laminar_csd(
+        times,
+        csd,
+        contact_labels=contact_labels,
+        ax=axes[1],
+        vmin=csd_vmin,
+        vmax=csd_vmax,
+        show=False
+    )
+    axes[1].set_title(titles[1])
+
+    plt.show()
+    return fig, axes
+'''
+'''
 import matplotlib.pyplot as plt
 from hnn_core.viz import plot_laminar_lfp, plot_laminar_csd
 
@@ -590,7 +801,7 @@ def plot_lfp_and_csd(times, lfp, csd, contact_positions=None,
     plt.show()
 
     return fig, axes
-
+'''
 #use net.rec_arrays[array_name].plot_lfp() and .plot_csd() when plotting actual HNN-recorded arrays
 
 '''

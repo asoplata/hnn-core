@@ -87,11 +87,11 @@ def _default_template_builder(cell_type: str):
     )
 
 
-#def _get_template_cells(cell_types):
-#    return {
-#        cell_type: _default_template_builder(cell_type)
-#        for cell_type in cell_types
-#    }
+def _get_template_cells(cell_types):
+    return {
+        cell_type: _default_template_builder(cell_type)
+        for cell_type in cell_types
+    }
 
 
 # returns 3D position of the soma for the given gid, used as reference point for extracellular calculations
@@ -115,10 +115,9 @@ def _get_nrn_section(template_cell, section: str):
         sec = template_cell.sections[section]
         if hasattr(sec, "_sec"):
             return sec._sec
-        return sec
 
     raise KeyError(
-        f"Section {section!r} not found. "
+        f"NEURON section {section!r} not found. "
         f"_nrn_sections keys: {list(getattr(template_cell, '_nrn_sections', {}).keys())}; "
         f"sections keys: {list(getattr(template_cell, 'sections', {}).keys())}"
     )
@@ -192,15 +191,18 @@ def collect_intrinsic_sources(
     if bad:
         raise ValueError(f"Unsupported intrinsic channels: {bad}")
 
+    template_cells = _get_template_cells(cell_types)
     #template_cells = _get_template_cells(cell_types, template_builders)
     #template_cells = net.cell_types[cell_type]["cell_object"]
     sources: list[SourceInfo] = []
     currents_nA = []
 
     for cell_type in cell_types:
-        template_cell = net.cell_types[cell_type]["cell_object"]
+        #template_cell = net.cell_types[cell_type]["cell_object"]
         #template_cell = template_cells[cell_type]
-        
+        #template_cell = _make_template_cell(cell_type)
+        template_cell = template_cells[cell_type]
+
         for gid in net.gid_ranges[cell_type]:
             for channel in channels:
                 channel_data = _channel_data_for_gid(net, trial_idx, gid, channel)
@@ -250,13 +252,15 @@ def collect_synaptic_sources(
     section midpoint. For even nseg, it is split between the two central segments
     unless a different midpoint_mode is requested.
     """
-    #template_cells = _get_template_cells(cell_types, template_builders)
+    
     sources: list[SourceInfo] = []
     currents_nA = []
 
+    template_cells = _get_template_cells(cell_types)
+
     for cell_type in cell_types:
-        template_cell = net.cell_types[cell_type]["cell_object"]
-        #template_cell = template_cells[cell_type]
+        #template_cell = net.cell_types[cell_type]["cell_object"]
+        template_cell = template_cells[cell_type]
         for gid in net.gid_ranges[cell_type]:
             syn_data = _synaptic_data_for_gid(net, trial_idx, gid)
             for section, syn_dict in syn_data.items():
@@ -421,10 +425,11 @@ def build_transfer_resistance_matrix_for_sources(
     array = net.rec_arrays[array_name]
     cell_types = sorted({src.cell_type for src in sources})
 
-    template_cells = {
-        cell_type: net.cell_types[cell_type]["cell_object"]
-        for cell_type in cell_types
-    }
+    #template_cells = {
+    #    cell_type: net.cell_types[cell_type]["cell_object"]
+    #    for cell_type in cell_types
+    #}
+    template_cells = _get_template_cells(cell_types)
 
     T = np.zeros((len(array.positions), len(sources)), dtype=float)
 
