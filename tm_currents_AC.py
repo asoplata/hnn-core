@@ -39,7 +39,7 @@ if "dpls" not in locals():
     with JoblibBackend(8):
         dpls = simulate_dipole(
             net,
-            tstop=50,#170.0,
+            tstop=170.0,
             n_trials=n_trials,
             record_imem=tm_record_cfg,
             record_isec="all",
@@ -54,6 +54,7 @@ dpl_plot = dpl.plot(
     layer=["L5"],
     show=False,
 )
+plt.close("all")
 
 
 from tm_currents_utils import (
@@ -67,6 +68,149 @@ from tm_currents_utils import (
     plot_flat_neuron,
     plot_3d_neuron,
     postproc_soma_dipole,
+    check_rmse_and_residuals
+)
+
+'''
+## Comparison of dipoles from transmembrane currents (i_mem) vs axial currents in dpl object for L5 and L2 pyramidal cells
+# L5 pyramidal cell
+fig, ax = plt.subplots(
+    nrows=2,
+    ncols=1,
+    sharex=True,
+    figsize=(8, 8),
+)
+
+test_imem_L5 = postproc_tm_currents(
+    net=net,
+    cell_type="L5_pyramidal",
+    from_components=False,
+)
+
+ax[1].plot(
+    dpl.times,
+    test_imem_L5,
+)
+
+_ = dpl.plot(
+    layer=["L5"],
+    ax=ax[0],
+)
+
+ax[0].set_ylim(-200, 100)
+ax[1].set_ylim(-200, 100)
+
+# L2 pyramidal cell
+fig, ax = plt.subplots(
+    nrows=2,
+    ncols=1,
+    sharex=True,
+    figsize=(8, 8),
+)
+
+test_imem_L2 = postproc_tm_currents(
+    net=net,
+    cell_type="L2_pyramidal",
+    from_components=False,
+)
+
+ax[1].plot(
+    dpl.times,
+    test_imem_L2,
+)
+
+_ = dpl.plot(
+    layer=["L2"],
+    ax=ax[0],
+)
+
+ax[0].set_ylim(-200, 100)
+ax[1].set_ylim(-200, 100)
+'''
+
+
+# For validation, following the same approach as in Dylan's test_tm_currents.py:
+#  we can compare the dipole generated using agg_i_mem in the soma and the sum of the individual transmembrane currents (intrinsic + synaptic)
+
+fig, ax = plt.subplots(
+    nrows=2,
+    ncols=1,
+    sharex=True,
+    figsize=(8, 8),
+)
+
+test_imem_L5 = postproc_soma_dipole(
+    net=net,
+    from_components=False,
+)
+
+ax[0].plot(
+    dpl.times[1:],
+    test_imem_L5[1:],
+)
+
+test_imem_L5 = postproc_soma_dipole(
+    net=net,
+    from_components=True,
+)
+
+ax[1].plot(
+    dpl.times[1:],
+    test_imem_L5[1:],
+)
+
+ax[0].set_ylim(-200, 100)
+ax[1].set_ylim(-200, 100)
+
+
+
+check_rmse_and_residuals(net)
+
+
+#### STOP HERE - BELOW IS WORK IN PROGRESS
+
+# For a single trial and current, get recordings by
+# section, segment for each cell
+ina_hh2_segment_data = agg_transmembrane_segment_recordings_by_celltype(
+    net,
+    trial_number=0,
+    target_channel="ina_hh2",
+)
+
+l5_seg_fig = plot_segment_recordings_by_section(
+    section_name="apical_trunk",
+    single_channel_data=ina_hh2_segment_data,
+    cell_type="L5_pyramidal",
+    overwrite_channel_name="Na+ HH2",
+)
+
+l2_seg_fig = plot_segment_recordings_by_section(
+    section_name="apical_trunk",
+    single_channel_data=ina_hh2_segment_data,
+    cell_type="L2_pyramidal",
+    overwrite_channel_name="Na+ HH2",
+)
+
+# For a single trial and current, get recordings by
+# section, adding the segments together
+ina_hh2_section_data = agg_transmembrane_section_recordings_by_celltype(
+    net,
+    trial_number=0,
+    target_channel="ina_hh2",
+)
+
+channel_section_data = get_channel_section_data(
+    net,
+    channels=[
+        "ina_hh2",
+        "ik_hh2",
+        "ik_kca",
+        "ik_km",
+        "ica_ca",
+        "ica_cat",
+        "il_hh2",
+        "i_ar",
+    ],
 )
 
 '''
@@ -152,7 +296,7 @@ channel_section_data = get_channel_section_data(
     ],
 )
 
-
+'''
 
 
 cell_type = "L5_pyramidal"
@@ -279,7 +423,7 @@ ax_main = plot_3d_neuron(
     show_section_labels=False,
 )
 
-plt.show()
+#plt.show()
 
 
 l5_seg_fig = plot_segment_recordings_by_section(
@@ -306,7 +450,7 @@ plot_single_channel_by_section_celltype(
     overwrite_channel_name="Na+ HH2",
     show_neuron_previews=True,
 )
-
+'''
 # AC: former function "plot_single_channel_by_section_celltype"
 # AC: This: For one section, how do the different channels look in that section for one cell type?
 fig, ax = plt.subplots(
@@ -316,6 +460,7 @@ fig, ax = plt.subplots(
     figsize=(8, 15),
 )
 plt.show()
+
 
 
 test_imem_L5 = postproc_soma_dipole(
@@ -340,3 +485,6 @@ ax[1].plot(
 
 ax[0].set_ylim(-200, 100)
 ax[1].set_ylim(-200, 100)
+
+plt.show()
+

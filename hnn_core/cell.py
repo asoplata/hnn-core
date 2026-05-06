@@ -905,6 +905,7 @@ class Cell:
                     #    - the mechanism exists on the segment
                     #    _ the ref variable exists for the segment mechanism
                     else:
+                        '''
                         mech_obj = getattr(segment, mech, None) # temp variable to store the mechanism object
                         # e.g., mech = "hh2" exists on that segment, then mech_obj = segment.hh2, else None
 
@@ -922,6 +923,7 @@ class Cell:
                             currents[sec_name][seg_key] = h.Vector()
                             currents[sec_name][seg_key].record(rec_target)
                         '''
+                        
                         if hasattr(segment, mech) and hasattr(
                             getattr(segment, mech), ref
                         ):
@@ -936,7 +938,7 @@ class Cell:
                                     ref,
                                 )
                             )
-                        '''
+                        
                         '''
                         if self.gid == 50 and mech == "hh2" and sec_name == "soma" and seg_key == "seg_1":
                             print(
