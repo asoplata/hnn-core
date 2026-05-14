@@ -13,6 +13,7 @@ from .externals.mne import _validate_type
 
 from .params_default import get_params_default
 
+
 # return number of evoked inputs (proximal, distal)
 # using dictionary d (or if d is a string, first load the dictionary from
 # filename d)
@@ -328,7 +329,10 @@ class Params(dict):
 
             params_default = get_params_default(nprox, ndist)
             # don't use any default values for duecker_ET_model
-            if "sim_prefix" in params_input and params_input["sim_prefix"] == "duecker_ET_model":
+            if (
+                "sim_prefix" in params_input
+                and params_input["sim_prefix"] == "duecker_ET_model"
+            ):
                 for key in params_input.keys():
                     self[key] = params_input[key]
             else:

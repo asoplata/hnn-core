@@ -32,6 +32,7 @@
                             ]
                         ],
                         "nseg": 1,
+                        "v": -65,
                         "mechs": {
                             "hh2": {}
                         },
@@ -46,17 +47,20 @@
                     "ampa": {
                         "e": 0,
                         "tau1": 0.5,
-                        "tau2": 5.0
+                        "tau2": 5.0,
+                        "syn_type": "Exp2Syn"
                     },
                     "gabaa": {
                         "e": -80,
                         "tau1": 0.5,
-                        "tau2": 5.0
+                        "tau2": 5.0,
+                        "syn_type": "Exp2Syn"
                     },
                     "nmda": {
                         "e": 0,
                         "tau1": 1.0,
-                        "tau2": 20.0
+                        "tau2": 20.0,
+                        "syn_type": "Exp2Syn"
                     }
                 },
                 "cell_tree": null,
@@ -79,6 +83,7 @@
                 "morpho_type": "basket",
                 "electro_type": "inhibitory",
                 "layer": "2",
+                "zdist_origin": 0.8,
                 "measure_dipole": false,
                 "reference": "https://doi.org/10.7554/eLife.51214"
             }
@@ -95,8 +100,8 @@
                     "apical_trunk": {
                         "L": 59.5,
                         "diam": 4.25,
-                        "cm": 0.6195,
-                        "Ra": 200.0,
+                        "cm": 1,
+                        "Ra": 100.0,
                         "end_pts": [
                             [
                                 0.0,
@@ -110,6 +115,7 @@
                             ]
                         ],
                         "nseg": 1,
+                        "v": -71.46,
                         "mechs": {
                             "km": {
                                 "gbar_km": 250.0
@@ -131,8 +137,8 @@
                     "apical_1": {
                         "L": 306.0,
                         "diam": 4.08,
-                        "cm": 0.6195,
-                        "Ra": 200.0,
+                        "cm": 1,
+                        "Ra": 100.0,
                         "end_pts": [
                             [
                                 0.0,
@@ -146,6 +152,7 @@
                             ]
                         ],
                         "nseg": 7,
+                        "v": -71.46,
                         "mechs": {
                             "km": {
                                 "gbar_km": 250.0
@@ -167,8 +174,8 @@
                     "apical_tuft": {
                         "L": 238.0,
                         "diam": 3.4,
-                        "cm": 0.6195,
-                        "Ra": 200.0,
+                        "cm": 1,
+                        "Ra": 100.0,
                         "end_pts": [
                             [
                                 0.0,
@@ -182,6 +189,7 @@
                             ]
                         ],
                         "nseg": 5,
+                        "v": -71.46,
                         "mechs": {
                             "km": {
                                 "gbar_km": 250.0
@@ -203,8 +211,8 @@
                     "apical_oblique": {
                         "L": 340.0,
                         "diam": 3.91,
-                        "cm": 0.6195,
-                        "Ra": 200.0,
+                        "cm": 1,
+                        "Ra": 100.0,
                         "end_pts": [
                             [
                                 0.0,
@@ -218,6 +226,7 @@
                             ]
                         ],
                         "nseg": 7,
+                        "v": -71.46,
                         "mechs": {
                             "km": {
                                 "gbar_km": 250.0
@@ -239,8 +248,8 @@
                     "basal_1": {
                         "L": 85.0,
                         "diam": 4.25,
-                        "cm": 0.6195,
-                        "Ra": 200.0,
+                        "cm": 1,
+                        "Ra": 100.0,
                         "end_pts": [
                             [
                                 0.0,
@@ -254,6 +263,7 @@
                             ]
                         ],
                         "nseg": 1,
+                        "v": -71.46,
                         "mechs": {
                             "km": {
                                 "gbar_km": 250.0
@@ -275,8 +285,8 @@
                     "basal_2": {
                         "L": 255.0,
                         "diam": 2.72,
-                        "cm": 0.6195,
-                        "Ra": 200.0,
+                        "cm": 1,
+                        "Ra": 100.0,
                         "end_pts": [
                             [
                                 0.0,
@@ -290,6 +300,7 @@
                             ]
                         ],
                         "nseg": 5,
+                        "v": -71.46,
                         "mechs": {
                             "km": {
                                 "gbar_km": 250.0
@@ -311,8 +322,8 @@
                     "basal_3": {
                         "L": 255.0,
                         "diam": 2.72,
-                        "cm": 0.6195,
-                        "Ra": 200.0,
+                        "cm": 1,
+                        "Ra": 100.0,
                         "end_pts": [
                             [
                                 0.0,
@@ -326,6 +337,7 @@
                             ]
                         ],
                         "nseg": 5,
+                        "v": -71.46,
                         "mechs": {
                             "km": {
                                 "gbar_km": 250.0
@@ -347,8 +359,8 @@
                     "soma": {
                         "L": 22.1,
                         "diam": 23.4,
-                        "cm": 0.6195,
-                        "Ra": 200.0,
+                        "cm": 1,
+                        "Ra": 100.0,
                         "end_pts": [
                             [
                                 0.0,
@@ -362,6 +374,7 @@
                             ]
                         ],
                         "nseg": 1,
+                        "v": -65,
                         "mechs": {
                             "km": {
                                 "gbar_km": 250.0
@@ -383,22 +396,26 @@
                     "ampa": {
                         "e": 0.0,
                         "tau1": 0.5,
-                        "tau2": 5.0
+                        "tau2": 5.0,
+                        "syn_type": "Exp2Syn"
                     },
                     "nmda": {
                         "e": 0.0,
                         "tau1": 1.0,
-                        "tau2": 20.0
+                        "tau2": 20.0,
+                        "syn_type": "Exp2Syn"
                     },
                     "gabaa": {
                         "e": -80.0,
                         "tau1": 0.5,
-                        "tau2": 5.0
+                        "tau2": 5.0,
+                        "syn_type": "Exp2Syn"
                     },
                     "gabab": {
                         "e": -80.0,
                         "tau1": 1.0,
-                        "tau2": 20.0
+                        "tau2": 20.0,
+                        "syn_type": "Exp2Syn"
                     }
                 },
                 "cell_tree": {
@@ -463,6 +480,7 @@
                 "morpho_type": "pyramidal",
                 "electro_type": "excitatory",
                 "layer": "2",
+                "zdist_origin": 1,
                 "measure_dipole": true,
                 "reference": "https://doi.org/10.7554/eLife.51214"
             }
@@ -494,6 +512,7 @@
                             ]
                         ],
                         "nseg": 1,
+                        "v": -65,
                         "mechs": {
                             "hh2": {}
                         },
@@ -508,17 +527,20 @@
                     "ampa": {
                         "e": 0,
                         "tau1": 0.5,
-                        "tau2": 5.0
+                        "tau2": 5.0,
+                        "syn_type": "Exp2Syn"
                     },
                     "gabaa": {
                         "e": -80,
                         "tau1": 0.5,
-                        "tau2": 5.0
+                        "tau2": 5.0,
+                        "syn_type": "Exp2Syn"
                     },
                     "nmda": {
                         "e": 0,
                         "tau1": 1.0,
-                        "tau2": 20.0
+                        "tau2": 20.0,
+                        "syn_type": "Exp2Syn"
                     }
                 },
                 "cell_tree": null,
@@ -539,6 +561,7 @@
                 "morpho_type": "basket",
                 "electro_type": "inhibitory",
                 "layer": "5",
+                "zdist_origin": 0.2,
                 "measure_dipole": false,
                 "reference": "https://doi.org/10.7554/eLife.51214"
             }
@@ -570,6 +593,7 @@
                             ]
                         ],
                         "nseg": 3,
+                        "v": -72,
                         "mechs": {
                             "hh2": {
                                 "gkbar_hh2": 0.01,
@@ -632,6 +656,7 @@
                             ]
                         ],
                         "nseg": 13,
+                        "v": -71.32,
                         "mechs": {
                             "hh2": {
                                 "gkbar_hh2": 0.01,
@@ -714,6 +739,7 @@
                             ]
                         ],
                         "nseg": 13,
+                        "v": -69.08,
                         "mechs": {
                             "hh2": {
                                 "gkbar_hh2": 0.01,
@@ -796,6 +822,7 @@
                             ]
                         ],
                         "nseg": 9,
+                        "v": -67.3,
                         "mechs": {
                             "hh2": {
                                 "gkbar_hh2": 0.01,
@@ -870,6 +897,7 @@
                             ]
                         ],
                         "nseg": 5,
+                        "v": -72,
                         "mechs": {
                             "hh2": {
                                 "gkbar_hh2": 0.01,
@@ -936,6 +964,7 @@
                             ]
                         ],
                         "nseg": 1,
+                        "v": -72,
                         "mechs": {
                             "hh2": {
                                 "gkbar_hh2": 0.01,
@@ -994,6 +1023,7 @@
                             ]
                         ],
                         "nseg": 5,
+                        "v": -72,
                         "mechs": {
                             "hh2": {
                                 "gkbar_hh2": 0.01,
@@ -1060,6 +1090,7 @@
                             ]
                         ],
                         "nseg": 5,
+                        "v": -72,
                         "mechs": {
                             "hh2": {
                                 "gkbar_hh2": 0.01,
@@ -1126,6 +1157,7 @@
                             ]
                         ],
                         "nseg": 1,
+                        "v": -72,
                         "mechs": {
                             "hh2": {
                                 "gkbar_hh2": 0.01,
@@ -1162,22 +1194,26 @@
                     "ampa": {
                         "e": 0.0,
                         "tau1": 0.5,
-                        "tau2": 5.0
+                        "tau2": 5.0,
+                        "syn_type": "Exp2Syn"
                     },
                     "nmda": {
                         "e": 0.0,
                         "tau1": 1.0,
-                        "tau2": 20.0
+                        "tau2": 20.0,
+                        "syn_type": "Exp2Syn"
                     },
                     "gabaa": {
                         "e": -80.0,
                         "tau1": 0.5,
-                        "tau2": 5.0
+                        "tau2": 5.0,
+                        "syn_type": "Exp2Syn"
                     },
                     "gabab": {
                         "e": -80.0,
                         "tau1": 1.0,
-                        "tau2": 20.0
+                        "tau2": 20.0,
+                        "syn_type": "Exp2Syn"
                     }
                 },
                 "cell_tree": {
@@ -1248,6 +1284,7 @@
                 "morpho_type": "pyramidal",
                 "electro_type": "excitatory",
                 "layer": "5",
+                "zdist_origin": 0,
                 "measure_dipole": true,
                 "reference": "https://doi.org/10.7554/eLife.51214"
             }
@@ -6535,7 +6572,7 @@
             "type": "evoked",
             "location": "distal",
             "n_drive_cells": 235,
-            "event_seed": 272,
+            "event_seed": 2,
             "conn_seed": 3,
             "dynamics": {
                 "mu": 63.53,
@@ -6556,7 +6593,7 @@
             "synaptic_delays": {
                 "L2_basket": 0.1,
                 "L2_pyramidal": 0.1,
-                "L5_pyramidal": 0.1
+                "L5_pyramidal": 1.0
             },
             "probability": 1.0,
             "name": "evdist1",
@@ -6571,7 +6608,7 @@
             "type": "evoked",
             "location": "proximal",
             "n_drive_cells": 270,
-            "event_seed": 507,
+            "event_seed": 2,
             "conn_seed": 3,
             "dynamics": {
                 "mu": 26.61,
@@ -6611,7 +6648,7 @@
             "type": "evoked",
             "location": "proximal",
             "n_drive_cells": 270,
-            "event_seed": 777,
+            "event_seed": 2,
             "conn_seed": 3,
             "dynamics": {
                 "mu": 137.12,
@@ -101735,7 +101772,7 @@
             "receptor": "ampa",
             "nc_dict": {
                 "A_delay": 1.0,
-                "A_weight": 0.00025,
+                "A_weight": 0.02,
                 "lamtha": 3.0,
                 "threshold": 0.0,
                 "gain": 1.0
@@ -103699,7 +103736,7 @@
             "loc": "distal",
             "receptor": "ampa",
             "nc_dict": {
-                "A_delay": 0.1,
+                "A_delay": 1.0,
                 "A_weight": 0.1423,
                 "lamtha": 3.0,
                 "threshold": 0.0,
@@ -104222,7 +104259,7 @@
             "loc": "distal",
             "receptor": "nmda",
             "nc_dict": {
-                "A_delay": 0.1,
+                "A_delay": 1.0,
                 "A_weight": 0.080074,
                 "lamtha": 3.0,
                 "threshold": 0.0,
