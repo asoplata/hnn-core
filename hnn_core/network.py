@@ -699,7 +699,7 @@ class Network:
             )
 
         # if there is a pos_dict, adjust cell positions (if mesh_shape > (1,1))
-        if hasattr(self, "pos_dict") and not np.isnan(self._inplane_distance):
+        if (len(self.pos_dict) > 0) and not np.isnan(self._inplane_distance):
             scale = inplane_distance / self._inplane_distance
             for cell_type in self.cell_types:
                 zdist = (
