@@ -449,7 +449,7 @@ def pyramidal(cell_name, pos=(0, 0, 0), override_params=None, gid=None):
     """
     if cell_name == "L2_pyramidal":
         return _cell_L2Pyr(override_params, pos=pos, gid=gid)
-    elif (cell_name == "L5_pyramidal") or (cell_name == "L5Pyr"):
+    elif (cell_name == "L5_pyramidal"):
         return _cell_L5Pyr(override_params, pos=pos, gid=gid)
     else:
         raise ValueError(f"Unknown pyramidal cell type: {cell_name}")
