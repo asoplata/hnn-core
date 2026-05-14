@@ -538,10 +538,17 @@ class Network:
             # read out layer separation
             if hasattr(self, "_layer_separation") is False:
                 for cell_type in self.cell_types:
-                    if self.cell_types[cell_type]["cell_metadata"]["zdist_origin"] == 1:
-                        self._layer_separation = np.mean(
-                            np.array(self.pos_dict[cell_type])[:, 2]
-                        )
+                    if (
+                        "zdist_origin"
+                        in self.cell_types[cell_type]["cell_metadata"].keys()
+                    ):
+                        if (
+                            self.cell_types[cell_type]["cell_metadata"]["zdist_origin"]
+                            == 1
+                        ):
+                            self._layer_separation = np.mean(
+                                np.array(self.pos_dict[cell_type])[:, 2]
+                            )
 
             # update drives to be positioned at network origin
             for drive_name, drive in self.external_drives.items():

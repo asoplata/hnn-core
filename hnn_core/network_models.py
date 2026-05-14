@@ -360,7 +360,10 @@ def law_2021_model(
 # Remove params argument after updating examples
 # (only relevant for Jones 2009 model)
 def calcium_model(
-    params=None, add_drives_from_params=False, legacy_mode=False, mesh_shape=(10, 10)
+    params=None,
+    add_drives_from_params=False,
+    legacy_mode=False,
+    mesh_shape=(10, 10),
 ):
     """Instantiate the Jones 2009 model with improved calcium dynamics in
     L5 pyramidal neurons. For more details on changes to calcium dynamics
@@ -396,13 +399,18 @@ def calcium_model(
         params = read_params(params_fname)
 
     net = jones_2009_model(
-        params, add_drives_from_params, legacy_mode, mesh_shape=mesh_shape
+        params,
+        add_drives_from_params,
+        legacy_mode,
+        mesh_shape=mesh_shape,
     )
 
     # Replace L5 pyramidal cell template with updated calcium
     cell_name = "L5_pyramidal"
-    pos = net.cell_types[cell_name].pos
-    net.cell_types[cell_name] = pyramidal_ca(cell_name=_short_name(cell_name), pos=pos)
+    pos = net.cell_types[cell_name]["cell_object"].pos
+    net.cell_types[cell_name]["cell_object"] = pyramidal_ca(
+        cell_name=cell_name, pos=pos
+    )
 
     return net
 
