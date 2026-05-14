@@ -303,7 +303,7 @@ def _cell_L5Pyr(override_params, pos=(0.0, 0.0, 0), gid=0.0):
 
 def _get_basket_soma(cell_name, v_init=-64.9737):
     end_pts = [[0, 0, 0], [0, 0, 39.0]]
-    return Section(L=39.0, diam=20.0, cm=0.85, Ra=200.0, end_pts=end_pts)
+    return Section(L=39.0, diam=20.0, cm=0.85, Ra=200.0, end_pts=end_pts, v=v_init)
 
 
 # values from Chamberland et al 2023
