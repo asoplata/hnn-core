@@ -124,7 +124,7 @@ def _cell_L2Pyr(override_params, pos=(0.0, 0.0, 0), gid=0.0):
     sections = _get_dends(
         p_all, cell_type="L2Pyr", section_names=section_names, v_init={"all": -71.46}
     )
-    sections["soma"] = _get_pyr_soma(p_all, "L2Pyr")
+    sections["soma"] = _get_pyr_soma(p_all, "L2Pyr", v_init=-71.46)
 
     end_pts = {
         "soma": [[-50, 0, 765], [-50, 0, 778]],
