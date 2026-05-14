@@ -863,7 +863,7 @@ class Cell:
                     self.ca[sec_name] = h.Vector()
                     self.ca[sec_name].record(self._nrn_sections[sec_name](0.5)._ref_cai)
 
-    def syn_create(self, secloc, e, tau1, tau2, type):
+    def syn_create(self, secloc, e, tau1, tau2, syn_type='Exp2Syn'):
         """Create an h.Exp2Syn synapse.
 
         Parameters
@@ -876,8 +876,8 @@ class Cell:
             Rise time (in ms)
         tau2: float
             Decay time (in ms)
-        type: str
-            Name of synapse point process to create. Options are 'Exp2Syn', 'GABAB', 'MyExp2SynNMDABB'.
+        syn_type: str
+            Name of synapse point process to create. Options are 'Exp2Syn', 'GABAB', 'NMDA_gao'.
 
         Returns
         -------
@@ -889,7 +889,7 @@ class Cell:
                 f"secloc must be instance ofnrn.Segment. Got {type(secloc)}"
             )
 
-        synapse_class = getattr(h, type)
+        synapse_class = getattr(h, syn_type)
         syn = synapse_class(secloc)
 
         # some synapses have these defined in mod file
