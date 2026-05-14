@@ -313,7 +313,6 @@ def _get_interneuron_soma(cell_name, v_init=-69):
 
 
 def _get_syn_props(p_all, cell_type, syn_types=["ampa", "nmda", "gabaa", "gabab"]):
-
     synapses = dict()
     for syn in syn_types:
         synapses[syn] = {
@@ -524,7 +523,6 @@ def pyramidal_ca(cell_name, pos, override_params=None, gid=None):
 
 
 def pyramidal_l5ET(cell_name, pos=(0, 0, 0), gid=None):
-
     p_all = get_L5PyrET_params()
 
     # override params according to function
@@ -726,7 +724,6 @@ def pyramidal_l5ET(cell_name, pos=(0, 0, 0), gid=None):
 
 
 def pyramidal_l23(cell_name, pos=(0, 0, 0), gid=None):
-
     p_all = get_L2Pyrhuman_params()
 
     gbar_Ih = partial(
@@ -901,7 +898,6 @@ def pyramidal_l23(cell_name, pos=(0, 0, 0), gid=None):
 
 
 def interneuron(cell_name, pos=(0, 0, 0), layer=2, gid=None):
-
     p_all = get_Int_params()
     sections = dict()
     sections["soma"] = _get_interneuron_soma(cell_name, v_init=-69.5972)

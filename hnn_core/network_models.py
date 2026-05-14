@@ -572,19 +572,20 @@ def duecker_ET_model(
 
     # layer2 Basket -> layer5 Pyr
     src_cell = "L2_basket"
-    lamtha = 6.125  # *0.8  # shorter space constant (Campagnola, 2022, mice data)
-    key = f"gbar_L2Basket_{target_cell}"
+    receptor = "gabaa"
+    lamtha = 6.125
+    key = f"gbar_L2Basket_{target_cell}_{receptor}"
     weight = params[key]
 
-    # remove this as we're not simulating NGF cells
-    # loc = 'apical_tuft'
-    # receptor = 'gabab'
-    # net.add_connection(
-    #     src_cell, target_cell, loc, receptor, weight, delay, lamtha)
-
-    # instead, add GABAA connection to apical_2 as Martinotti-like inhibition (SST cells)
+    # add GABAA connection to apical_2 as Martinotti-like inhibition (SST cells)
     loc = "apical_2"
-    receptor = "gabaa"
+    net.add_connection(src_cell, target_cell, loc, receptor, weight, delay, lamtha)
+
+    # this connection is set to 0 as we're not simulating NGF cells.
+    loc = "apical_tuft"
+    receptor = "gabab"
+    key = f"gbar_L2Basket_{target_cell}_{receptor}"
+    weight = params[key]
     net.add_connection(src_cell, target_cell, loc, receptor, weight, delay, lamtha)
 
     # xx -> layer2 Basket

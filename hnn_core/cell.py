@@ -210,7 +210,6 @@ class Section:
     """
 
     def __init__(self, L, diam, Ra, cm, v=-65, end_pts=None):
-
         self._L = L
         self._diam = diam
         self._Ra = Ra
@@ -620,7 +619,6 @@ class Cell:
             for receptor in sections[sec_name].syns:
                 syn_key = f"{sec_name}_{receptor}"
                 seg = self._nrn_sections[sec_name](0.5)
-
                 # Quick and dirty, will be updated in bigger synapse refactor
                 if (
                     self.name == "L5ET"
