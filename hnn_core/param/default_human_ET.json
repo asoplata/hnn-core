@@ -1,4 +1,4 @@
-{   "sim_prefix": "dueckerETmodel",
+{   "sim_prefix": "duecker_ET_model",
     "tstop": 170,
     "dt": 0.025,
     "celsius": 37.0,
