@@ -657,7 +657,7 @@ def create_pext(p, tstop):
         "L2_basket": (
             p["L2Basket_Gauss_A_weight"],
             p["L2Basket_Gauss_A_weight"],
-            0.1,
+            1.0,
             p["L2Basket_Gauss_mu"],
             p["L2Basket_Gauss_sigma"],
         ),
@@ -697,7 +697,7 @@ def create_pext(p, tstop):
         "L2_basket": (
             p["L2Basket_Pois_A_weight_ampa"],
             p["L2Basket_Pois_A_weight_nmda"],
-            0.1,
+            1.0,
             p["L2Basket_Pois_lamtha"],
         ),
         "L2_pyramidal": (
