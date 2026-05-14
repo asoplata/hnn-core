@@ -204,11 +204,11 @@ def get_L2Pyr_params_default():
         # Soma
         "L2Pyr_soma_L": 22.1,
         "L2Pyr_soma_diam": 23.4,
-        "L2Pyr_soma_cm": 1,
-        "L2Pyr_soma_Ra": 100.0,
+        "L2Pyr_soma_cm": 0.6195,
+        "L2Pyr_soma_Ra": 200.0,
         # Dendrites
-        "L2Pyr_dend_cm": 1,
-        "L2Pyr_dend_Ra": 100.0,
+        "L2Pyr_dend_cm": 0.6195,
+        "L2Pyr_dend_Ra": 200.0,
         "L2Pyr_apicaltrunk_L": 59.5,
         "L2Pyr_apicaltrunk_diam": 4.25,
         "L2Pyr_apical1_L": 306.0,
