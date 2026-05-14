@@ -124,7 +124,7 @@ class BatchSimulate(object):
         postproc=False,
         clear_cache=False,
         summary_func=None,
-        bsl_cor="jones"
+        bsl_cor="jones",
     ):
         _validate_type(net, Network, "net", "Network")
         _validate_type(tstop, types="numeric", item_name="tstop")
@@ -339,7 +339,7 @@ class BatchSimulate(object):
                 record_vsec=self.record_vsec,
                 record_isec=self.record_isec,
                 postproc=self.postproc,
-                bsl_cor=self.bsl_cor
+                bsl_cor=self.bsl_cor,
             )
             results["dpl"] = dpl
 

@@ -65,7 +65,7 @@ def _simulate_single_trial(net, tstop, dt, trial_idx):
 
     # initialize cells to -65 mV, after all the NetCon
     # delays have been specified
-    h.finitialize()                 # the initial membrane potential seems to be different for each cell, this does not seem to be the same as h.finitialize(-65)
+    h.finitialize()  # the initial membrane potential seems to be different for each cell, this does not seem to be the same as h.finitialize(-65)
 
     def simulation_time():
         print(f"Trial {trial_idx + 1}: {round(h.t, 2)} ms...")
@@ -483,7 +483,10 @@ class NetworkBuilder(object):
                                 **self.net.external_biases[bias][src_type]
                             )
                         # if specific GIDs specified, check if this cell's GID is in the list and apply bias if so
-                        elif type(self.net.external_biases[bias][src_type]["gid"]) is list:
+                        elif (
+                            type(self.net.external_biases[bias][src_type]["gid"])
+                            is list
+                        ):
                             if gid in self.net.external_biases[bias][src_type]["gid"]:
                                 cell.create_tonic_bias(
                                     **self.net.external_biases[bias][src_type]

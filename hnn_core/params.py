@@ -9,7 +9,6 @@ import os.path as op
 from pathlib import Path
 from copy import deepcopy
 
-from .params_default import get_params_default
 from .externals.mne import _validate_type
 
 
@@ -325,7 +324,7 @@ class Params(dict):
 
         if isinstance(params_input, dict):
             nprox, ndist = _count_evoked_inputs(params_input)
-            
+
             # KD: This doesn't allow users to define new cell names, synapse types etc.
             # create default params templated from params_input
             # params_default = get_params_default(nprox, ndist)
@@ -336,7 +335,6 @@ class Params(dict):
             #         self[key] = params_input[key]
             #     else:
             #         self[key] = params_default[key]
-
 
             # changing to this now.
             for key in params_input.keys():

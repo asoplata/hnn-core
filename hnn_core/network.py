@@ -502,7 +502,6 @@ class Network:
         self._N_pyr_x = mesh_shape[0]
         self._N_pyr_y = mesh_shape[1]
 
-
         # Handle positions and cell types
         if pos_dict is not None and cell_types is not None:
             # Use provided positions and cell types
@@ -518,18 +517,31 @@ class Network:
                     )
 
             # read out inplane_distance
-            if hasattr(self, '_inplane_distance') is False:
+            if hasattr(self, "_inplane_distance") is False:
                 inlay_dist = []
                 for cell_type in self.cell_types.keys():
-                    current_dist = np.mean(np.concatenate((np.diff(np.unique(np.array(self.pos_dict[cell_type])[:,0])), np.diff(np.unique(np.array(self.pos_dict[cell_type])[:,1])))))
+                    current_dist = np.mean(
+                        np.concatenate(
+                            (
+                                np.diff(
+                                    np.unique(np.array(self.pos_dict[cell_type])[:, 0])
+                                ),
+                                np.diff(
+                                    np.unique(np.array(self.pos_dict[cell_type])[:, 1])
+                                ),
+                            )
+                        )
+                    )
                     inlay_dist.append(current_dist)
                 self._inplane_distance = np.min(np.array(inlay_dist))
 
             # read out layer separation
-            if hasattr(self, '_layer_separation') is False:
+            if hasattr(self, "_layer_separation") is False:
                 for cell_type in self.cell_types:
-                    if self.cell_types[cell_type]['cell_metadata']['zdist_origin'] == 1:
-                        self._layer_separation = np.mean(np.array(self.pos_dict[cell_type])[:,2])
+                    if self.cell_types[cell_type]["cell_metadata"]["zdist_origin"] == 1:
+                        self._layer_separation = np.mean(
+                            np.array(self.pos_dict[cell_type])[:, 2]
+                        )
 
             # update drives to be positioned at network origin
             for drive_name, drive in self.external_drives.items():
@@ -601,7 +613,6 @@ class Network:
         if add_drives_from_params:
             _add_drives_from_params(self)
 
-
         self._tstop = None
         self._dt = None
 
@@ -643,8 +654,12 @@ class Network:
 
         return True
 
-    def set_cell_positions(self, *, inplane_distance=None, layer_separation=None,
-                           ):
+    def set_cell_positions(
+        self,
+        *,
+        inplane_distance=None,
+        layer_separation=None,
+    ):
         """Set relative positions of cells arranged in a square grid
 
         Note that it is possible to change only a subset of the parameters
@@ -675,28 +690,32 @@ class Network:
             raise ValueError(
                 f"Layer separation must be positive, got: {layer_separation}"
             )
-        
+
         # if there is a pos_dict, adjust cell positions (if mesh_shape > (1,1))
         if hasattr(self, "pos_dict") and not np.isnan(self._inplane_distance):
             scale = inplane_distance / self._inplane_distance
             for cell_type in self.cell_types:
-                zdist = self.cell_types[cell_type]['cell_metadata']['zdist_origin'] * layer_separation
+                zdist = (
+                    self.cell_types[cell_type]["cell_metadata"]["zdist_origin"]
+                    * layer_separation
+                )
                 self.pos_dict[cell_type] = [
                     (pos[0] * scale, pos[1] * scale, zdist)
                     for pos in self.pos_dict[cell_type]
                 ]
             # scale origin and update drive positions
-            origin = self.pos_dict['origin']
-            self.pos_dict['origin'] = (origin[0] * scale, origin[1] * scale, origin[2])
+            origin = self.pos_dict["origin"]
+            self.pos_dict["origin"] = (origin[0] * scale, origin[1] * scale, origin[2])
             for drive_name in self.external_drives:
-                self.pos_dict[drive_name] = [self.pos_dict['origin']] * len(self.pos_dict[drive_name])
+                self.pos_dict[drive_name] = [self.pos_dict["origin"]] * len(
+                    self.pos_dict[drive_name]
+                )
             self._inplane_distance = inplane_distance
             self._layer_separation = layer_separation
-        
+
         # If cell positions are set for the first time -> default model with default cell names
 
-        elif not np.isnan(self._inplane_distance):      # ensure mesh_shape>(1,1)
-
+        elif not np.isnan(self._inplane_distance):  # ensure mesh_shape>(1,1)
             # Get layer positions using layer dict
             layer_dict = _create_cell_coords(
                 n_pyr_x=self._N_pyr_x,
@@ -713,7 +732,6 @@ class Network:
                 "L2_basket": layer_dict["L2_mid"],
                 "origin": layer_dict["origin"],
             }
-
 
             # update drives to be positioned at network origin
             for drive_name, drive in self.external_drives.items():
@@ -1552,10 +1570,11 @@ class Network:
         for trial_idx in range(n_trials):
             for d, drive in enumerate(self.external_drives.values()):
                 event_times = list()  # new list for each trial and drive
-                
-                for drive_cell_gid in self.gid_ranges[drive['name']]:
-                    drive_cell_gid_offset = (drive_cell_gid -
-                                             self.gid_ranges[drive['name']][0])
+
+                for drive_cell_gid in self.gid_ranges[drive["name"]]:
+                    drive_cell_gid_offset = (
+                        drive_cell_gid - self.gid_ranges[drive["name"]][0]
+                    )
                     trial_seed_offset = self._n_gids
                     if drive["cell_specific"]:
                         # loop over drives (one for each target cell
@@ -1567,7 +1586,7 @@ class Network:
                                 for conn_idx in conn_idxs
                             ]
                         )
-                        
+
                         for target_type in target_types:
                             event_times.append(
                                 _drive_cell_event_times(
@@ -1582,7 +1601,6 @@ class Network:
                                 )
                             )
                     else:
-                        
                         src_event_times = _drive_cell_event_times(
                             drive["type"],
                             drive["dynamics"],
@@ -1606,7 +1624,7 @@ class Network:
         amplitude,
         t0=0,
         tstop=None,
-        gid=None
+        gid=None,
     ):
         """Attaches parameters of tonic bias input for given cell types
 
@@ -1636,8 +1654,8 @@ class Network:
             This value will be applied to all the  tonic biases if
             multiple are specified with the `amplitude` keyword.
         gid : int | list | None
-            Optionally specify gid(s) to which the tonic bias should be applied. 
-            If None (default), the bias will be applied to all cells of the specified cell type(s). 
+            Optionally specify gid(s) to which the tonic bias should be applied.
+            If None (default), the bias will be applied to all cells of the specified cell type(s).
 
         """
 
@@ -1661,7 +1679,7 @@ class Network:
                 amplitude=float(amplitude),
                 t_0=t0,
                 t_stop=tstop,
-                gid=gid
+                gid=gid,
             )
         else:
             _validate_type(amplitude, dict, "amplitude")
@@ -1682,7 +1700,7 @@ class Network:
                     amplitude=_amplitude,
                     t_0=t0,
                     t_stop=tstop,
-                    gid=gid
+                    gid=gid,
                 )
 
     def _add_cell_type(self, cell_name, pos, cell_template=None):
@@ -2471,7 +2489,7 @@ def _add_cell_type_bias(
     bias_name="tonic",
     t_0=0,
     t_stop=None,
-    gid=None
+    gid=None,
 ):
     """Add a tonic bias to a specific cell type in the network.
 
@@ -2515,7 +2533,7 @@ def _add_cell_type_bias(
         "t0": t_0,
         "tstop": t_stop,
         "section": section,
-        "gid": gid
+        "gid": gid,
     }
 
     sections = list(network.cell_types[cell_type]["cell_object"].sections.keys())

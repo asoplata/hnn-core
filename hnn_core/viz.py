@@ -697,10 +697,11 @@ def plot_spikes_raster(
 
     # validate cell types
     if cell_types:
-        
         _validate_type(cell_types, list, "cell_types", "list of str")
         # allowed are spikes that fired (including drives) and generally cells in network
-        allowed_types = np.unique(cell_response.cell_types+cell_response._cell_type_names)
+        allowed_types = np.unique(
+            cell_response.cell_types + cell_response._cell_type_names
+        )
         if not set(cell_types).issubset(allowed_types):
             raise ValueError(
                 "Invalid cell types provided. "
@@ -1090,10 +1091,11 @@ def plot_tfr_morlet(
         trial_power.append(power)
 
     power = np.mean(trial_power, axis=0)
-    im = ax.pcolormesh(times, freqs, power[0, 0, ...], cmap=colormap,
-                       shading='auto', rasterized=True)
-    ax.set_xlabel('Time (ms)')
-    ax.set_ylabel('Frequency (Hz)')
+    im = ax.pcolormesh(
+        times, freqs, power[0, 0, ...], cmap=colormap, shading="auto", rasterized=True
+    )
+    ax.set_xlabel("Time (ms)")
+    ax.set_ylabel("Frequency (Hz)")
 
     if colorbar:
         fig = ax.get_figure()
@@ -1879,7 +1881,14 @@ def plot_laminar_csd(
         vmax = np.max(np.abs(data))
 
     im = ax.pcolormesh(
-        times, new_depths, data, cmap=cmap, shading="auto", vmin=vmin, vmax=vmax, rasterized=True
+        times,
+        new_depths,
+        data,
+        cmap=cmap,
+        shading="auto",
+        vmin=vmin,
+        vmax=vmax,
+        rasterized=True,
     )
     ax.set_xlabel("time (ms)")
     ax.set_ylabel("electrode depth")

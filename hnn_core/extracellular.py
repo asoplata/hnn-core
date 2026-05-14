@@ -230,7 +230,6 @@ def _transfer_resistance(
     # ==> 1e-9 A x (1 / 1e-6 S) = 1e-3 V = mV
     # ===> multiply by 1e3 to get uV
 
-    
     return 1000.0 * phi / (4.0 * np.pi * conductivity)
 
 
@@ -733,7 +732,6 @@ class _ExtracellularArrayBuilder(object):
             if self.array.method is not None:
                 transfer_resistance = list()
                 for sec in secs_on_rank:
-                    
                     this_xfer_r = _transfer_resistance(
                         sec,
                         pos,

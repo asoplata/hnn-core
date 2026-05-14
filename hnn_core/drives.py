@@ -164,7 +164,7 @@ def _add_drives_from_params(net):
     for drive_name in sorted(drive_specs.keys()):  # order matters
         specs = drive_specs[drive_name]
         if specs["type"] == "evoked":
-            #print(specs["event_seed"], flush=True) # here it is correct
+            # print(specs["event_seed"], flush=True) # here it is correct
             net.add_evoked_drive(
                 drive_name,
                 mu=specs["dynamics"]["mu"],
@@ -245,7 +245,6 @@ def _add_drives_from_params(net):
     #     drive["event_seed"] += net.gid_ranges[drive_name][0]
 
     #     print(f"Drive {drive_name} event_seed updated to {drive['event_seed']}", flush=True)
-        
 
 
 def _get_prng(seed, gid):

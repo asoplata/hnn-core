@@ -381,7 +381,7 @@ def get_L2Pyrhuman_params():
         "L2Pyr_basal_gbar_NaTs2_t_32d": 0.008009,
         "L2Pyr_basal_gbar_SKv3_1": 0.000513,
         "L2Pyr_basal_gbar_Ih": 2e-05,
-        "L2Pyr_basal_g_pas": 2.7027027027027027e-05, 
+        "L2Pyr_basal_g_pas": 2.7027027027027027e-05,
         "L2Pyr_basal_e_pas": -75,
         "L2Pyr_basal_decay_CaDynamics_E2": 70,
         "L2Pyr_basal_gamma_CaDynamics_E2": 0.0013325000000000001,
@@ -396,7 +396,7 @@ def get_L2Pyrhuman_params():
         "L2Pyr_dend_g_pas": 2.7027027027027027e-05,
         "L2Pyr_dend_e_pas": -75,
         "L2Pyr_dend_decay_CaDynamics_E2": 70,
-        "L2Pyr_dend_gamma_CaDynamics_E2": 0.0013325
+        "L2Pyr_dend_gamma_CaDynamics_E2": 0.0013325,
     }
 
 
@@ -481,7 +481,7 @@ def get_L5PyrET_params():
         "L5ET_dend_g_pas": 3.926666666666667e-05,
         "L5ET_dend_e_pas": -85,
         "L5ET_dend_decay_CaDynamics_E2": 122,
-        "L5ET_dend_gamma_CaDynamics_E2": 0.0005096
+        "L5ET_dend_gamma_CaDynamics_E2": 0.0005096,
     }
 
 
@@ -513,5 +513,5 @@ def get_Int_params():
         "Int_gabab_e": -80.0,
         "Int_gabab_tau1": 45,
         "Int_gabab_tau2": 200,
-        "Int_gabab_type": "gabab"
+        "Int_gabab_type": "gabab",
     }
