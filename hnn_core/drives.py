@@ -237,14 +237,10 @@ def _add_drives_from_params(net):
         _tstop = bias_specs["tonic"][cellname]["tstop"]
         net.add_tonic_bias(amplitude=_cell_types_amplitudes, t0=_t0, tstop=_tstop)
 
-    # # in HNN-GUI, seed is determined by "absolute GID" instead of the
-    # # gid offset with respect to the first cell of a population.
-    # for drive_name, drive in net.external_drives.items():
-    #     drive["event_seed"] += net.gid_ranges[drive_name][0]
-    # for drive_name, drive in net.external_drives.items():
-    #     drive["event_seed"] += net.gid_ranges[drive_name][0]
-
-    #     print(f"Drive {drive_name} event_seed updated to {drive['event_seed']}", flush=True)
+    # in HNN-GUI, seed is determined by "absolute GID" instead of the
+    # gid offset with respect to the first cell of a population.
+    for drive_name, drive in net.external_drives.items():
+        drive["event_seed"] += net.gid_ranges[drive_name][0]
 
 
 def _get_prng(seed, gid):

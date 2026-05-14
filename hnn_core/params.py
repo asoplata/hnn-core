@@ -631,7 +631,7 @@ def create_pext(p, tstop):
             "L5_pyramidal": (
                 p["gbar_" + skey + "_L5Pyr_ampa"],
                 p["gbar_" + skey + "_L5Pyr_nmda"],
-                1.0,
+                0.1,
                 p["sigma_t_" + skey],
             ),
             "L2_basket": (
