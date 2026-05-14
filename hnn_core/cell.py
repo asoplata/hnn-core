@@ -863,7 +863,7 @@ class Cell:
                     self.ca[sec_name] = h.Vector()
                     self.ca[sec_name].record(self._nrn_sections[sec_name](0.5)._ref_cai)
 
-    def syn_create(self, secloc, e, tau1, tau2, syn_type='Exp2Syn'):
+    def syn_create(self, secloc, e, tau1, tau2, syn_type="Exp2Syn"):
         """Create an h.Exp2Syn synapse.
 
         Parameters

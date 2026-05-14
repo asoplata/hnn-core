@@ -319,16 +319,16 @@ def _get_syn_props(p_all, cell_type, syn_types=["ampa", "nmda", "gabaa", "gabab"
             "e": p_all["%s_%s_e" % (cell_type, syn)],
             "tau1": p_all["%s_%s_tau1" % (cell_type, syn)],
             "tau2": p_all["%s_%s_tau2" % (cell_type, syn)],
-            "type": p_all["%s_%s_type" % (cell_type, syn)],
+            "syn_type": p_all["%s_%s_type" % (cell_type, syn)],
         }
     return synapses
 
 
 def _get_basket_syn_props():
     return {
-        "ampa": {"e": 0, "tau1": 0.5, "tau2": 5.0, "type": "Exp2Syn"},
-        "gabaa": {"e": -80, "tau1": 0.5, "tau2": 5.0, "type": "Exp2Syn"},
-        "nmda": {"e": 0, "tau1": 1.0, "tau2": 20.0, "type": "Exp2Syn"},
+        "ampa": {"e": 0, "tau1": 0.5, "tau2": 5.0, "syn_type": "Exp2Syn"},
+        "gabaa": {"e": -80, "tau1": 0.5, "tau2": 5.0, "syn_type": "Exp2Syn"},
+        "nmda": {"e": 0, "tau1": 1.0, "tau2": 20.0, "syn_type": "Exp2Syn"},
     }
 
 
