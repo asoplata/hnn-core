@@ -101772,7 +101772,7 @@
             "receptor": "ampa",
             "nc_dict": {
                 "A_delay": 1.0,
-                "A_weight": 0.02,
+                "A_weight": 0.00025,
                 "lamtha": 3.0,
                 "threshold": 0.0,
                 "gain": 1.0
