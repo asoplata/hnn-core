@@ -1094,6 +1094,9 @@ def plot_tfr_morlet(
     im = ax.pcolormesh(
         times, freqs, power[0, 0, ...], cmap=colormap, shading="auto", rasterized=True
     )
+    if freqs[0] > freqs[-1]:
+        freqs = freqs[::-1]
+        ax.invert_yaxis()
     ax.set_xlabel("Time (ms)")
     ax.set_ylabel("Frequency (Hz)")
 
