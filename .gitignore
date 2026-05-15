@@ -39,3 +39,6 @@ cover
 __pycache__
 
 *.log
+
+dipole_duecker_output_new.txt
+spikes_duecker_output_new.txt
