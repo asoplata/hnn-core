@@ -58,10 +58,12 @@ jobs:
         run: |
           ruff check hnn_core
 
-      - name: Test Duecker-only non-MPI, embarrassingly parallel tests with pytest
-        shell: bash -el {0}
-        run: |
-          python -m pytest ./hnn_core/tests/ -m "(not uses_mpi) and duecker" -n auto --cov=hnn_core --cov-report=xml
+      # # Commented out for now because currently there are no non-MPI Duecker tests,
+      # # and pytest apparently returns an error code if 0 tests are selected.
+      # - name: Test Duecker-only non-MPI, embarrassingly parallel tests with pytest
+      #   shell: bash -el {0}
+      #   run: |
+      #     python -m pytest ./hnn_core/tests/ -m "(not uses_mpi) and duecker" -n auto --cov=hnn_core --cov-report=xml
 
       - name: Test Duecker-only MPI-using parallel tests with pytest
         shell: bash -el {0}
