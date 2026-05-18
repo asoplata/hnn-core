@@ -257,8 +257,8 @@ class CellResponse(object):
     def transmembrane_currents(self):
         return {
             "agg_i_mem": self._agg_i_mem,
-            "agg_ina": self._agg_ina,
-            "agg_ik": self._agg_ik,
+            #"agg_ina": self._agg_ina,
+            #"agg_ik": self._agg_ik,
             "agg_i_cap": self._agg_i_cap,
             "ina_hh2": self._ina_hh2,
             "ik_hh2": self._ik_hh2,

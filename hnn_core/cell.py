@@ -943,6 +943,7 @@ class Cell:
                     #    - the mechanism exists on the segment
                     #    _ the ref variable exists for the segment mechanism
                     else:
+                        '''
                         mech_obj = getattr(segment, mech, None) # temp variable to store the mechanism object
                         # e.g., mech = "hh2" exists on that segment, then mech_obj = segment.hh2, else None
 
@@ -975,9 +976,8 @@ class Cell:
                                 )
                             )
                         '''
-                        '''
-                        if self.gid == 50 and mech == "hh2" and sec_name == "soma" and seg_key == "seg_1":
                             print(
+                        if self.gid == 50 and mech == "hh2" and sec_name == "soma" and seg_key == "seg_1":
                                 f"gid={self.gid} {sec_name}/{seg_key}: "
                                 f"hh2._ref_il={hasattr(segment.hh2, '_ref_il') if hasattr(segment, 'hh2') else 'NA'}, "
                                 f"hh2._ref_ina={hasattr(segment.hh2, '_ref_ina') if hasattr(segment, 'hh2') else 'NA'}, "
