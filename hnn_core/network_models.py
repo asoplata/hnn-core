@@ -16,7 +16,6 @@ from .externals.mne import _validate_type
 # serialisation / deserialisation) can import it without instantiating
 # a full Network object.
 
-# colors are a wip placeholder that will change post dev meet discussion
 default_cell_metadata = {
     "L2_basket": {
         "morpho_type": "basket",
@@ -56,7 +55,6 @@ default_cell_metadata = {
     },
 }
 
-# same, placeholder, wip
 default_drive_colors = {
     "proximal": "r",
     "distal": "g",
