@@ -862,125 +862,6 @@ def postproc_tm_currents(
 
     return dipole
 
-def check_rmse_and_residuals(
-    net,
-    trial=0,
-    cell_type="L5_pyramidal",
-):
-    times = net.cell_response.times
-
-    # get dipole from i_mem
-    dpl_imem = postproc_soma_dipole(
-        net,
-        trial=trial,
-        cell_type=cell_type,
-        from_components=False,
-    )
-    # get the dipole reconstructed from the constituent components
-    dpl_comp = postproc_soma_dipole(
-        net,
-        trial=trial,
-        cell_type=cell_type,
-        from_components=True,
-    )
-
-    if dpl_imem is None or dpl_comp is None:
-        raise ValueError(
-            "Dipole data could not be computed",
-        )
-
-    # calculate residual and rmse
-    residual = dpl_imem - dpl_comp
-    rmse = np.sqrt(np.mean(residual**2))
-
-    # normalize by the peak-to-peak range of agg_i_mem (our "ground truth")
-    dpl_range = np.max(dpl_imem) - np.min(dpl_imem)
-    nrmse_pct = (rmse / dpl_range) * 100 if dpl_range != 0 else 0
-
-    fig, ax = plt.subplots(
-        2,
-        1,
-        figsize=(10, 10),
-        sharex=True,
-    )
-
-    # overlay plot
-    ax[0].plot(
-        times[1:],
-        dpl_imem[1:],
-        label="From agg_i_mem",
-        alpha=0.8,
-    )
-    ax[0].plot(
-        times[1:],
-        dpl_comp[1:],
-        label="From components",
-        linestyle="--",
-        alpha=0.8,
-    )
-
-    # text box for rmse
-    error_text = f" RMSE: {rmse:.2f}\nNRMSE:  {nrmse_pct:.2f}%"
-    ax[0].text(
-        x=0.05,
-        y=0.95,
-        s=error_text,
-        transform=ax[0].transAxes,
-        verticalalignment="top",
-        fontsize=12,
-        fontfamily="Menlo",
-        bbox=dict(
-            boxstyle="round",
-            facecolor="white",
-            alpha=0.2,
-        ),
-    )
-
-    ax[0].set_title(
-        f"Computed Dipole Comparison for {cell_type.replace('_', ' ').title()} Soma",
-    )
-    ax[0].set_ylabel("nAm")
-    ax[0].grid(True, alpha=0.3)
-    ax[0].legend(loc="upper right")
-
-    ymin, ymax = ax[0].get_ylim()
-    ylim = (max(abs(ymin), abs(ymax))) * 1.05
-    ax[0].set_ylim(-ylim, ylim)
-
-    # residual dipole plot
-    ax[1].plot(
-        times[1:],
-        residual[1:],
-        color="red",
-        label="(i_mem - reconstructed), scaled",
-    )
-    ax[1].set_title(
-        "Residual (Error)",
-    )
-    ax[1].set_ylabel("nAm")
-    ax[1].set_ylim(-ylim, ylim)
-    ax[1].grid(True, alpha=0.3)
-    # ax[1].legend()
-
-    rightax = ax[1].twinx()
-    rightax.plot(
-        times[1:],
-        residual[1:],
-        alpha=0.2,
-        label="(i_mem - reconstructed), zoomed",
-    )
-    ymin, ymax = rightax.get_ylim()
-    ylim = max(abs(ymin), abs(ymax))
-    rightax.set_ylim(-ylim, ylim)
-
-    lines1, labels1 = ax[1].get_legend_handles_labels()
-    lines2, labels2 = rightax.get_legend_handles_labels()
-
-    ax[1].legend(lines1 + lines2, labels1 + labels2)
-
-    plt.tight_layout()
-    plt.show()
-
 def postproc_soma_dipole_AC(
     net,
     trial=0,
@@ -1151,6 +1032,127 @@ def postproc_soma_dipole_AC(
     return dipole, I_t_over_gid, I_syn_over_gid, I_cap_intr_over_gid
 
 
+def check_rmse_and_residuals(
+    net,
+    trial=0,
+    cell_type="L5_pyramidal",
+):
+    times = net.cell_response.times
+
+    # get dipole from i_mem
+    dpl_imem = postproc_soma_dipol_AC(
+        net,
+        trial=trial,
+        cell_type=cell_type,
+        from_components=False,
+    )
+    # get the dipole reconstructed from the constituent components
+    dpl_comp = postproc_soma_dipole_AC(
+        net,
+        trial=trial,
+        cell_type=cell_type,
+        from_components=True,
+    )
+
+    if dpl_imem is None or dpl_comp is None:
+        raise ValueError(
+            "Dipole data could not be computed",
+        )
+
+    # calculate residual and rmse
+    residual = dpl_imem - dpl_comp
+    rmse = np.sqrt(np.mean(residual**2))
+
+    # normalize by the peak-to-peak range of agg_i_mem (our "ground truth")
+    dpl_range = np.max(dpl_imem) - np.min(dpl_imem)
+    nrmse_pct = (rmse / dpl_range) * 100 if dpl_range != 0 else 0
+
+    fig, ax = plt.subplots(
+        2,
+        1,
+        figsize=(10, 10),
+        sharex=True,
+    )
+
+    # overlay plot
+    ax[0].plot(
+        times[1:],
+        dpl_imem[1:],
+        label="From agg_i_mem",
+        alpha=0.8,
+    )
+    ax[0].plot(
+        times[1:],
+        dpl_comp[1:],
+        label="From components",
+        linestyle="--",
+        alpha=0.8,
+    )
+
+    # text box for rmse
+    error_text = f" RMSE: {rmse:.2f}\nNRMSE:  {nrmse_pct:.2f}%"
+    ax[0].text(
+        x=0.05,
+        y=0.95,
+        s=error_text,
+        transform=ax[0].transAxes,
+        verticalalignment="top",
+        fontsize=12,
+        fontfamily="Menlo",
+        bbox=dict(
+            boxstyle="round",
+            facecolor="white",
+            alpha=0.2,
+        ),
+    )
+
+    ax[0].set_title(
+        f"Computed Dipole Comparison for {cell_type.replace('_', ' ').title()} Soma",
+    )
+    ax[0].set_ylabel("nAm")
+    ax[0].grid(True, alpha=0.3)
+    ax[0].legend(loc="upper right")
+
+    ymin, ymax = ax[0].get_ylim()
+    ylim = (max(abs(ymin), abs(ymax))) * 1.05
+    ax[0].set_ylim(-ylim, ylim)
+
+    # residual dipole plot
+    ax[1].plot(
+        times[1:],
+        residual[1:],
+        color="red",
+        label="(i_mem - reconstructed), scaled",
+    )
+    ax[1].set_title(
+        "Residual (Error)",
+    )
+    ax[1].set_ylabel("nAm")
+    ax[1].set_ylim(-ylim, ylim)
+    ax[1].grid(True, alpha=0.3)
+    # ax[1].legend()
+
+    rightax = ax[1].twinx()
+    rightax.plot(
+        times[1:],
+        residual[1:],
+        alpha=0.2,
+        label="(i_mem - reconstructed), zoomed",
+    )
+    ymin, ymax = rightax.get_ylim()
+    ylim = max(abs(ymin), abs(ymax))
+    rightax.set_ylim(-ylim, ylim)
+
+    lines1, labels1 = ax[1].get_legend_handles_labels()
+    lines2, labels2 = rightax.get_legend_handles_labels()
+
+    ax[1].legend(lines1 + lines2, labels1 + labels2)
+
+    plt.tight_layout()
+    plt.show()
+
+
+
 
 
 
@@ -1168,7 +1170,7 @@ def plot_stacked_traces(
     lw=0.8,
     alpha=1.0,
     scale=1.0,
-    baseline_samps=None,
+    baseline_samps=None, # use a value for experimental data
     labels=None,
 ):
     """Plot traces stacked by cortical depth.
