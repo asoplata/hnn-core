@@ -496,7 +496,7 @@ plt.subplots_adjust(left=0.13, right=0.98, top=0.96, bottom=0.05)
 # QUANTIFY THE ERROR FOR THE RECONTRUCTION AT THE SOMA
 # mimics check_rmse_and_residuals() in tm_currents_utils.py
 
-residual_lfp_soma = lfp_agg_soma - lfp_components_sum_soma
+residual_lfp_soma = lfp_agg_soma[:,1:] - lfp_components_sum_soma[:,1:]
 rmse_per_contact = np.sqrt(np.mean(residual_lfp_soma**2, axis=1))
 
 positions = np.asarray(net.rec_arrays["probe1"].positions)
@@ -510,7 +510,7 @@ ax.set_title("LFP error magnitude per contact")
 
 # normalize by the peak-to-peak range of agg_i_mem (our "ground truth")
 # peak-to-peak per contact (use np.ptp as a shortcut; equivalent to max - min along axis=1)
-lfp_range_per_contact = np.ptp(lfp_agg_soma, axis=1)   # shape (n_contacts,)
+lfp_range_per_contact = np.ptp(lfp_agg_soma[:,1:], axis=1)   # shape (n_contacts,)
 
 # normalized RMSE per contact, in percent; safe against zero-range contacts
 nrmse_pct_per_contact = np.where(
