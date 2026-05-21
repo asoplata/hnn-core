@@ -17,6 +17,7 @@ from hnn_core.network_models import add_erp_drives_to_jones_model
 
 net = jones_2009_model()
 add_erp_drives_to_jones_model(net)
+net.set_cell_positions(inplane_distance=30.)
 
 # Laminar probe
 depths = np.arange(-625, 2150, 100)
@@ -122,7 +123,7 @@ plt.subplots_adjust(left=0.13, right=0.98, top=0.96, bottom=0.05)
 
 residual_ = lfp_lsa_ - lfp_psa_
 
-gain = 0.5
+gain = 0.05
 
 residual  = residual_ * gain
 offset = 1.0   # fixed spacing between traces in visual units
@@ -132,7 +133,7 @@ lfp_lsa_range = np.max(lfp_lsa_) - np.min(lfp_lsa_)
 nrmse_pct = (rmse / lfp_lsa_range * 100) if lfp_lsa_range != 0 else 0.0
 
 # --- scale bar in µV ---
-scale_uV = 5.0
+scale_uV = 10.0
 bar_height_visual = scale_uV * gain
 
 fig, ax = plt.subplots(figsize=(9, 7))

@@ -17,6 +17,8 @@ from hnn_core.network_models import add_erp_drives_to_jones_model
 
 net = jones_2009_model()
 add_erp_drives_to_jones_model(net)
+net.set_cell_positions(inplane_distance=30.)
+
 
 # Laminar probe
 depths = np.arange(-625, 2150, 100)
@@ -492,7 +494,6 @@ ax.text(x_bar + (times[-1] - times[1]) * 0.01,
 plt.subplots_adjust(left=0.13, right=0.98, top=0.96, bottom=0.05)
 
 
-# What follows is a WIP!
 # QUANTIFY THE ERROR FOR THE RECONTRUCTION AT THE SOMA
 # mimics check_rmse_and_residuals() in tm_currents_utils.py
 
