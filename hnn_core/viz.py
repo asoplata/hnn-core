@@ -12,7 +12,7 @@ from .externals.mne import _validate_type
 
 
 def _get_cell_colors_from_metadata(cell_types_dict):
-    """Get color and marker mappings (WIP) from cell_metadata.
+    """Get color and marker mappings from cell_metadata.
 
     Parameters
     ----------
@@ -554,7 +554,6 @@ def plot_spikes_hist(
 
     _validate_type(color, (str, list, dict, None), "color", "str, list of str, or dict")
 
-    # Currently, we cannot use `hnn_core.network_models.default_cell_metadata` colors or `.default`
     if color is None:
         color_cycle = cycle(["r", "g", "b", "y", "m", "c"])
     elif isinstance(color, str):
