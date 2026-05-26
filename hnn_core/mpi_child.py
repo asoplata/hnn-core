@@ -8,18 +8,12 @@ import sys
 import pickle
 import base64
 import re
-from mpi4py import MPI
 from hnn_core.parallel_backends import _extract_data, _extract_data_length
 import logging
 import signal
 
-
-def _pickle_data(sim_data):
-    # pickle the data and encode as base64 before sending to stderr
-    pickled_str = pickle.dumps(sim_data)
-    pickled_bytes = base64.b64encode(pickled_str)
-
-    return pickled_bytes
+import os
+import tempfile
 
 
 def _str_to_net(input_str):
@@ -62,11 +56,13 @@ class MPISimulation(object):
         if skip_mpi_import:
             self.rank = 0
         else:
-            # from mpi4py import MPI
+            from mpi4py import MPI
 
             self.comm = MPI.COMM_WORLD
             self.rank = self.comm.Get_rank()
             size = self.comm.Get_size()
+
+            ## Do you want to keep this for future debugging?
             log_filename = f"process_{self.rank}.log"
             logging.basicConfig(
                 filename=log_filename,
@@ -82,8 +78,11 @@ class MPISimulation(object):
     def __exit__(self, type, value, traceback):
         # skip Finalize() if we didn't import MPI on __init__
         if hasattr(self, "comm"):
+            from mpi4py import MPI
+
             MPI.Finalize()
 
+    # SIGTERM handler
     def _handle_sigterm(self, signum, frame):
 
         print(
@@ -128,24 +127,31 @@ class MPISimulation(object):
 
     def _write_data_stderr(self, sim_data):
         """write base64 encoded data to stderr"""
+        """writes data to a temp file """
 
         # only have rank 0 write to stdout/stderr
         if self.rank > 0:
             return
 
-        sys.stderr.write("@start_of_data@")
-        pickled_bytes = _pickle_data(sim_data)
-        sys.stderr.write(pickled_bytes.decode())
+        # rankm 0 writes data to temp file
+        pickled_bytes = pickle.dumps(sim_data)
+        fd, tmp_path = tempfile.mkstemp(prefix="hnn_mpi_data_", suffix=".pkl")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(pickled_bytes)
+        except Exception:
+            # This exception was necessary in Oscar to make the runtime error more verbose
+            os.unlink(tmp_path)
+            raise
 
-        # the parent process is waiting for "@end_of_data:[#bytes]@" with the
-        # length of data. The '@' is not found in base64 encoding, so we can
-        # be certain it is the border of the signal
-        sys.stderr.write("@end_of_data:%d@\n" % len(pickled_bytes))
+        # Signal the parent process the file path  @data_file:/path/to/file:SIZE@
+        # solves pipe buffering problems
+        sys.stderr.write("@data_file:%s:%d@\n" % (tmp_path, len(pickled_bytes)))
         sys.stderr.flush()  # flush to ensure signal is not buffered
 
     def run(self, net, tstop, dt, n_trials):
         """Run MPI simulation(s) and write results to stderr"""
-        # print(f"HERE {self.rank}")
+
         from hnn_core.network_builder import _simulate_single_trial
 
         sim_data = list()
@@ -155,6 +161,8 @@ class MPISimulation(object):
             # go ahead and append trial data for each rank, though
             # only rank 0 has data that should be sent back to MPIBackend
             sim_data.append(single_sim_data)
+
+            ## Maybe leaving this lines for debugging purposes
             if self.logger:
                 self.logger.info(f"Started worker process on rank {self.rank}")
 

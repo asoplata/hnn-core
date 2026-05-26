@@ -12,7 +12,6 @@ import base64
 import time
 from warnings import warn
 from subprocess import Popen, PIPE, TimeoutExpired
-import binascii
 from queue import Queue, Empty
 from threading import Thread, Event
 
@@ -113,13 +112,19 @@ def run_subprocess(command, obj, timeout, proc_queue=None, *args, **kwargs):
     child_data : object
         The data returned by the child process.
     """
-    proc_data_bytes = b""
+
     # each loop while waiting will involve two Queue.get() timeouts, each
     # 0.01s. This calculation will error on the side of a longer timeout
     # than is specified because more is done each loop that just Queue.get()
     timeout_cycles = timeout / 0.02
 
-    pickled_obj = base64.b64encode(pickle.dumps(obj))
+    ## Maybe leaving this print for debugging purposes
+    raw_pickle = pickle.dumps(obj)
+    pickled_obj = base64.b64encode(raw_pickle)
+    print(
+        f"Network size': {len(raw_pickle)} bytes ({len(raw_pickle) / 1024:.2f} KB)",
+        flush=True,
+    )
 
     # non-blocking adapted from https://stackoverflow.com/questions/375427/non-blocking-read-on-a-subprocess-pipe-in-python#4896288  # noqa: E501
     out_q = Queue()
@@ -128,8 +133,6 @@ def run_subprocess(command, obj, timeout, proc_queue=None, *args, **kwargs):
     threads_started = False
 
     try:
-        # print(command)
-
         ## Timing subproces
         t_start = time.time()
         proc = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE, *args, **kwargs)
@@ -151,7 +154,7 @@ def run_subprocess(command, obj, timeout, proc_queue=None, *args, **kwargs):
         sent_network = False
         count_since_last_output = 0
 
-        ## Camilo's code
+        ## Wait for NEURON starts and sends first response
         first_output_received = False
         t_start = time.time()
 
@@ -162,7 +165,6 @@ def run_subprocess(command, obj, timeout, proc_queue=None, *args, **kwargs):
             if not data_received:
                 child_out = _echo_child_output(out_q)
                 if child_out:
-                    ## Camilo's code
                     if not first_output_received:
                         print(
                             f"nrniv startup time: {time.time() - t_start:.2f}s | "
@@ -175,7 +177,7 @@ def run_subprocess(command, obj, timeout, proc_queue=None, *args, **kwargs):
                 else:
                     count_since_last_output += 1
                 # look for data in stderr and print child stdout
-                data_len, proc_data_bytes = _get_data_from_child_err(err_q)
+                data_len, proc_data_path_file = _get_data_from_child_err(err_q)
                 if data_len > 0:
                     data_received = True
                     _write_child_exit_signal(proc.stdin)
@@ -258,7 +260,7 @@ def run_subprocess(command, obj, timeout, proc_queue=None, *args, **kwargs):
         # simulation failed with a numeric return code
         raise RuntimeError("MPI simulation failed. Return code: %d" % proc.returncode)
 
-    child_data = _process_child_data(proc_data_bytes, data_len)
+    child_data = _process_child_data(proc_data_path_file, data_len)
 
     # clean up the queue
     try:
@@ -269,45 +271,44 @@ def run_subprocess(command, obj, timeout, proc_queue=None, *args, **kwargs):
     return proc, child_data
 
 
-def _process_child_data(data_bytes, data_len):
+def _process_child_data(path_data_file, data_len):
     """Process the data returned by child process.
 
     Parameters
     ----------
-    data_bytes : str
-        The data bytes
+    path_data_file
+        Path to the temporary file written by the child.
+    data_len
+        Expected byte count for integrity check.
 
     Returns
     -------
     data_unpickled : object
         The unpickled data.
     """
-    if not data_len == len(data_bytes):
+    if path_data_file is None or data_len == 0:
         # This is indicative of a failure. For debugging purposes.
+        raise RuntimeError("MPI simulation didn't produce a result file. ")
+
+    try:
+        with open(path_data_file, "rb") as f:
+            data_bytes = f.read()
+    finally:
+        try:
+            os.unlink(path_data_file)
+        except OSError:
+            pass
+
+    if len(data_bytes) != data_len:
         warn(
             "Length of received data unexpected. Expecting %d bytes, "
             "got %d" % (data_len, len(data_bytes))
         )
-
-    if len(data_bytes) == 0:
-        raise RuntimeError("MPI simulation didn't return any data")
-
-    # decode base64 byte string
-    try:
-        data_pickled = base64.b64decode(data_bytes, validate=True)
-    except binascii.Error:
-        # This is here for future debugging purposes. Unit tests can't
-        # reproduce an incorrectly padded string, but this has been an
-        # issue before
-        raise ValueError(
-            "Incorrect padding for data length %d bytes" % len(data_len)
-            + " (mod 4 = %d)" % (len(data_len) % 4)
-        )
-
-    # unpickle the data
-    return pickle.loads(data_pickled)
+    return pickle.loads(data_bytes)
 
 
+# This is the input side.
+# sending the network configuration to NEURON
 def _echo_child_output(out_q):
     out = ""
     while True:
@@ -316,6 +317,9 @@ def _echo_child_output(out_q):
         except Empty:
             break
 
+    # Return the output instead of just a boolean value so callers can
+    # tell if anything was received and check the actual content
+    # (logging the first line of nrniv output).
     if len(out) > 0:
         sys.stdout.write(out)
         return out
@@ -325,7 +329,7 @@ def _echo_child_output(out_q):
 def _get_data_from_child_err(err_q):
     err = ""
     data_length = 0
-    data_bytes = b""
+    data_file = None
 
     while True:
         try:
@@ -333,22 +337,17 @@ def _get_data_from_child_err(err_q):
         except Empty:
             break
 
-    # check for data signal
-    extracted_data = _extract_data(err, "data")
-    if len(extracted_data) > 0:
-        # _extract_data only returns data when signals on
-        # both sides were seen
-
-        err = err.replace("@start_of_data@", "")
-        err = err.replace(extracted_data, "")
-        data_length = _extract_data_length(err, "data")
-        err = err.replace("@end_of_data:%d@\n" % data_length, "")
-        data_bytes = extracted_data.encode()
+    # check for file signal @data_file
+    file_match = re.search(r"@data_file:(.+):(\d+)@", err)
+    if file_match is not None:
+        data_file = file_match.group(1)
+        data_length = int(file_match.group(2))
+        err = err[: file_match.start()] + err[file_match.end() :]
 
     # print the rest of the child's stderr to our stdout
     sys.stdout.write(err)
 
-    return data_length, data_bytes
+    return data_length, data_file
 
 
 def _has_mpi4py():
