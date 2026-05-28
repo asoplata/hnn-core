@@ -878,10 +878,12 @@ class MPIBackend(object):
         sensible_default_cores: bool = True,
         override_hwthreading_option: Union[None, bool] = None,
         override_oversubscribe_option: Union[None, bool] = None,
+        debug_child_processes: bool = False,
     ) -> None:
         self.expected_data_length = 0
         self.proc = None
         self.proc_queue = Queue()
+        self.debug_child_processes = debug_child_processes
 
         # Check of psutil and mpi4py import has been moved into this function,
         # since this function is called by GUI before MPIBackend()
@@ -945,6 +947,9 @@ class MPIBackend(object):
                 os.path.dirname(sys.modules[__name__].__file__), "mpi_child.py"
             )
         )
+
+        if debug_child_processes:
+            self.mpi_cmd += " --debug-child-processes"
 
         # Split the command into shell arguments for passing to Popen
         use_posix = True if sys.platform != "win32" else False

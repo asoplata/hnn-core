@@ -49,7 +49,7 @@ class MPISimulation(object):
         The rank for each processor part of the MPI communicator
     """
 
-    def __init__(self, skip_mpi_import=False):
+    def __init__(self, skip_mpi_import=False, debug_child_processes=False):
         signal.signal(signal.SIGTERM, self._handle_sigterm)
         self.skip_mpi_import = skip_mpi_import
         self.logger = None
@@ -62,15 +62,15 @@ class MPISimulation(object):
             self.rank = self.comm.Get_rank()
             size = self.comm.Get_size()
 
-            ## Do you want to keep this for future debugging?
-            log_filename = f"process_{self.rank}.log"
-            logging.basicConfig(
-                filename=log_filename,
-                filemode="w",
-                level=logging.INFO,
-                format=f"[Rank {self.rank}/{size}] %(asctime)s - %(levelname)s - %(message)s",
-            )
-            self.logger = logging.getLogger(f"mpi_child.rank{self.rank}")
+            if debug_child_processes:
+                log_filename = f"process_{self.rank}.log"
+                logging.basicConfig(
+                    filename=log_filename,
+                    filemode="w",
+                    level=logging.INFO,
+                    format=f"[Rank {self.rank}/{size}] %(asctime)s - %(levelname)s - %(message)s",
+                )
+                self.logger = logging.getLogger(f"mpi_child.rank{self.rank}")
 
     def __enter__(self):
         return self
@@ -112,6 +112,8 @@ class MPISimulation(object):
             net = None
 
         net = self.comm.bcast(net, root=0)
+        if self.logger:
+            self.logger.info(f"Net has been loaded on rank {self.rank}")
         return net
 
     def _wait_for_exit_signal(self):
@@ -131,8 +133,14 @@ class MPISimulation(object):
 
         # only have rank 0 write to stdout/stderr
         if self.rank > 0:
+            if self.logger:
+                self.logger.info("Child process beginning to wait for exit signal")
             return
 
+        if self.logger:
+            self.logger.info(
+                "Rank 0 beginning to write data to temp file and signal parent process"
+            )
         # rankm 0 writes data to temp file
         pickled_bytes = pickle.dumps(sim_data)
         fd, tmp_path = tempfile.mkstemp(prefix="hnn_mpi_data_", suffix=".pkl")
@@ -146,8 +154,13 @@ class MPISimulation(object):
 
         # Signal the parent process the file path  @data_file:/path/to/file:SIZE@
         # solves pipe buffering problems
+        # TODO make sure that this string is under 64kb right?
         sys.stderr.write("@data_file:%s:%d@\n" % (tmp_path, len(pickled_bytes)))
         sys.stderr.flush()  # flush to ensure signal is not buffered
+        if self.logger:
+            self.logger.info(
+                "Rank 0 finished writing data to temp file and signaling parent process"
+            )
 
     def run(self, net, tstop, dt, n_trials):
         """Run MPI simulation(s) and write results to stderr"""
@@ -156,20 +169,29 @@ class MPISimulation(object):
 
         sim_data = list()
         for trial_idx in range(n_trials):
+            if self.logger:
+                self.logger.info(
+                    f"Beginning simulation of trial {trial_idx} on rank {self.rank}"
+                )
             single_sim_data = _simulate_single_trial(net, tstop, dt, trial_idx)
 
             # go ahead and append trial data for each rank, though
             # only rank 0 has data that should be sent back to MPIBackend
             sim_data.append(single_sim_data)
 
-            ## Maybe leaving this lines for debugging purposes
             if self.logger:
-                self.logger.info(f"Started worker process on rank {self.rank}")
+                # AES: Is this always successful?
+                self.logger.info(
+                    f"Successfully finished simulation of trial {trial_idx} on rank {self.rank}"
+                )
 
         # flush output buffers from all ranks (any errors or status messages)
         sys.stdout.flush()
         sys.stderr.flush()
-
+        if self.logger:
+            self.logger.info(
+                f"Successfully finished all simulations on rank {self.rank}"
+            )
         return sim_data
 
 
@@ -179,9 +201,10 @@ if __name__ == "__main__":
     import traceback
 
     rc = 0
+    debug_child_processes = "--debug-child-processes" in sys.argv
 
     try:
-        with MPISimulation() as mpi_sim:
+        with MPISimulation(debug_child_processes=debug_child_processes) as mpi_sim:
             # XXX: _read_net -> _read_obj, fix later
             net, tstop, dt, n_trials = mpi_sim._read_net()
             sim_data = mpi_sim.run(net, tstop, dt, n_trials)
