@@ -624,12 +624,20 @@ def filter_sources(
     #    ])
     if syn_names is not None:
         syn_set = set(syn_names)
-        keep &= np.array([
-            src.syn_name is not None
-            and (src.syn_name in syn_set
-                or any(src.syn_name.endswith(f"_{s}") for s in syn_set))
-            for src in sources
-        ])
+        result = []
+        for src in sources:
+            value = (src.syn_name is not None
+                    and (src.syn_name in syn_set
+                        or any(src.syn_name.endswith(f"_{s}") for s in syn_set)))
+            result.append(value)
+
+        keep &= np.array(result)
+        #keep &= np.array([
+        #    src.syn_name is not None
+        #    and (src.syn_name in syn_set
+        #        or any(src.syn_name.endswith(f"_{s}") for s in syn_set))
+        #    for src in sources
+        #])
 
     filt_sources = [src for src, k in zip(sources, keep) if k]
     filt_I = current_matrix_nA[keep]
