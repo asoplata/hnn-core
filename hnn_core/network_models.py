@@ -3,6 +3,7 @@
 # Authors: Nick Tolley <nicholas_tolley@brown.edu>
 
 import os.path as op
+from copy import deepcopy
 import warnings
 
 import hnn_core
@@ -18,6 +19,107 @@ from .cells_default import (
     interneuron,
 )
 from .externals.mne import _validate_type
+
+# Default cell metadata for the standard Jones 2009 network cell types.
+# Defined here at module level so that other code (e.g. JSON
+# serialisation / deserialisation) can import it without instantiating
+# a full Network object.
+
+default_cell_metadata = {
+    "L2_basket": {
+        "morpho_type": "basket",
+        "electro_type": "inhibitory",
+        "layer": "2",
+        "zdist_origin": 0.8,  # distance to origin in percent of layer_separation
+        "measure_dipole": False,
+        "reference": "https://doi.org/10.7554/eLife.51214",
+        "color": "m",
+        "marker": "x",  # shape from prev viz.py line:926
+    },
+    "L2_pyramidal": {
+        "morpho_type": "pyramidal",
+        "electro_type": "excitatory",
+        "layer": "2",
+        "zdist_origin": 1,
+        "measure_dipole": True,
+        "reference": "https://doi.org/10.7554/eLife.51214",
+        "color": "c",
+        "marker": "^",
+    },
+    "L5_basket": {
+        "morpho_type": "basket",
+        "electro_type": "inhibitory",
+        "layer": "5",
+        "zdist_origin": 0.2,
+        "measure_dipole": False,
+        "reference": "https://doi.org/10.7554/eLife.51214",
+        "color": "r",
+        "marker": "x",
+    },
+    "L5_pyramidal": {
+        "morpho_type": "pyramidal",
+        "electro_type": "excitatory",
+        "layer": "5",
+        "zdist_origin": 0,
+        "measure_dipole": True,
+        "reference": "https://doi.org/10.7554/eLife.51214",
+        "color": "b",
+        "marker": "^",
+    },
+}
+
+default_drive_colors = {
+    "proximal": "r",
+    "distal": "g",
+    "default": "#8B4513",
+}
+
+# Cell metadata for the new Duecker model network cell types.
+duecker_cell_metadata = {
+    "L2_basket": {
+        "morpho_type": "interneuron",
+        "electro_type": "inhibitory",
+        "layer": "2",
+        "zdist_origin": 0.8,
+        "measure_dipole": False,
+        "reference": "https://doi.org/10.7554/eLife.51214",
+        "color": "m",
+        "marker": "x",
+    },
+    "L2_pyramidal": {
+        "morpho_type": "pyramidal",
+        "electro_type": "excitatory",
+        "layer": "2",
+        "zdist_origin": 1,
+        "measure_dipole": True,
+        "reference": "https://doi.org/10.7554/eLife.51214",
+        "color": "c",
+        "marker": "^",
+    },
+    "L5_basket": {
+        "morpho_type": "interneuron",
+        "electro_type": "inhibitory",
+        "layer": "5",
+        "zdist_origin": 0.2,
+        "measure_dipole": False,
+        "reference": "https://doi.org/10.7554/eLife.51214",
+        "color": "r",
+        "marker": "x",
+    },
+    "L5ET": {
+        "morpho_type": "pyramidal",
+        "electro_type": "excitatory",
+        "layer": "5",
+        "zdist_origin": 0,
+        "measure_dipole": True,
+        "reference": "https://doi.org/10.7554/eLife.51214",
+        "color": "b",
+        "marker": "^",
+    },
+}
+
+
+# ToDO -> direct _cell_L2Pyr calling
 
 
 def neymotin_2020_model(
@@ -85,47 +187,19 @@ def neymotin_2020_model(
     cell_types = {
         "L2_basket": {
             "cell_object": basket(cell_name="L2_basket"),
-            "cell_metadata": {
-                "morpho_type": "basket",
-                "electro_type": "inhibitory",
-                "layer": "2",
-                "zdist_origin": 0.8,  # distance to origin in percent of layer_separation
-                "measure_dipole": False,
-                "reference": "https://doi.org/10.7554/eLife.51214",
-            },
+            "cell_metadata": deepcopy(default_cell_metadata["L2_basket"]),
         },
         "L2_pyramidal": {
             "cell_object": pyramidal(cell_name="L2_pyramidal"),
-            "cell_metadata": {
-                "morpho_type": "pyramidal",
-                "electro_type": "excitatory",
-                "layer": "2",
-                "zdist_origin": 1,
-                "measure_dipole": True,
-                "reference": "https://doi.org/10.7554/eLife.51214",
-            },
+            "cell_metadata": deepcopy(default_cell_metadata["L2_pyramidal"]),
         },
         "L5_basket": {
             "cell_object": basket(cell_name="L5_basket"),
-            "cell_metadata": {
-                "morpho_type": "basket",
-                "electro_type": "inhibitory",
-                "layer": "5",
-                "zdist_origin": 0.2,
-                "measure_dipole": False,
-                "reference": "https://doi.org/10.7554/eLife.51214",
-            },
+            "cell_metadata": deepcopy(default_cell_metadata["L5_basket"]),
         },
         "L5_pyramidal": {
             "cell_object": pyramidal(cell_name="L5_pyramidal"),
-            "cell_metadata": {
-                "morpho_type": "pyramidal",
-                "electro_type": "excitatory",
-                "layer": "5",
-                "zdist_origin": 0,
-                "measure_dipole": True,
-                "reference": "https://doi.org/10.7554/eLife.51214",
-            },
+            "cell_metadata": deepcopy(default_cell_metadata["L5_pyramidal"]),
         },
     }
 
@@ -507,47 +581,19 @@ def duecker_ET_model(
     cell_types = {
         "L2_basket": {
             "cell_object": interneuron(cell_name=_short_name("L2_basket"), layer=2),
-            "cell_metadata": {
-                "morpho_type": "interneuron",
-                "electro_type": "inhibitory",
-                "layer": "2",
-                "zdist_origin": 0.8,
-                "measure_dipole": False,
-                "reference": "https://doi.org/10.7554/eLife.51214",
-            },
+            "cell_metadata": deepcopy(duecker_cell_metadata["L2_basket"]),
         },
         "L2_pyramidal": {
             "cell_object": pyramidal_l23(cell_name=_short_name("L2_pyramidal")),
-            "cell_metadata": {
-                "morpho_type": "pyramidal",
-                "electro_type": "excitatory",
-                "layer": "2",
-                "zdist_origin": 1,
-                "measure_dipole": True,
-                "reference": "https://doi.org/10.7554/eLife.51214",
-            },
+            "cell_metadata": deepcopy(duecker_cell_metadata["L2_pyramidal"]),
         },
         "L5_basket": {
             "cell_object": interneuron(cell_name=_short_name("L5_basket"), layer=5),
-            "cell_metadata": {
-                "morpho_type": "interneuron",
-                "electro_type": "inhibitory",
-                "layer": "5",
-                "zdist_origin": 0.2,
-                "measure_dipole": False,
-                "reference": "https://doi.org/10.7554/eLife.51214",
-            },
+            "cell_metadata": deepcopy(duecker_cell_metadata["L5_basket"]),
         },
         "L5ET": {
             "cell_object": pyramidal_l5ET(cell_name="L5ET"),
-            "cell_metadata": {
-                "morpho_type": "pyramidal",
-                "electro_type": "excitatory",
-                "layer": "5",
-                "zdist_origin": 0,
-                "measure_dipole": True,
-                "reference": "https://doi.org/10.7554/eLife.51214",
-            },
+            "cell_metadata": deepcopy(duecker_cell_metadata["L5ET"]),
         },
     }
 

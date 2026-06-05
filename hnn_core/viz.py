@@ -24,6 +24,27 @@ from scipy.signal import decimate, periodogram
 from .externals.mne import tfr_array_morlet, _validate_type
 
 
+def _get_cell_colors_from_metadata(cell_types_dict):
+    """Get color and marker mappings from cell_metadata.
+
+    Parameters
+    ----------
+    cell_types_dict : dict
+
+    Returns
+    -------
+    colors : dict
+    markers : dict
+    """
+    colors = dict()
+    markers = dict()
+    for cell_name in sorted(cell_types_dict.keys()):
+        meta = cell_types_dict[cell_name].get("cell_metadata", {})
+        colors[cell_name] = meta.get("color", "k")
+        markers[cell_name] = meta.get("marker", "o")
+    return colors, markers
+
+
 def _lighten_color(color, amount=0.5):
     try:
         c = matplotlib.colors.cnames[color]
@@ -487,7 +508,15 @@ def plot_spikes_hist(
     spike_types_mask = {
         s_type: np.isin(spike_types_data, s_type) for s_type in unique_types
     }
-    cell_types = cell_response._cell_type_names
+    # fetching the cell types
+    # TODO KD the Duecker model now requires us to import duecker_cell_metadata AND use
+    # a NEW attribute (which we need to create) inside CellResponse that indicates what
+    # the name of the model used to create CellResponse was. That way, we can specify
+    # which variant of metadata to use.
+    from .network_models import default_cell_metadata
+
+    known_cell_types = set(default_cell_metadata.keys())
+    cell_types = sorted([ct for ct in unique_types if ct in known_cell_types])
     input_types = np.setdiff1d(unique_types, cell_types)
 
     if isinstance(spike_types, str):
@@ -552,6 +581,12 @@ def plot_spikes_hist(
         spike_label: list() for spike_label in np.unique(list(spike_labels.values()))
     }
     spike_color = dict()  # Store colors specified for each spike_label
+    # NOTE: Currently, since `CellResponse` only contains the "type" (aka drive name or
+    # cell name) of what produced each spike, but not whether that drive was proximal or
+    # distal, there is currently no way to apply the coloring of
+    # `hnn_core.network_models.default_drive_colors` to the spikes in this plot. If
+    # `CellResponse` is ever guaranteed access to the `Network` information in the
+    # future, then this will be fixable.
     for spike_type, spike_label in spike_labels.items():
         if spike_label not in spike_color:
             if isinstance(color, dict):
@@ -563,6 +598,9 @@ def plot_spikes_hist(
                     color[spike_label], str, "Dictionary values of color", "str"
                 )
                 spike_color[spike_label] = color[spike_label]
+            elif spike_label in default_cell_metadata.keys():
+                # Overwrite spike colors if the spikes come from true cells
+                spike_color[spike_label] = default_cell_metadata[spike_label]["color"]
             else:
                 spike_color[spike_label] = next(color_cycle)
         spike_type_times[spike_label].extend(spike_times[spike_types_mask[spike_type]])
@@ -713,14 +751,21 @@ def plot_spikes_raster(
                 f"Got {cell_types}"
             )
     else:
-        # Use all cell types and warn user that they should select cell types
-        cell_types = cell_response._cell_type_names
+        # TODO KD the Duecker model now requires us to import duecker_cell_metadata AND use
+        # a NEW attribute (which we need to create) inside CellResponse that indicates what
+        # the name of the model used to create CellResponse was. That way, we can specify
+        # which variant of metadata to use.
+        from .network_models import default_cell_metadata
 
-    # Set default colors
-    default_colors = plt.rcParams["axes.prop_cycle"].by_key()["color"][
-        : len(cell_types)
-    ]
-    cell_colors = {cell: color for cell, color in zip(cell_types, default_colors)}
+        known_cell_types = set(default_cell_metadata.keys())
+        cell_types = sorted([ct for ct in unique_spike_types if ct in known_cell_types])
+        if not cell_types:
+            cell_types = sorted(list(known_cell_types))
+
+    # default colors from cell metadata
+    from .network_models import default_cell_metadata as _meta
+
+    cell_colors = {cell: _meta.get(cell, {}).get("color", "k") for cell in cell_types}
 
     # validate colors argument
     _validate_type(colors, (list, dict, None), "color", "list of str, or dict")
@@ -932,32 +977,14 @@ def plot_cells(net, ax=None, show=True, colors=None, markers=None):
             f"Expected 'ax' to be an instance of Axes3D, but got {type(ax).__name__}"
         )
 
-    if colors is None:
-        color_cycle = plt.rcParams["axes.prop_cycle"].by_key()["color"]
-        colors = {
-            cell_type: color_cycle[i % len(color_cycle)]
-            for i, cell_type in enumerate(net.cell_types)
-        }
+    # colors and markers from cell metadata
+    if net.cell_types:
+        colors, markers = _get_cell_colors_from_metadata(net.cell_types)
+    else:
+        colors = dict()
+        markers = dict()
 
-    if markers is None:
-        morpho_marker_map = {"pyramidal": "^", "basket": "x", "interneuron": "o"}
-        all_markers = ["^", "x", "o", "s", "D", "P", "*", "v", "<", ">"]
-        used_markers = set(morpho_marker_map.values())
-        markers = {}
-        for cell_type in net.cell_types:
-            morpho_type = net.cell_types[cell_type]["cell_metadata"].get(
-                "morpho_type", ""
-            )
-            if morpho_type in morpho_marker_map:
-                markers[cell_type] = morpho_marker_map[morpho_type]
-            else:
-                for m in all_markers:
-                    if m not in used_markers:
-                        markers[cell_type] = m
-                        used_markers.add(m)
-                        break
-
-    for cell_type in net.cell_types:
+    for cell_type in sorted(net.cell_types.keys()):
         x = [pos[0] for pos in net.pos_dict[cell_type]]
         y = [pos[1] for pos in net.pos_dict[cell_type]]
         z = [pos[2] for pos in net.pos_dict[cell_type]]
