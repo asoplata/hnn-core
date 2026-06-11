@@ -71,6 +71,11 @@ dpl = dpls[0]
 
 times = net.cell_response.times
 
+lfp = net.rec_arrays["probe1"].voltages[0]  # HNN's LFP; trial 0
+contact_labels = np.asarray(depths, dtype=int)
+
+#plott.plot_laminar_lfp_AC(times, lfp, contact_labels, scale=5.0)
+
 #####################
 # Total CSD from agg_i_mem
 #####################
@@ -107,36 +112,60 @@ csd_from_sources = tme.compute_csd_from_sources(
     V_bin
 )
 
-contact_labels = np.asarray(depths, dtype=int)
+times_ = times[1:]
+lfp_agg_i_mem_ = lfp_agg_i_mem[:, 1:]
+#plott.plot_laminar_lfp_AC(times[1:], lfp_agg_i_mem_, contact_labels, scale=5.0)
+
+csd_from_sources_ = csd_from_sources[:, 1:]
+
+#plott.plot_laminar_csd_AC(
+#        times_, 
+#        csd_from_sources_, 
+#        contact_labels,
+#        vmin=-60,
+#        vmax=60,
+#        overlay_csd_traces=True)
+
+#plott.plot_laminar_csd_AC(
+#        times_, 
+#        csd_from_sources_, 
+#        contact_labels,
+#        vmin=-60,
+#        vmax=60,
+#        overlay_lfp_traces=True,
+#        data_lfp=lfp_agg_i_mem_,
+#        scale_lfp_traces=5.0)
+
 
 plott.plot_lfp_morph_csd(
-    times, 
-    lfp_agg_i_mem, 
-    csd_from_sources, 
+    times_, 
+    lfp_agg_i_mem_, 
+    csd_from_sources_, 
     contact_labels, 
     net, 
     ext_inputs=net.cell_response, 
     spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']}, 
-    scale_lfp=100.0,
-    voltage_scalebar=50,
+    scale_lfp=3.0,
+    voltage_scalebar=200,
     vmin=-60,
     vmax=60,
-    figsize=(18, 6)
-    )
-
-
-
-plott.plot_laminar_csd_AC(
-    times,
-    csd_from_sources,
-    contact_labels=contact_labels,
-    vmin=-100,
-    vmax=100,
-    interpolation=None,
+    figsize=(18, 6),
+    overlay_csd_traces=True,
     unit_csd="µA/mm³")
-#plt.title("Total CSD")
-    
-# y-axis in units of μA/mm³, which is the unit of the CSD computed from the sources!!
+
+
+dpl_agg_i_mem = tme.reconstruct_dipole_from_sources(net, sources_agg, I_agg)
+dpl_agg_i_mem_ = dpl_agg_i_mem[1:]
+
+fig, ax = plt.subplots()
+ax.plot(dpl.times, dpl.data['agg'], 'k', label='Total', lw=1.5)
+ax.plot(times_, dpl_agg_i_mem_, label='dipole from agg_i_mem sources', lw=1.5)
+ax.set_xlabel('Time (ms)')
+ax.set_ylabel('Dipole (nAm)')
+ax.legend()
+plt.show()
+
+
 
 # CSD from synaptic currents only
 sources_syn, I_syn = tme.collect_synaptic_sources(
@@ -158,14 +187,14 @@ csd_from_syn = tme.compute_csd_from_sources(
     V_bin_syn
 )
 
-plott.plot_laminar_csd_AC(
-    times,
-    csd_from_syn,
-    contact_labels=contact_labels,
-    vmin=-100,
-    vmax=100,
-    interpolation=None,
-    unit_csd="µA/mm³")
+#plott.plot_laminar_csd_AC(
+#    times,
+#    csd_from_syn,
+#    contact_labels=contact_labels,
+#    vmin=-100,
+#    vmax=100,
+#    interpolation=None,
+#    unit_csd="µA/mm³")
 #plt.title("CSD from I_syn")
 
 
@@ -222,7 +251,7 @@ plott.plot_laminar_csd_AC(
 
 #plt.title("CSD from GABA_B currents only")
 
-
+#dpl_gabaa = tme.reconstruct_dipole_from_sources(net, sources_syn_GABAA, I_syn_GABAA)
 # UP to here: GABA_B currents are all positive (sources), but the resulting CSD through plot_laminar_csd_AC displays sinks. I think this is due to interpolation (checking it).
 
 # AMPA current only
@@ -341,3 +370,5 @@ tme.plot_laminar_csd_AC(
     contact_labels=contact_labels,
     vmin=-30,
     vmax=30)
+
+

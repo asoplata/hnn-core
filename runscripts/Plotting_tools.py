@@ -266,12 +266,13 @@ def plot_laminar_csd_AC(
     overlay_lfp_traces=False,
     scale_lfp_traces=1.0,
     unit_csd="µV/µm²", # or "µA/mm³"
-    interp_kx=3,
-    interp_ky=3
+    interp_kx=1, # linear interpolation by default
+    interp_ky=1
 ):
     import matplotlib.pyplot as plt
     from scipy.interpolate import RectBivariateSpline
     from scipy.interpolate import RegularGridInterpolator
+    from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 
 
     if ax is None:
@@ -286,7 +287,7 @@ def plot_laminar_csd_AC(
             'Please use sink = "b" or sink = "r".'
             ' Only colormap "jet" is supported for CSD.'
         )
-
+    data_ = data.copy()
     if interpolation == "spline":
         # create interpolation function
         interp_data = RectBivariateSpline(times, contact_labels, data.T,kx=interp_kx, ky=interp_ky)
@@ -313,7 +314,7 @@ def plot_laminar_csd_AC(
     im = ax.pcolormesh(
         times, new_depths, data, cmap=cmap, shading="auto", vmin=vmin, vmax=vmax
     )
-    ax.set_xlabel("time (s)")
+    ax.set_xlabel("time (ms)")
     
     # check this
     contact_labels = np.asarray(contact_labels)
@@ -334,23 +335,27 @@ def plot_laminar_csd_AC(
         plt.colorbar(im, ax=ax, cax=color_axis).set_label(f"CSD ({unit_csd})")
 
     if overlay_csd_traces:
-        for i, (z, tr) in enumerate(zip(new_depths, data)):
+        for i, (z, tr) in enumerate(zip(contact_labels, data_)):
             ax.plot(times, z + scale_csd_traces * tr, color='k', alpha=0.5)
         scalebar = AnchoredSizeBar(
-            ax.transData, 1, f"{200:.0f} {unit_csd}",
+            ax.transData, 1, f"{50:.0f} {unit_csd}",
             "upper left",
-            size_vertical= 200 * scale_csd_traces,
+            size_vertical= 50 * scale_csd_traces,
             pad=0.1, color="black", frameon=False,
         )
         ax.add_artist(scalebar)
-
     elif overlay_lfp_traces:
+        depth_spacing = np.diff(contact_labels)[0]
+        max_amp = np.max(np.ptp(data_lfp, axis=1))
+        effective_scale = scale_lfp_traces * depth_spacing / max_amp
+
         for i, (z, tr) in enumerate(zip(contact_labels, data_lfp)):
-            ax.plot(times, z + scale_lfp_traces * tr, color='k', alpha=0.5)
+            ax.plot(times, z + effective_scale * tr, color='k', alpha=0.5)
         scalebar = AnchoredSizeBar(
             ax.transData, 1, f"{200:.0f} " + r"$\mu V$",
             "upper left",
-            size_vertical=200 * scale_lfp_traces,
+            #size_vertical=200 * scale_lfp_traces,
+            size_vertical=200 * effective_scale,
             pad=0.1, color="black", frameon=False,
         )
         ax.add_artist(scalebar)

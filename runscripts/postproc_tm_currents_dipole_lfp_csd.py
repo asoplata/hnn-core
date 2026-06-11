@@ -2107,3 +2107,21 @@ def compute_csd_from_sources(
         )
     summed_nA = B @ current_matrix_nA
     return (summed_nA * 1e-3) / V_bin#[:, None]
+
+
+def reconstruct_dipole_from_sources(net, sources, I, scaling_factor=3000):
+    """Reconstruct dipole (nAm) from a source/current collection.
+    I : (n_sources, n_times) in nA
+    """
+    dipole = np.zeros(I.shape[1])
+    for src, current in zip(sources, I):
+        start_gid = net.gid_ranges[src.cell_type][0]
+        soma_pos = np.array(net.pos_dict[src.cell_type][src.gid - start_gid])
+        template_cell = net.cell_types[src.cell_type]['cell_object']
+        end_pts = np.asarray(template_cell.sections[src.section]._end_pts, dtype=float)
+        sec_start = end_pts[0] + soma_pos
+        sec_end   = end_pts[1] + soma_pos
+        z_i = (sec_start + src.segment_x * (sec_end - sec_start))[2]
+        # nA * µm = fAm → /1e6 → nAm
+        dipole += current * z_i / 1e6 * scaling_factor
+    return dipole
