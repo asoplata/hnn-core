@@ -22,10 +22,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: conda-incubator/setup-miniconda@v4
         with:
           activate-environment: test
           python-version: ${{ matrix.python-version }}
+          miniforge-version: latest
+
       - name: Install dependencies
         shell: bash -el {0}
         run: |

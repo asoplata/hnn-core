@@ -23,8 +23,11 @@ jobs:
               command: |
                   export PATH=~/miniconda/bin:$PATH
                   conda update --yes --quiet conda
-                  conda create -n testenv --yes pip python=3.11
+                  conda create -n testenv --yes --channel conda-forge --override-channels pip python=3.11
                   source activate testenv
+                  # changes introduced from https://conda-forge.org/docs/user/transitioning_from_defaults/
+                  conda config --env --add channels conda-forge
+                  conda config --env --set channel_priority strict
                   export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
                   # necessary due to https://github.com/mpi4py/mpi4py/issues/335#issuecomment-1486366039
                   rm $CONDA_PREFIX/compiler_compat/ld
