@@ -10,12 +10,14 @@ Adopted from http://atpassos.me/post/44900091837/bayesian-optimization
 #          Alexandre Passos <alexandre.tp@gmail.com>
 #          Mainak Jas <mjas@mgh.harvard.edu>
 #          Carolina Fernandez <cxf418@miami.edu>
-
+from datetime import datetime
+from pathlib import Path
+import pickle
 import warnings
-from sklearn import gaussian_process
-import numpy as np
 
+import numpy as np
 import scipy.stats as st
+from sklearn import gaussian_process
 
 
 def expected_improvement(gp, best_f, all_x):
@@ -45,7 +47,16 @@ def expected_improvement(gp, best_f, all_x):
     return (y - best_f) * st.norm.cdf(Z) + y_std * st.norm.pdf(Z)
 
 
-def bayes_opt(func, x0, cons, acquisition, maxfun=200, debug=False, random_state=None):
+def bayes_opt(
+    func,
+    x0,
+    cons,
+    acquisition,
+    maxfun=200,
+    debug=False,
+    random_state=None,
+    backup_dir=False,
+):
     """The actual bayesian optimization function.
 
     Parameters
@@ -64,6 +75,9 @@ def bayes_opt(func, x0, cons, acquisition, maxfun=200, debug=False, random_state
         The default is False.
     random_state : int, optional
         Random state of the GaussianProcessRegressor. The default is None.
+    backup_dir : str | Path, optional
+        Directory in which to store a pickled backup of every 10th iteration of your
+        optimization run.
 
     Returns
     -------
@@ -112,6 +126,25 @@ def bayes_opt(func, x0, cons, acquisition, maxfun=200, debug=False, random_state
 
         if debug:
             print("iter", i, "best_x", best_x, best_f)
+
+        if backup_dir:
+            backup_dir = Path(backup_dir)
+            # KDTODOO NEEDS TESTING
+            if i % 10 == 0:
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                with open(
+                    (backup_dir / f"bayesian_checkpoint_{timestamp}.pkl"),
+                    "wb",
+                ) as f:
+                    pickle.dump(
+                        {
+                            "X": X,
+                            "y": y,
+                            "best_x": best_x,
+                            "best_f": best_f,
+                        },
+                        f,
+                    )
 
     return best_x, best_f
 

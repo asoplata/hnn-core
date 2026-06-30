@@ -5,6 +5,10 @@
 #          Ryan Thorpe <ryan_thorpe@brown.edu>
 #          Mainak Jas <mjas@mgh.harvard.edu>
 
+from datetime import datetime
+from pathlib import Path
+import pickle
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,8 +22,6 @@ from .objective_functions import (
     _maximize_psd,
 )
 from ..externals.mne import _validate_type
-import os.path as op
-import pickle
 
 
 class Optimizer:
@@ -222,6 +224,9 @@ class Optimizer:
             The smooth window length to use after every optimization iteration before
             data comparison. There is no smoothing applied by default, so you must pass
             a value if you want any smoothing.
+        backup_dir : str | Path, optional
+            Directory in which to store a pickled backup of every 10th iteration of your
+            optimization run.
         verbose : bool, default=True
             If True, print build steps and simulation progress to console.
 
@@ -602,10 +607,16 @@ def _run_opt_cma(
         solutions = es.ask()
         es.tell(solutions, _obj_func(solutions))
         es.disp()
-        backup_dir = obj_fun_kwargs.get("pth_backup", False)
+        backup_dir = obj_fun_kwargs.get("backup_dir", False)
         if backup_dir:
+            backup_dir = Path(backup_dir)
+            # KDTODOO NEEDS TESTING
             if es.countiter % 10 == 0:
-                with open(op.join(backup_dir, "cma_checkpoint.pkl"), "wb") as f:
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                with open(
+                    (backup_dir / f"cma_checkpoint_{timestamp}.pkl"),
+                    "wb",
+                ) as f:
                     pickle.dump({"es": es, "obj_values": obj_values}, f)
     es.result_pretty()
 
@@ -687,6 +698,18 @@ def _run_opt_cobyla(
             best=best,
         )
 
+    def cobyla_callback(intermediate_result):
+        if constraints.index(intermediate_result["x"]) % 10 == 0:
+            # test for backup presence is before this function is used
+            backup_dir = Path(obj_fun_kwargs["backup_dir"])
+            # KDTODOO NEEDS TESTING
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            with open(
+                (backup_dir / f"cobyla_checkpoint_{timestamp}.pkl"),
+                "wb",
+            ) as f:
+                pickle.dump({"intermediate_result": intermediate_result}, f)
+
     fmin_cobyla(
         _obj_func,
         cons=constraints,
@@ -695,6 +718,7 @@ def _run_opt_cobyla(
         x0=list(initial_params.values()),
         maxfun=max_iter,
         catol=0.0,
+        callback=(cobyla_callback if obj_fun_kwargs.get("backup_dir", False) else None),
     )
 
     # get optimized params
