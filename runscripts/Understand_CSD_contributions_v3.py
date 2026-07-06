@@ -33,7 +33,7 @@ net.add_electrode_array('probe1', electrode_pos)
 n_trials = 1
 
 if "dpls" not in locals():
-    with JoblibBackend(8):
+    with JoblibBackend(1):
         dpls = simulate_dipole(
             net,
             tstop=170.0,
@@ -64,11 +64,326 @@ l5_component_channels = [
     "il_hh2",
     "i_ar",
 ]
-'''
+
+
 scaling_factor = 3000
 for dpl in dpls:
     dpl.scale(scaling_factor)
+
+dpl = dpls[0]
+times = net.cell_response.times
+
+lfp = net.rec_arrays["probe1"].voltages[0]  # HNN's LFP; trial 0
+contact_labels = np.asarray(depths, dtype=int)
+
+#breakpoint()
+#######
+# From synaptic currents only
+#######
+
+sources_syn, I_syn = tme.collect_synaptic_sources(
+    net,
+    trial_idx=0,
+    cell_types=["L5_pyramidal"],
+)
+
+sources_syn_soma, I_syn_soma = tme.filter_sources(
+    sources_syn,
+    I_syn,
+    cell_types=["L5_pyramidal"],
+    sections=["soma"],
+)
+
+# LFP from synaptic currents only
+T_syn_soma = tme.build_transfer_resistance_matrix_for_sources(
+    net,
+    sources_syn_soma,
+    array_name="probe1",
+)
+
+lfp_syn_soma = tme.reconstruct_lfp_from_sources(
+    T_syn_soma,
+    I_syn_soma,
+)
+
+#######
+# From capacitive currents only
+#######
+
+sources_cap, I_cap = tme.collect_intrinsic_sources(
+    net,
+    trial_idx=0,
+    cell_types=["L2_pyramidal", "L5_pyramidal"],
+    channels=["agg_i_cap"],
+)
+
+sources_cap_soma, I_cap_soma = tme.filter_sources(
+    sources_cap,
+    I_cap,
+    cell_types=["L5_pyramidal"],
+    sections=["soma"],
+)
+
+T_cap_soma = tme.build_transfer_resistance_matrix_for_sources(
+    net,
+    sources_cap_soma,
+    array_name="probe1",
+)
+
+lfp_cap_soma = tme.reconstruct_lfp_from_sources(
+    T_cap_soma,
+    I_cap_soma,
+)
+
+#######
+# From ionic currents only
+#######
+
+sources_ionic, I_ionic = tme.collect_intrinsic_sources(
+    net,
+    trial_idx=0,
+    cell_types=["L2_pyramidal","L5_pyramidal"],
+    channels=["ina_hh2", "ik_hh2", "ik_kca", "ik_km",
+              "ica_ca", "ica_cat", "il_hh2", "i_ar"]
+)
+
+sources_ionic_soma, I_ionic_soma = tme.filter_sources(
+    sources_ionic,
+    I_ionic,
+    cell_types=["L5_pyramidal"],
+    sections=["soma"],
+)
+
+T_ionic_soma = tme.build_transfer_resistance_matrix_for_sources(
+    net,
+    sources_ionic_soma,
+    array_name="probe1",
+)
+
+lfp_ionic_soma = tme.reconstruct_lfp_from_sources(
+    T_ionic_soma,
+    I_ionic_soma,
+)
+
+
+#######
+# From aggregated membrane current
+#######
+sources_agg, I_agg = tme.collect_intrinsic_sources(
+    net,
+    trial_idx=0,
+    cell_types=["L2_pyramidal","L5_pyramidal"],
+    channels=["agg_i_mem"],
+)
+
+sources_agg_soma, I_agg_soma = tme.filter_sources(
+    sources_agg,
+    I_agg,
+    cell_types=["L5_pyramidal"],
+    sections=["soma"],
+)
+
+T_agg_agg_soma = tme.build_transfer_resistance_matrix_for_sources(
+    net,
+    sources_agg_soma,
+    array_name="probe1",
+)
+
+lfp_agg_i_mem_soma = tme.reconstruct_lfp_from_sources(
+    T_agg_agg_soma,
+    I_agg_soma,
+)
+
+
+
+contact_number = 8  # choose one electrode/contact
+plt.figure()
+plt.plot(times[1:], lfp_agg_i_mem_soma[contact_number,1:], label="agg_i_mem")
+plt.plot(times[1:], lfp_cap_soma[contact_number,1:], "--", label="cap")  
+plt.plot(times[1:], lfp_ionic_soma[contact_number,1:], "--", label="ionic")  
+plt.plot(times[1:], lfp_syn_soma[contact_number,1:], ":", label="syn")  
+
+plt.plot(times[1:], lfp_cap_soma[contact_number,1:] + lfp_ionic_soma[contact_number,1:] + lfp_syn_soma[contact_number,1:], "--", label="cap + ionic + syn")
+plt.legend()
+plt.xlabel("Time (ms)")
+plt.ylabel("LFP (µV)")
+plt.title('LFP at contact 10 (z=375 µm) - L5 pyramidal cell soma')
+
+
+
+
+#######
+# From synaptic currents only
+#######
+
+sources_syn, I_syn = tme.collect_synaptic_sources(
+    net,
+    trial_idx=0,
+    cell_types=["L2_pyramidal","L5_pyramidal"],
+)
+
+# LFP from synaptic currents only
+T_syn = tme.build_transfer_resistance_matrix_for_sources(
+    net,
+    sources_syn,
+    array_name="probe1",
+)
+
+lfp_syn = tme.reconstruct_lfp_from_sources(
+    T_syn,
+    I_syn,
+)
+
+#######
+# From capacitive currents only
+#######
+
+sources_cap, I_cap = tme.collect_intrinsic_sources(
+    net,
+    trial_idx=0,
+    cell_types=["L2_pyramidal", "L5_pyramidal"],
+    channels=["agg_i_cap"],
+)
+
+T_cap = tme.build_transfer_resistance_matrix_for_sources(
+    net,
+    sources_cap,
+    array_name="probe1",
+)
+
+lfp_cap = tme.reconstruct_lfp_from_sources(
+    T_cap,
+    I_cap,
+)
+
+#######
+# From ionic currents only
+#######
+
+sources_ionic, I_ionic = tme.collect_intrinsic_sources(
+    net,
+    trial_idx=0,
+    cell_types=["L2_pyramidal","L5_pyramidal"],
+    channels=["ina_hh2", "ik_hh2", "ik_kca", "ik_km",
+              "ica_ca", "ica_cat", "il_hh2", "i_ar"]
+)
+
+T_ionic = tme.build_transfer_resistance_matrix_for_sources(
+    net,
+    sources_ionic,
+    array_name="probe1",
+)
+
+lfp_ionic = tme.reconstruct_lfp_from_sources(
+    T_ionic,
+    I_ionic,
+)
+
+
+sources_agg, I_agg = tme.collect_intrinsic_sources(
+    net,
+    trial_idx=0,
+    cell_types=["L2_pyramidal","L5_pyramidal"],
+    channels=["agg_i_mem"],
+)
+
+#######
+# From aggregated membrane current
+#######
+T_agg = tme.build_transfer_resistance_matrix_for_sources(
+    net,
+    sources_agg,
+    array_name="probe1",
+)
+
+lfp_agg_i_mem = tme.reconstruct_lfp_from_sources(
+    T_agg,
+    I_agg,
+)
+
+
+
+contact_number = 8  # choose one electrode/contact
+plt.figure()
+plt.plot(times[1:], lfp_agg_i_mem[contact_number,1:], label="agg_i_mem")
+#plt.plot(times[1:], lfp_cap[contact_number,1:], "--", label="cap")  
+#plt.plot(times[1:], lfp_ionic[contact_number,1:], "--", label="ionic")  
+#plt.plot(times[1:], lfp_syn[contact_number,1:], ":", label="syn")  
+plt.plot(times[1:], lfp_cap[contact_number,1:] + lfp_ionic[contact_number,1:] + lfp_syn[contact_number,1:], "--", label="cap + ionic + syn")
+plt.legend()
+plt.xlabel("Time (ms)")
+plt.ylabel("LFP (µV)")
+plt.title('LFP at contact 10 (z=375 µm)')
+
+
+I_agg_sum_seg = np.sum(I_agg, axis=0)
+I_cap_ionic_syn_sum_seg = np.sum(I_cap, axis=0) + np.sum(I_ionic, axis=0) + np.sum(I_syn, axis=0)
+
+plt.figure()
+plt.plot(times[1:], I_agg_sum_seg[1:], label="agg_i_mem")
+plt.plot(times[1:], I_cap_ionic_syn_sum_seg[1:], label="cap + ionic + syn")
+plt.legend()
+plt.xlabel("Time (ms)")
+plt.ylabel("Current (nA)")
+plt.title('Total membrane current summed over segments')
+
+# UP TO HERE!!!!
+
+# plot of all the contacts:
+# ALL THE TRACES — agg_i_mem vs (cap + ionic + synaptic):
+positions = np.asarray(net.rec_arrays["probe1"].positions)
+z = positions[:, 2]
+n_contacts = lfp_agg_soma.shape[0]
+
+# single global scaling factor (applies to both signals)
+gain = 0.005
+
+traces_agg  = lfp_agg_soma * gain
+traces_comp = (lfp_intr_soma + lfp_syn_soma) * gain
+offset = 1.0   # fixed spacing between traces in visual units
+
+# --- scale bar in µV ---
+scale_uV = 200.0
+bar_height_visual = scale_uV * gain
+
+fig, ax = plt.subplots(figsize=(9, 7))
+for c in range(n_contacts):
+    ax.plot(times[1:], traces_agg[c, 1:]  + c * offset,
+            color="k", lw=0.8,
+            label="agg_i_mem" if c == 0 else None)
+    ax.plot(times[1:], traces_comp[c, 1:] + c * offset,
+            color="tab:red", lw=0.8, alpha=0.8,
+            label="cap + ionic + synaptic" if c == 0 else None)
+
+ax.set_yticks([c * offset for c in range(n_contacts)])
+ax.set_yticklabels([f"{int(z[c])} µm" for c in range(n_contacts)], fontsize=9)
+ax.set_xlabel("Time (ms)")
+ax.set_ylabel("Depth z")
+ax.set_title("LFP per contact — agg_i_mem vs cap + ionic + synaptic")
+
+# --- legend (only one entry per signal) ---
+ax.legend(loc="upper right", fontsize=10, framealpha=0.9)
+
+# --- scale bar near the left edge, just below the first trace ---
+x_bar = times[1] + (times[-1] - times[1]) * 0.015
+y_bar_bottom = -1.0 * offset
+ax.plot([x_bar, x_bar],
+        [y_bar_bottom, y_bar_bottom + bar_height_visual],
+        color="black", lw=4, solid_capstyle="butt")
+ax.text(x_bar + (times[-1] - times[1]) * 0.01,
+        y_bar_bottom + bar_height_visual / 2,
+        f"{scale_uV:g} µV",
+        color="black", ha="left", va="center",
+        fontsize=11, fontweight="bold")
+
+plt.subplots_adjust(left=0.13, right=0.98, top=0.96, bottom=0.05)
+
+
+
+# FIN QUI 
+
 '''
+breakpoint()
 
 import copy
 
@@ -78,11 +393,12 @@ for dpl in dpls:
 
 dpls_smooth = [copy.deepcopy(dpl).smooth(window_len) for dpl in dpls]
 dpl_smooth = dpls_smooth[0]
-    
-dpl = dpls[0]
-times = net.cell_response.times
+
+'''
 
 
+
+'''
 fig, (ax_hist, ax_raster, ax) = plt.subplots(
     3, 1, sharex=True,
     gridspec_kw={'height_ratios': [1, 3, 3]},
@@ -98,24 +414,20 @@ plott.plot_spikes_hist(
 )
 ax_hist.set_xlabel('')
 
+
 from hnn_core.viz import plot_spikes_raster
 plot_spikes_raster(net.cell_response, ax=ax_raster, show=False, marker_size=5.0)
 ax_raster.set_xlabel('')
 
 ax.plot(times, dpl.data['agg'], label='', lw=1.5)
-ax.plot(times, dpl_smooth.data['agg'], label='smoothed', lw=1.5)
+#ax.plot(times, dpl_smooth.data['agg'], label='smoothed', lw=1.5)
 ax.set_xlabel('Time (ms)')
 ax.set_ylabel('Dipole (nAm)')
 ax.legend()
 fig.suptitle("Dipole")
 plt.show()
+'''
 
-
-
-
-
-lfp = net.rec_arrays["probe1"].voltages[0]  # HNN's LFP; trial 0
-contact_labels = np.asarray(depths, dtype=int)
 
 #####################
 # Total CSD from agg_i_mem
@@ -158,7 +470,7 @@ lfp_agg_i_mem_ = lfp_agg_i_mem[:, 1:]
 #plott.plot_laminar_lfp_AC(times[1:], lfp_agg_i_mem_, contact_labels, scale=5.0)
 
 csd_from_sources_ = csd_from_sources[:, 1:]
-
+'''
 plott.plot_lfp_morph_csd(
     times_, 
     lfp_agg_i_mem_, 
@@ -175,7 +487,8 @@ plott.plot_lfp_morph_csd(
     overlay_csd_traces=True,
     unit_csd="µA/mm³",
     overlay_raster_on_csd=True,)
-
+'''
+'''
 # agg_i_mem dipole
 dpl_agg_i_mem = tme.reconstruct_dipole_from_sources(net, sources_agg, I_agg)
 dpl_agg_i_mem_ = dpl_agg_i_mem[1:]
@@ -187,6 +500,7 @@ ax.set_xlabel('Time (ms)')
 ax.set_ylabel('Dipole (nAm)')
 ax.legend()
 plt.show()
+'''
 
 ###########################
 # FROM SYNAPTIC CURRENTS
@@ -240,7 +554,8 @@ fig = plott.plot_lfp_morph_csd(
     vmax=60,
     figsize=(18, 6),
     overlay_csd_traces=False,
-    unit_csd="µA/mm³")
+    unit_csd="µA/mm³",
+    overlay_raster_on_csd=True)
 fig.suptitle("LFP/CSD from synaptic currents")
 
 # dipole from synaptic currents only

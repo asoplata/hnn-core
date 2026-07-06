@@ -1040,7 +1040,7 @@ def check_rmse_and_residuals(
     times = net.cell_response.times
 
     # get dipole from i_mem
-    dpl_imem = postproc_soma_dipol_AC(
+    dpl_imem = postproc_soma_dipole_AC(
         net,
         trial=trial,
         cell_type=cell_type,
@@ -1152,6 +1152,172 @@ def check_rmse_and_residuals(
     plt.show()
 
 
+def postproc_oblique_dipole_AC(
+    net,
+    trial=0,
+    cell_type="L5_pyramidal",
+    scaling_factor=3000,
+    from_components=False,
+):
+    """ """
+
+    sec_name = "apical_oblique"
+    seg_key = "seg_3" #???
+    pos = 0.5
+
+    # load custom mechanisms
+    load_custom_mechanisms()
+
+    # initialize variable to hold dipole data
+    dipole = None
+
+    # build a template cell to get "metadata" for sections
+    template_cell = pyramidal(cell_name=cell_type)
+    template_cell.build(sec_name_apical="apical_trunk")
+
+    # get the relative endpoints for the soma
+    rel_endpoints = {}
+    sec = template_cell._nrn_sections["apical_oblique"]
+    start = np.array([sec.x3d(0), sec.y3d(0), sec.z3d(0)])
+    end = np.array(
+        [sec.x3d(sec.n3d() - 1), sec.y3d(sec.n3d() - 1), sec.z3d(sec.n3d() - 1)]
+    )
+    rel_endpoints[sec_name] = (start, end)
+
+    if not from_components:
+        all_tm_channels = ["agg_i_mem"]
+    else:
+        if cell_type == "L5_pyramidal":
+            all_tm_channels = [
+                "agg_i_cap",
+                "ina_hh2",
+                "ik_hh2",
+                "ik_kca",
+                "ik_km",
+                "ica_ca",
+                "ica_cat",
+                "il_hh2",
+                "i_ar",
+            ]
+        elif cell_type == "L2_pyramidal":
+            all_tm_channels = [
+                "agg_i_cap",
+                "ina_hh2",
+                "ik_hh2",
+                "ik_km",
+                "il_hh2",
+            ]
+        else:
+            raise ValueError(
+                f"Valid channels types for {cell_type} are not known.\n"
+                "Please pass the channels types as a list of str to tm_channels"
+            )
+    
+    I_t_over_gid = None
+    I_syn_over_gid = None
+    I_cap_intr_over_gid = None #capacitive + ionic currents
+    # loop through GIDs for the cell_type of interest
+    for gid in net.gid_ranges[cell_type]:
+        # get the updated soma position for this instantiation of the cell
+        # index of the first cell: e.g., 170 for the first L5Pyr cell
+        start_index = net.gid_ranges[cell_type][0]
+        # get soma position from position dictionary, which uses its own indexing
+        # that does not match the GID, hence the "- start_index"
+        soma_pos = np.array(net.pos_dict[cell_type][gid - start_index])
+
+        # create a dictionary of all channel data for the cell
+        cell_channels = {
+            ch: net.cell_response.transmembrane_currents[ch][trial][gid]
+            for ch in all_tm_channels
+        }
+
+        # get the cell sections to loop over
+        # the key used shouldn't matter, but we don't want to hard code it since
+        # we can pass different channels to this function, so we get it dynamically
+        first_key = list(cell_channels.keys())[0]
+
+        start_rel, end_rel = rel_endpoints[sec_name]
+        start = start_rel + soma_pos
+        end = end_rel + soma_pos
+
+        abs_pos = start + pos * (end - start)
+        z_i = abs_pos[2]
+
+        # sum all currents for this segment
+        I_t = np.zeros_like(
+            np.array(cell_channels[first_key][sec_name][seg_key]),
+        )
+
+        for ch in all_tm_channels:
+            # get channel data
+            vec = np.array(cell_channels[ch][sec_name][seg_key])
+
+            # get segment area and convert from µm^2 to cm^2
+            seg = template_cell._nrn_sections[sec_name](pos)
+            area_um2 = seg.area()  # µm^2
+            area_cm2 = area_um2 * 1e-8  # cm^2
+
+            if ch == "agg_i_mem":
+                # agg_i_mem is not recorded continuously as a density; it is
+                # recorded after each timestep. Ergo, the units conversion
+                # here is not necessary as the units are already in nA
+                #
+                # multiplying the contribution by zi in um will give us fAm,
+                # so we will later need to divide by 1e6 to convert to nAm
+                I_abs = vec # in nA
+            # convert densities (mA/cm^2) to absolute currents (mA)]
+            else:
+                #sign = -1 if ch == "agg_i_cap" else 1 # flip sign for capacitive current to match convention of inward current as positive
+                # sign = 1 # keep original sign for all currents for now
+                I_abs = vec * area_cm2  # keep as mA
+                if I_cap_intr_over_gid is None:
+                    I_cap_intr_over_gid = np.zeros_like(
+                        np.array(cell_channels[first_key][sec_name][seg_key]),
+                    )
+                I_cap_intr_over_gid += I_abs * 1e6 # in nA
+
+            I_t += I_abs # AC: nA for agg_i_mem, mA for the rest
+
+        # around for different structure for isec when reconstructing from components
+        if from_components:
+            soma_isec = net.cell_response.isec[trial][gid].get(sec_name, {})
+            for syn_key in soma_isec:
+                # isec is measured in nA, so we need to divide by 1e6 to
+                # convert nA to mA before we add to I_t
+                I_t += np.array(soma_isec[syn_key]) / 1e6
+                if I_syn_over_gid is None:
+                    I_syn_over_gid = np.zeros_like(
+                        np.array(cell_channels[first_key][sec_name][seg_key]),
+                    )
+                I_syn_over_gid += np.array(soma_isec[syn_key]) # in nA
+        
+        if I_t_over_gid is None:
+            I_t_over_gid = np.zeros_like(
+                np.array(cell_channels[first_key][sec_name][seg_key]),
+            )
+        
+        if from_components:
+            I_t_over_gid += I_t * 1e6 # convert mA to nA for I_t_over_gid
+        elif not from_components:
+            I_t_over_gid += I_t # already in nA
+
+        # multiple by r_i per Naess 2015 Ch 2 (simplified to zi in this case)
+        # for ionic currents, we have 1 mA*um = 1 nAm (correct units)
+        # for i_mem, we have nA rather than mA. and 1 nA*um = 1 fAm
+        contrib = I_t * z_i
+
+        # for agg_i_mem, divide by 1e6 to convert fAm to nAm
+        if not from_components:
+            contrib = contrib / 1e6 * scaling_factor
+        else:
+            contrib = contrib * scaling_factor
+
+        if dipole is None:
+            dipole = contrib.copy()
+        else:
+            dipole += contrib
+
+    return dipole, I_t_over_gid, I_syn_over_gid, I_cap_intr_over_gid
 
 
 

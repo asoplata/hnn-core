@@ -368,10 +368,23 @@ def _create_parallel_context(n_cores=None, expose_imem=False):
         _PC.done()
 
     # be explicit about using fixed step integration
+    #_CVODE.active(1)
     _CVODE.active(0)
+    #print(h.secondorder)
+
+    #_CVODE = h.CVode()
+    #_CVODE.active(1)
+    ##print(_CVODE.rtol())
+    ##print(_CVODE.atol())
+    #_CVODE.rtol(1)
+    #_CVODE.atol(1e-2)
+
+
     # note that CVode seems to forget this setting in either parallel backend
     if expose_imem:
-        _CVODE.use_fast_imem(1)
+        _CVODE.use_fast_imem(1) # AC: it only computes and stores seg.i_membrane
+        # I misintrepreted this line. Despite the option belongs to CVode, it is not
+        # restricted to variable-step simulations.  
 
 
 class NetworkBuilder(object):

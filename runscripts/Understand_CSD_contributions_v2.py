@@ -36,7 +36,7 @@ if "dpls" not in locals():
     with JoblibBackend(8):
         dpls = simulate_dipole(
             net,
-            tstop=10.0,
+            tstop=170.0,
             n_trials=n_trials,
             record_agg_i_mem="all",   # aggregated total transmembrane current
             # record_agg_ina="all",

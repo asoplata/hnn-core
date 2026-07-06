@@ -267,7 +267,10 @@ def plot_laminar_csd_AC(
     scale_lfp_traces=1.0,
     unit_csd="µV/µm²", # or "µA/mm³"
     interp_kx=1, # linear interpolation by default
-    interp_ky=1
+    interp_ky=1,
+    overlay_raster_on_csd=False,
+    cell_response=None,
+    raster_colors=None,
 ):
     import matplotlib.pyplot as plt
     from scipy.interpolate import RectBivariateSpline
@@ -359,6 +362,41 @@ def plot_laminar_csd_AC(
             pad=0.1, color="black", frameon=False,
         )
         ax.add_artist(scalebar)
+
+    if overlay_raster_on_csd and cell_response is not None:
+            if raster_colors is None:
+                raster_colors = {'L2_pyramidal': 'C1', 'L5_pyramidal': 'C3'}
+
+            if len(cell_response._spike_times[0]) > 0:
+                spike_times_all = np.concatenate(
+                    np.array(cell_response._spike_times, dtype=object)
+                )
+                spike_types_all = np.concatenate(
+                    np.array(cell_response._spike_types, dtype=object)
+                )
+                spike_gids_all = np.concatenate(
+                    np.array(cell_response._spike_gids, dtype=object)
+                )
+            else:
+                spike_times_all = np.array([])
+                spike_types_all = np.array([])
+                spike_gids_all  = np.array([])
+
+            ax_raster = ax.twinx()
+            for i, stype in enumerate(['L2_pyramidal', 'L5_pyramidal']):
+                mask = spike_types_all == stype
+                ax_raster.scatter(
+                    spike_times_all[mask],
+                    spike_gids_all[mask],
+                    s=2,
+                    color=raster_colors.get(stype, f'C{i}'),
+                    label=stype,
+                    zorder=5,
+                )
+
+            ax_raster.invert_yaxis()
+            ax_raster.set_ylabel('Cell ID')
+            ax_raster.legend(loc='upper right', fontsize=7, markerscale=4)
     #plt.tight_layout()
     plt_show(show)
 
@@ -647,7 +685,8 @@ def plot_lfp_morph_csd(
     figsize=None,
     show=True,
     ext_inputs=None,
-    spike_types=None
+    spike_types=None,
+    overlay_raster_on_csd=False,
 ):
     import matplotlib.pyplot as plt
 
@@ -739,6 +778,8 @@ def plot_lfp_morph_csd(
         overlay_lfp_traces=overlay_lfp_traces,
         scale_lfp_traces=scale_lfp_traces, 
         unit_csd=unit_csd, 
+        overlay_raster_on_csd=overlay_raster_on_csd,
+        cell_response=net.cell_response,
         show=False,
     )
 
