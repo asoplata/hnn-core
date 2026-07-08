@@ -76,7 +76,9 @@ times = net.cell_response.times
 lfp = net.rec_arrays["probe1"].voltages[0]  # HNN's LFP; trial 0
 contact_labels = np.asarray(depths, dtype=int)
 
-#breakpoint()
+print(lfp[0:5, 0:5])
+
+breakpoint()
 #######
 # From synaptic currents only
 #######
