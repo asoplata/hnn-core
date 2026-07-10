@@ -37,6 +37,7 @@ if "dpls" not in locals():
         dpls = simulate_dipole(
             net,
             tstop=170.0,
+            dt=0.00625,#0.0125, # 0.025
             n_trials=n_trials,
             record_agg_i_mem="all",   # aggregated total transmembrane current
             # record_agg_ina="all",
@@ -76,13 +77,93 @@ times = net.cell_response.times
 lfp = net.rec_arrays["probe1"].voltages[0]  # HNN's LFP; trial 0
 contact_labels = np.asarray(depths, dtype=int)
 
-print(lfp[0:5, 0:5])
+lfp = lfp[::4]
+times = times[::4]
 
-breakpoint()
+def downsample_currents(net, step=2, channels=None, include_isec=False,
+                         include_vsec=False, include_ca=False):
+    cell_response = net.cell_response
+
+    if channels is None:
+        channels = list(cell_response.transmembrane_currents.keys())
+
+    # downsample the shared time vector
+    cell_response._times = cell_response.times[::step]
+
+    # transmembrane_currents: channel -> trial -> gid -> section -> segment -> values
+    for channel in channels:
+        channel_data = getattr(cell_response, f"_{channel}")
+        for trial_data in channel_data:
+            for gid, section_dict in trial_data.items():
+                for section, segment_dict in section_dict.items():
+                    for segment, values in segment_dict.items():
+                        segment_dict[segment] = values[::step]
+
+    # vsec / ca: trial -> gid -> section -> values
+    for include_flag, attr_name in (
+        (include_vsec, "_vsec"),
+        (include_ca, "_ca"),
+    ):
+        if not include_flag:
+            continue
+        for trial_data in getattr(cell_response, attr_name):
+            for gid, section_dict in trial_data.items():
+                for section, values in section_dict.items():
+                    section_dict[section] = values[::step]
+
+    # isec: trial -> gid -> section -> syn_name -> values
+    if include_isec:
+        for trial_data in cell_response._isec:
+            for gid, section_dict in trial_data.items():
+                for section, syn_dict in section_dict.items():
+                    for syn_name, values in syn_dict.items():
+                        syn_dict[syn_name] = values[::step]
+
+    return cell_response.times
+
+# pick one example trace
+channel = "agg_i_mem"
+gid = list(net.gid_ranges["L5_pyramidal"])[0]
+trial_data = net.cell_response.transmembrane_currents[channel][0]  # trial 0
+section = list(trial_data[gid].keys())[0]
+segment = list(trial_data[gid][section].keys())[0]
+
+example = trial_data[gid][section][segment]
+
+print(example[:10])        # first 10 values
+print(len(example))        # length of that trace
+print(len(net.cell_response.times))  # should match
+example_isec = net.cell_response.isec[0][gid][section]
+syn_name = list(example_isec.keys())[0]
+values = example_isec[syn_name]
+print(len(values)) 
+
+step = 4
+downsample_currents(net, step=step, include_isec=True, include_vsec=True, include_ca=True)
+
+# pick one example trace
+channel = "agg_i_mem"
+gid = list(net.gid_ranges["L5_pyramidal"])[0]
+trial_data = net.cell_response.transmembrane_currents[channel][0]  # trial 0
+section = list(trial_data[gid].keys())[0]
+segment = list(trial_data[gid][section].keys())[0]
+
+example = trial_data[gid][section][segment]
+
+print(example[:10])        # first 10 values
+print(len(example))        # length of that trace
+print(len(net.cell_response.times))  # should match
+example_isec = net.cell_response.isec[0][gid][section]
+syn_name = list(example_isec.keys())[0]
+values = example_isec[syn_name]
+print(len(values)) 
+#print(lfp[0:5, 0:5])
+
+#breakpoint()
 #######
 # From synaptic currents only
 #######
-
+'''
 sources_syn, I_syn = tme.collect_synaptic_sources(
     net,
     trial_idx=0,
@@ -210,7 +291,7 @@ plt.legend()
 plt.xlabel("Time (ms)")
 plt.ylabel("LFP (µV)")
 plt.title('LFP at contact 10 (z=375 µm) - L5 pyramidal cell soma')
-
+'''
 
 
 
