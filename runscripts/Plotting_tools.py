@@ -785,3 +785,114 @@ def plot_lfp_morph_csd(
 
     plt_show(show)
     return fig
+
+def make_csd_contribution_summary_figure(
+    net, contact_labels, times_,
+    csd_from_sources_, csd_cap_, csd_ionic_, csd_syn_,
+    csd_syn_gabab_, csd_syn_gabaa_, csd_syn_ampa_, csd_syn_nmda_,
+    suptitle="", vmax_row0=None, vmax_row1=None,
+):
+    """Build the 2x6 CSD-contribution summary figure"""
+    import matplotlib.pyplot as plt
+
+    titles = [
+        ["Morphology", "Total (agg_i_mem)", "Capacitive", "Ionic", "Synaptic", ""],
+        ["residual (Tot-(cap+ion+syn))",   "GABA-B",            "GABA-A",     "AMPA",  "NMDA",     ""],
+    ]
+
+    fig, axes = plt.subplots(
+        2, 6,
+        constrained_layout=True,
+        figsize=(28, 8),
+        gridspec_kw={'width_ratios': [1, 1, 1, 1, 1, 0.25]},
+    )
+
+    # Morphology
+    plot_cell_morphology_for_lfp_csd(
+        net,
+        contact_positions=contact_labels,
+        cell_types=('L2_pyramidal', 'L5_pyramidal'),
+        ax=axes[0, 0],
+        show=False,
+    )
+
+    # Reconstructed total = synaptic + capacitive + ionic; residual vs. the agg_i_mem ground truth
+    csd_reconstructed_ = csd_syn_ + csd_cap_ + csd_ionic_
+    csd_residual_ = csd_from_sources_ - csd_reconstructed_
+
+    # auto-scale per figure, unless an explicit scale is passed in
+    if vmax_row0 is None:
+        vmax_row0 = max(np.max(np.abs(csd_from_sources_)),
+                         np.max(np.abs(csd_cap_)),
+                         np.max(np.abs(csd_ionic_)),
+                         np.max(np.abs(csd_syn_)))
+    vmin_row0 = -vmax_row0
+
+    if vmax_row1 is None:
+        vmax_row1 = max(np.max(np.abs(csd_residual_)),
+                         np.max(np.abs(csd_syn_gabab_)),
+                         np.max(np.abs(csd_syn_gabaa_)),
+                         np.max(np.abs(csd_syn_ampa_)),
+                         np.max(np.abs(csd_syn_nmda_)))
+    vmin_row1 = -vmax_row1
+
+    csd_panels_row0 = [
+        (axes[0, 1], csd_from_sources_),
+        (axes[0, 2], csd_cap_),
+        (axes[0, 3], csd_ionic_),
+        (axes[0, 4], csd_syn_),
+    ]
+    csd_panels_row1 = [
+        (axes[1, 0], csd_residual_),
+        (axes[1, 1], csd_syn_gabab_),
+        (axes[1, 2], csd_syn_gabaa_),
+        (axes[1, 3], csd_syn_ampa_),
+        (axes[1, 4], csd_syn_nmda_),
+    ]
+
+    for ax, data in csd_panels_row0:
+        plot_laminar_csd_AC(
+            times_, data, contact_labels,
+            ax=ax, vmin=vmin_row0, vmax=vmax_row0,
+            overlay_csd_traces=True,
+            unit_csd="µA/mm³",
+            sink="red",
+            colorbar=False,
+            show=False,
+        )
+
+    for ax, data in csd_panels_row1:
+        plot_laminar_csd_AC(
+            times_, data, contact_labels,
+            ax=ax, vmin=vmin_row1, vmax=vmax_row1,
+            overlay_csd_traces=True,
+            unit_csd="µA/mm³",
+            sink="red",
+            colorbar=False,
+            show=False,
+        )
+
+    # one shared colorbar per row, hosted in the leftover 6th column
+    axes[0, 5].axis('off')
+    cax0 = axes[0, 5].inset_axes([0.35, 0.15, 0.06, 0.7])
+    cbar0 = fig.colorbar(axes[0, 1].collections[-1], cax=cax0)
+    cbar0.set_label("CSD (µA/mm³)")
+
+    axes[1, 5].axis('off')
+    cax1 = axes[1, 5].inset_axes([0.35, 0.15, 0.06, 0.7])
+    cbar1 = fig.colorbar(axes[1, 0].collections[-1], cax=cax1)
+    cbar1.set_label("CSD (µA/mm³)")
+
+    # Titles
+    for row, row_titles in enumerate(titles):
+        for col, title in enumerate(row_titles):
+            axes[row, col].set_title(title)
+
+    # clear x/y labels on the data panels only — leave the two colorbar axes alone
+    for row in range(2):
+        for col in range(5):
+            axes[row, col].set_xlabel('')
+            axes[row, col].set_ylabel('')
+
+    fig.suptitle(suptitle)
+    return fig

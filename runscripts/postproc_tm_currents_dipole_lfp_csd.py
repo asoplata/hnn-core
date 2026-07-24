@@ -2125,3 +2125,61 @@ def reconstruct_dipole_from_sources(net, sources, I, scaling_factor=3000):
         # nA * µm = fAm → /1e6 → nAm
         dipole += current * z_i / 1e6 * scaling_factor
     return dipole
+
+
+# The following functions are needed to efficiently downsample currents in net.cell_reponse
+def _to_numpy_nested(d):
+    """ This is used to convert the currents' values in the nested dict in net.cell_response.transmembrane_currents (gid → section → segment → values)
+    in np.array
+    """
+
+    """Recursively convert every leaf list in a nested dict to a numpy array, in place."""
+    for key, value in d.items():
+        if isinstance(value, dict):
+            _to_numpy_nested(value)
+        else:
+            d[key] = np.asarray(value, dtype=float)
+
+def convert_currents_to_numpy(net, channels=None, include_isec=True,
+                               include_vsec=False, include_ca=False):
+    cr = net.cell_response
+    cr._times = np.asarray(cr.times, dtype=float)
+
+    channels = channels or list(cr.transmembrane_currents.keys())
+    for channel in channels:
+        for trial_data in getattr(cr, f"_{channel}"):
+            _to_numpy_nested(trial_data)
+
+    for flag, attr in [(include_isec, "_isec"), (include_vsec, "_vsec"), (include_ca, "_ca")]:
+        if flag:
+            for trial_data in getattr(cr, attr):
+                _to_numpy_nested(trial_data)
+
+
+def downsample_currents(net, step=2, channels=None, include_isec=False,
+                         include_vsec=False, include_ca=False):
+    cell_response = net.cell_response
+
+    if channels is None:
+        channels = list(cell_response.transmembrane_currents.keys())
+
+    # downsample the shared time vector
+    cell_response._times = cell_response.times[::step]
+
+    # transmembrane_currents: channel -> trial -> gid -> section -> segment -> values
+    for channel in channels:
+        channel_data = getattr(cell_response, f"_{channel}")
+        for trial_data in channel_data:
+            for gid, section_dict in trial_data.items():
+                for section, segment_dict in section_dict.items():
+                    for segment, values in segment_dict.items():
+                        segment_dict[segment] = values[::step]
+
+    # isec: trial -> gid -> section -> syn_name -> values
+    if include_isec:
+        for trial_data in cell_response._isec:
+            for gid, section_dict in trial_data.items():
+                for section, syn_dict in section_dict.items():
+                    for syn_name, values in syn_dict.items():
+                        syn_dict[syn_name] = values[::step]
+
