@@ -244,6 +244,8 @@ plott.plot_lfp_morph_csd(
     unit_csd="µA/mm³",
     overlay_raster_on_csd=True,
     sink="red")
+fig.suptitle("LFP/CSD from agg_i_mem")
+
 '''
 '''
 # agg_i_mem dipole
@@ -310,8 +312,9 @@ fig = plott.plot_lfp_morph_csd(
     vmin=-60,
     vmax=60,
     figsize=(18, 6),
-    overlay_csd_traces=False,
+    overlay_csd_traces=True,
     unit_csd="µA/mm³",
+    #overlay_csd_traces=True,
     overlay_raster_on_csd=True,
     sink="red")
 fig.suptitle("LFP/CSD from synaptic currents")
@@ -431,6 +434,7 @@ fig = plott.plot_lfp_morph_csd(
     figsize=(18, 6),
     overlay_csd_traces=True,
     unit_csd="µA/mm³",
+    overlay_raster_on_csd=True,
     sink="red")
 fig.suptitle("LFP/CSD from GABA_B currents")
 
@@ -494,6 +498,7 @@ fig = plott.plot_lfp_morph_csd(
     figsize=(18, 6),
     overlay_csd_traces=True,
     unit_csd="µA/mm³", 
+    overlay_raster_on_csd=True,
     sink="red")
 fig.suptitle("LFP/CSD from GABA_A currents")
 
@@ -552,11 +557,12 @@ fig = plott.plot_lfp_morph_csd(
     spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']}, 
     scale_lfp=3.0,
     voltage_scalebar=200,
-    vmin=-60,
-    vmax=60,
+    vmin=-10,
+    vmax=10,
     figsize=(18, 6),
     overlay_csd_traces=True,
     unit_csd="µA/mm³",
+    overlay_raster_on_csd=True,
     sink="red")
 fig.suptitle("LFP/CSD from AMPA currents")
 
@@ -614,11 +620,12 @@ fig = plott.plot_lfp_morph_csd(
     spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']}, 
     scale_lfp=3.0,
     voltage_scalebar=200,
-    vmin=-60,
-    vmax=60,
+    vmin=-10,
+    vmax=10,
     figsize=(18, 6),
     overlay_csd_traces=True,
     unit_csd="µA/mm³",
+    overlay_raster_on_csd=True,
     sink="red")
 fig.suptitle("LFP/CSD from NMDA currents")
 
@@ -699,6 +706,7 @@ fig = plott.plot_lfp_morph_csd(
     figsize=(18, 6),
     overlay_csd_traces=True,
     unit_csd="µA/mm³",
+    overlay_raster_on_csd=True,
     sink="red")
 fig.suptitle("LFP/CSD from capacitive and ionic currents")
 
@@ -771,7 +779,7 @@ fig_all = plott.make_csd_contribution_summary_figure(
     net, contact_labels, times_,
     csd_from_sources_, csd_cap_, csd_ionic_, csd_syn_,
     csd_syn_gabab_, csd_syn_gabaa_, csd_syn_ampa_, csd_syn_nmda_,
-    vmax_row0=60, vmax_row1=10,
+    vmax_row0=10, vmax_row1=10,
     suptitle="Whole network (all pyramidal cells)",
 )
 plt.show()
@@ -879,6 +887,7 @@ for lfp_, csd_, title in intrinsic_panels:
         figsize=(18, 6),
         overlay_csd_traces=False,
         unit_csd="µA/mm³",
+        overlay_raster_on_csd=True,
         sink="r"
     )
     fig.suptitle(f"LFP/CSD from {title}")
@@ -949,6 +958,8 @@ fig_spiking = plott.make_csd_contribution_summary_figure(
     csd_syn_nmda_=csd_spiking["csd_syn_nmda_"],
     vmax_row0=60, vmax_row1=10,
     suptitle="Spiking pyramidal cells (182/200)",
+    cell_response=net.cell_response,
+    overlay_raster=False,
 )
 
 fig_nonspiking = plott.make_csd_contribution_summary_figure(
@@ -998,8 +1009,9 @@ fig = plott.plot_lfp_morph_csd(
     vmin=-60,
     vmax=60,
     figsize=(18, 6),
-    overlay_csd_traces=False,
+    overlay_csd_traces=True,
     unit_csd="µA/mm³",
+    overlay_raster_on_csd=True,
     sink="r")
 fig.suptitle("LFP/CSD from agg_i_mem, excluding apical obliques")
 
@@ -1025,7 +1037,7 @@ fig = plott.plot_lfp_morph_csd(
     vmin=-60,
     vmax=60,
     figsize=(18, 6),
-    overlay_csd_traces=False,
+    overlay_csd_traces=True,
     unit_csd="µA/mm³",
     sink="r")
 fig.suptitle("LFP/CSD syn, excluding apical obliques")
@@ -1221,7 +1233,6 @@ plt.show()
 ####
 
 
-'''
 
 fig_all = plott.make_csd_contribution_summary_figure(
     net, contact_labels, times_,
@@ -1232,4 +1243,230 @@ fig_all = plott.make_csd_contribution_summary_figure(
 )
 plt.show()
 
-'''
+
+
+csd_agg_from_apical_obliques = csd_from_sources_ - csd_agg_no_oblique_
+
+
+csd_agg_from_apical_obliques = csd_from_sources_ - csd_agg_no_oblique_
+
+fig = plott.plot_laminar_csd_AC(
+    times_,
+    csd_agg_from_apical_obliques,
+    contact_labels,
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="red",
+)
+fig.suptitle("CSD contribution from apical obliques (Total − no-oblique)")
+plt.show()
+
+csd_ion_from_apical_obliques = csd_ionic_ - csd_ion_no_oblique_
+
+fig = plott.plot_laminar_csd_AC(
+    times_,
+    csd_ion_from_apical_obliques,
+    contact_labels,
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="red",
+)
+fig.suptitle("Ionic CSD contribution from apical obliques")
+plt.show()
+
+csd_cap_from_apical_obliques = csd_cap_ - csd_cap_no_oblique_
+
+fig = plott.plot_laminar_csd_AC(
+    times_,
+    csd_cap_from_apical_obliques,
+    contact_labels,
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="red",
+)
+fig.suptitle("Capacitive CSD contribution from apical obliques")
+plt.show()
+
+
+csd_syn_from_apical_obliques = csd_syn_ - csd_syn_no_oblique_
+
+fig = plott.plot_laminar_csd_AC(
+    times_,
+    csd_syn_from_apical_obliques,
+    contact_labels,
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="red",
+)
+fig.suptitle("Synaptic CSD contribution from apical obliques")
+plt.show()
+
+
+
+
+# check if results match with keeping apical_oblique only
+keep_sections = {"apical_oblique"}
+
+sources_agg_only_oblique, I_agg_only_oblique = tme.filter_sources(
+    sources_agg, I_agg, sections=keep_sections
+)
+lfp_agg_only_oblique_, csd_agg_only_oblique_ = compute_lfp_csd_for_sources(net, sources_agg_only_oblique, I_agg_only_oblique)
+
+fig = plott.plot_laminar_csd_AC(
+    times_,
+    csd_agg_only_oblique_,
+    contact_labels,
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="red",
+)
+fig.suptitle("Synaptic CSD contribution from apical obliques (ground-truth)")
+plt.show()
+
+
+# Look at contributions from other sections
+for cell_type in ("L2_pyramidal", "L5_pyramidal"):
+    sections = net.cell_types[cell_type]["cell_object"].sections
+    print(cell_type, list(sections.keys()))
+
+#apical_trunk
+keep_sections = {"apical_trunk"}
+
+sources_agg_only_trunk, I_agg_only_trunk = tme.filter_sources(
+    sources_agg, I_agg, sections=keep_sections
+)
+lfp_agg_only_trunk_, csd_agg_only_trunk_ = compute_lfp_csd_for_sources(net, sources_agg_only_trunk, I_agg_only_trunk)
+
+fig = plott.plot_laminar_csd_AC(
+    times_,
+    csd_agg_only_trunk_,
+    contact_labels,
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="red",
+)
+fig.suptitle("CSD contribution from apical trunk")
+plt.show()
+
+# synaptic should be zero - and it is!
+sources_syn_only_trunk, I_syn_only_trunk = tme.filter_sources(
+    sources_syn, I_syn, sections=keep_sections
+)
+lfp_syn_only_trunk_, csd_syn_only_trunk_ = compute_lfp_csd_for_sources(net, sources_syn_only_trunk, I_syn_only_trunk)
+
+fig = plott.plot_laminar_csd_AC(
+    times_,
+    csd_syn_only_trunk_,
+    contact_labels,
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="red",
+)
+fig.suptitle("Synaptic CSD contribution from apical trunk")
+plt.show()
+
+# look at ionic currents from apical trunk
+sources_ionic_only_trunk, I_ionic_only_trunk = tme.filter_sources(
+    sources_ionic, I_ionic, sections=keep_sections
+)
+lfp_ionic_only_trunk_, csd_ionic_only_trunk_ = compute_lfp_csd_for_sources(net, sources_ionic_only_trunk, I_ionic_only_trunk)
+
+fig = plott.plot_laminar_csd_AC(
+    times_,
+    csd_ionic_only_trunk_,
+    contact_labels,
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="red",
+)
+fig.suptitle("Ionic CSD contribution from apical trunk")
+plt.show()
+
+
+sources_cap_only_trunk, I_cap_only_trunk = tme.filter_sources(
+    sources_cap, I_cap, sections=keep_sections
+)
+lfp_cap_only_trunk_, csd_cap_only_trunk_ = compute_lfp_csd_for_sources(net, sources_cap_only_trunk, I_cap_only_trunk)
+
+fig = plott.plot_laminar_csd_AC(
+    times_,
+    csd_cap_only_trunk_,
+    contact_labels,
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="red",
+)
+fig.suptitle("Capacitive CSD contribution from apical trunk")
+plt.show()
+
+
+# apical_1
+#apical_1
+keep_sections = {"apical_1"}
+
+sources_agg_only_apical1, I_agg_only_apical1 = tme.filter_sources(
+    sources_agg, I_agg, sections=keep_sections
+)
+lfp_agg_only_apical1_, csd_agg_only_apical1_ = compute_lfp_csd_for_sources(net, sources_agg_only_apical1, I_agg_only_apical1)
+
+fig = plott.plot_laminar_csd_AC(
+    times_,
+    csd_agg_only_apical1_,
+    contact_labels,
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="red",
+)
+fig.suptitle("CSD contribution from apical_1")
+plt.show()
+
+# synaptic should be zero - apical_1 isn't a proximal or distal drive target
+sources_syn_only_apical1, I_syn_only_apical1 = tme.filter_sources(
+    sources_syn, I_syn, sections=keep_sections
+)
+lfp_syn_only_apical1_, csd_syn_only_apical1_ = compute_lfp_csd_for_sources(net, sources_syn_only_apical1, I_syn_only_apical1)
+
+fig = plott.plot_laminar_csd_AC(
+    times_,
+    csd_syn_only_apical1_,
+    contact_labels,
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="red",
+)
+fig.suptitle("Synaptic CSD contribution from apical_1")
+plt.show()
+
+# look at ionic currents from apical_1
+sources_ionic_only_apical1, I_ionic_only_apical1 = tme.filter_sources(
+    sources_ionic, I_ionic, sections=keep_sections
+)
+lfp_ionic_only_apical1_, csd_ionic_only_apical1_ = compute_lfp_csd_for_sources(net, sources_ionic_only_apical1, I_ionic_only_apical1)
+
+fig = plott.plot_laminar_csd_AC(
+    times_,
+    csd_ionic_only_apical1_,
+    contact_labels,
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="red",
+)
+fig.suptitle("Ionic CSD contribution from apical_1")
+plt.show()
+
+
+sources_cap_only_apical1, I_cap_only_apical1 = tme.filter_sources(
+    sources_cap, I_cap, sections=keep_sections
+)
+lfp_cap_only_apical1_, csd_cap_only_apical1_ = compute_lfp_csd_for_sources(net, sources_cap_only_apical1, I_cap_only_apical1)
+
+fig = plott.plot_laminar_csd_AC(
+    times_,
+    csd_cap_only_apical1_,
+    contact_labels,
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="red",
+)
+fig.suptitle("Capacitive CSD contribution from apical_1")
+plt.show()

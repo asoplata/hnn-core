@@ -370,7 +370,7 @@ def _create_parallel_context(n_cores=None, expose_imem=False):
     # be explicit about using fixed step integration
     #_CVODE.active(1)
     _CVODE.active(0)
-    #print(h.secondorder)
+    print(h.secondorder)
 
     #_CVODE = h.CVode()
     #_CVODE.active(1)
