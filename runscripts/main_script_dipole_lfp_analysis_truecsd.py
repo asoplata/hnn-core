@@ -24,6 +24,7 @@ net.set_cell_positions(inplane_distance=30.)
 
 # Laminar probe
 depths = np.arange(-625, 2150, 100)
+#depths = np.arange(-650, 2150, 100)
 electrode_pos = [(135, 135, z) for z in depths]
 net.add_electrode_array('probe1', electrode_pos)
 
@@ -34,6 +35,7 @@ if "dpls" not in locals():
         dpls = simulate_dipole(
             net,
             tstop=170.0,
+            dt=0.025,
             n_trials=n_trials,
             record_agg_i_mem="all",   # aggregated total transmembrane current
             # record_agg_ina="all",
@@ -79,8 +81,8 @@ fig, axs = plt.subplots(2, 1, sharex=True, figsize=(6, 8),
 
 lfp_hnn = net.rec_arrays["probe1"].voltages[0]  # HNN's LFP; trial 0
 
-window_len = 10
-decimate = [5, 4]  # from 40k to 8k to 2k
+#window_len = 10
+#decimate = [5, 4]  # from 40k to 8k to 2k
 
 
 net.rec_arrays['probe1'][0].plot_lfp(
@@ -91,6 +93,23 @@ net.rec_arrays['probe1'][0].plot_lfp(
 
 net.rec_arrays['probe1'][0].plot_csd(ax=axs[1], show=False)
 #net.rec_arrays['probe1'][0].smooth(window_len=window_len).plot_csd(ax=axs[1], show=False)
+plt.tight_layout()
+plt.show()
+
+
+# alternative way to plot:
+fig, axs = plt.subplots(2, 1, sharex=True, figsize=(6, 8),
+                        gridspec_kw={'height_ratios': [3,3]})
+
+lfp_hnn = net.rec_arrays["probe1"].voltages[0]  # HNN's LFP; trial 0
+contact_labels = np.asarray(depths, dtype=int)
+
+tme.plot_laminar_lfp_AC(
+    times, lfp_hnn, contact_labels,
+    ax=axs[0], depth_plot=True, scale=0.3,   # scale < 1 shrinks
+    voltage_scalebar=200, show=False)
+
+net.rec_arrays['probe1'][0].plot_csd(ax=axs[1], show=False)
 plt.tight_layout()
 plt.show()
 '''
@@ -115,13 +134,25 @@ csd_from_sources = tme.compute_csd_from_sources(
 )
 
 contact_labels = np.asarray(depths, dtype=int)
+vmax = np.max(np.abs(csd_from_sources[:,1:]))
 
+fig, ax = plt.subplots()
 tme.plot_laminar_csd_AC(
     times,
     csd_from_sources,
     contact_labels=contact_labels,
-    vmin=-100,
-    vmax=100)
+    ax=ax,
+    vmin=-vmax,
+    vmax=vmax,
+    show=False)
+
+ax.set_title("compute_csd_from_sources (agg_i_mem)")
+ax.set_yticks(contact_labels)
+ax.set_ylabel("z (µm)")
+fig.tight_layout()
+plt.show()
+
+
 # y-axis in units of μA/mm³, which is the unit of the CSD computed from the sources!!
 
 #sigma = 0.3  # S/m (HNN default)
@@ -141,13 +172,26 @@ tme.plot_laminar_csd_AC(
 # Comparison to CSD computed from LFP
 lfp_hnn = net.rec_arrays["probe1"].voltages[0]  # HNN's LFP; trial 0
 delta = np.median(np.diff(depths))   # electrode spacing in um
-csd = calculate_csd2d(lfp_hnn, delta=delta)   # shape: (n_contacts, n_times)
+csd_from_lfp = calculate_csd2d(lfp_hnn, delta=delta)   # shape: (n_contacts, n_times)
+csd_from_lfp_ = csd_from_lfp[:,1:]
+vmax = np.abs(csd_from_lfp_).max()
 
+fig, ax = plt.subplots()  # no constrained_layout here
 tme.plot_laminar_csd_AC(
     times,
-    csd,
+    csd_from_lfp,
     contact_labels=contact_labels,
-    vmin=-0.1,
-    vmax=0.1)
+    ax=ax,
+    vmin=-vmax,
+    vmax=vmax,
+    show=False)
+
+ax.set_title("2nd derivative of LFP (calculate_csd2d)")
+ax.set_yticks(contact_labels)
+ax.set_ylabel("z (µm)")
+fig.tight_layout()
+plt.show()
+
+
 
 

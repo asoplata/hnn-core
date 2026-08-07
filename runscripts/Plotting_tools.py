@@ -196,7 +196,7 @@ def _draw_cell_morphology(ax, net, cell_type='L5_pyramidal', gid=None,
         ))
     return gid, soma_pos
 
-
+'''
 def plot_cell_morphology_for_lfp_csd(
     net,
     contact_positions,
@@ -247,7 +247,64 @@ def plot_cell_morphology_for_lfp_csd(
 
     plt_show(show)
     return ax
+'''
 
+def plot_cell_morphology_for_lfp_csd(
+    net,
+    contact_positions,
+    cell_types=('L2_pyramidal', 'L5_pyramidal'),
+    gid=None,
+    diam_scale=5.0,
+    ax=None,
+    x_spacing=50,
+    show=True,
+):
+    import matplotlib.pyplot as plt
+
+    contact_positions = np.asarray(contact_positions, dtype=float)
+    depth_spacing = np.diff(contact_positions)[0]
+    z_min = contact_positions.min() - depth_spacing
+    z_max = contact_positions.max() + depth_spacing
+    z_surface = contact_positions.max()  # same reference as plot_laminar_csd_AC
+
+    if ax is None:
+        _, ax = plt.subplots(1, 1)
+
+    x_shift = 0.0
+    gid_labels = []
+    for ct in cell_types:
+        gid_used, _ = _draw_cell_morphology(
+            ax, net, cell_type=ct, gid=gid, diam_scale=diam_scale,
+            x_shift=x_shift,
+        )
+        gid_labels.append(f'{ct}\n(gid={gid_used})')
+
+        template = net.cell_types[ct]['cell_object']
+        xs = [pt[0] for sec in template.sections.values() for pt in sec._end_pts]
+        x_shift += (max(xs) - min(xs)) + x_spacing
+
+    ax.set_title(' | '.join(gid_labels), fontsize=10)
+    ax.set_xlabel('x (µm)')
+    ax.set_ylim(z_min, z_max)
+    ax.relim()
+    ax.autoscale(axis='x', tight=False)
+
+    # Left axis: same convention as plot_laminar_csd_AC ("depth from surface")
+    ax.set_yticks(contact_positions)
+    ax.set_yticklabels([f"{z_surface - z:g}" for z in contact_positions])
+    ax.set_ylabel('Depth (µm)')
+
+    for z in contact_positions:
+        ax.axhline(z, color='lightgray', lw=0.3, zorder=0)
+
+    # Right axis: raw HNN z-coordinates, for reference
+    ax_hnn = ax.secondary_yaxis('right', functions=(lambda y: y, lambda y: y))
+    ax_hnn.set_yticks(contact_positions)
+    ax_hnn.set_yticklabels([f"{z:g}" for z in contact_positions])
+    ax_hnn.set_ylabel('HNN depth (µm)')
+
+    plt_show(show)
+    return ax
 
 def plot_laminar_csd_AC(
     times,

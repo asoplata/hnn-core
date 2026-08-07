@@ -1346,6 +1346,7 @@ def plot_lfp_and_csd(times, lfp, csd, net=None,
 # to be swapped with the one in hnn_core.viz once happy with it
 # it allows to keep using the old version of plot_laminar_lfp if voltage_offset is not None
 # it introduces an option depth-based mode
+'''
 def plot_laminar_lfp_AC(
     times,
     data,
@@ -1590,7 +1591,8 @@ def plot_laminar_lfp_AC(
 
     plt_show(show)
     return ax.get_figure()
-
+'''
+'''
 def plot_laminar_csd_AC(
     times,
     data,
@@ -1688,7 +1690,7 @@ def plot_laminar_csd_AC(
     plt_show(show)
 
     return ax.get_figure()
-
+'''
 
 def _relabel_axis_as_depth(ax, z_surface_um, side="left",
                             ylabel="Depth from surface (µm)"):

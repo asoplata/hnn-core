@@ -26,7 +26,10 @@ net.set_cell_positions(inplane_distance=30.)
 
 
 # Laminar probe
-depths = np.arange(-625, 2150, 100)
+#depths = np.arange(-625, 2150, 100) what I usually use
+depths = np.arange(-650, 2150, 100) #v1
+#depths = np.arange(-550, 2150, 100) #v2
+#depths = np.arange(-650.5, 2100, 100)
 electrode_pos = [(135, 135, z) for z in depths]
 net.add_electrode_array('probe1', electrode_pos)
 
@@ -52,6 +55,7 @@ if "dpls" not in locals():
             record_il_hh2="all",      # aggregated leak current
             record_i_ar="all",
             record_isec="all",
+            record_vsec="all"
         )
 
 l5_component_channels = [
@@ -110,9 +114,11 @@ results = {
     "times": times,
 }
 #with open("runscripts/data/sim_results_dt0025.pkl", "wb") as f:
-with open("runscripts/data/sim_results_dt000625.pkl", "wb") as f:
+#with open("runscripts/data/sim_results_dt000625.pkl", "wb") as f:
+with open("runscripts/data/sim_results_dt000625_withmembranepot_newelect.pkl", "wb") as f:
     pickle.dump(results, f)
 
+print(results.keys())
 '''
 results = {
     "net": net,
