@@ -1376,7 +1376,7 @@ def make_vm_traces_figure(xlim=None, fixed_height=60.0, baseline_samps=50):
 
     tme.plot_stacked_traces(
         ax_vm, times_, Vm_normalized, depths=section_depths,
-        color='k', scale=1.0, labels=sections,
+        color='k', scale=-1.0, labels=sections,
     )
     ax_vm.set_yticks(section_depths)
     ax_vm.set_yticklabels(sections)
