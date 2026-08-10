@@ -2185,3 +2185,17 @@ def downsample_currents(net, step=2, channels=None, include_isec=False,
                     for syn_name, values in syn_dict.items():
                         syn_dict[syn_name] = values[::step]
 
+    # vsec: trial -> gid -> section -> values
+    if include_vsec:
+        for trial_data in cell_response._vsec:
+            for gid, section_dict in trial_data.items():
+                for section, values in section_dict.items():
+                    section_dict[section] = values[::step]
+
+                        # ca: trial -> gid -> section -> values
+    if include_ca:
+        for trial_data in cell_response._ca:
+            for gid, section_dict in trial_data.items():
+                for section, values in section_dict.items():
+                    section_dict[section] = values[::step]
+

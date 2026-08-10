@@ -63,7 +63,7 @@ print(len(example))        # length of that trace
 '''
 
 step = 4
-tme.downsample_currents(net, step=step, include_isec=True)
+tme.downsample_currents(net, step=step, include_isec=True, include_vsec=True)
 times = times[::step]
 lfp_hnn = lfp_hnn[:,::step]
 
@@ -575,23 +575,31 @@ fig1 = plott.plot_lfp_morph_csd(
     figsize=(18, 6),
     overlay_csd_traces=True,
     unit_csd="µV/µm²",
-    overlay_raster_on_csd=True,
+    overlay_raster_on_csd=False,
     sink="red")
 fig1.suptitle("LFP/CSD from GABA_B currents (2nd derivative of LFP)")
-## THERE ARE ARTIFACTUAL SINKS!!!!! SHould be investigated why
-
+## THERE ARE ARTIFACTUAL SINKS! Explanation is in the second derivative of the LFP to compute the CSD. 
+# Look below: 
 
 lfp_syn_gabab_ = lfp_syn_gabab[:, 1:]
 
 timepoint = 4000
 lfp_syn_gabab_t = lfp_syn_gabab_[:, timepoint]
-plt.figure()
-plt.plot(contact_labels, lfp_syn_gabab_t, '*')
 
-d1 = np.gradient(lfp_syn_gabab_t, contact_labels)
-d2 = np.gradient(d1, contact_labels)
+delta = np.median(np.diff(contact_labels))
 
-fig, axes = plt.subplots(3, 1, sharex=True, figsize=(6, 9), constrained_layout=True)
+# 1st derivative: central difference (interior points only, edges undefined)
+d1 = np.full_like(lfp_syn_gabab_t, np.nan)
+d1[1:-1] = (lfp_syn_gabab_t[2:] - lfp_syn_gabab_t[:-2]) / (contact_labels[2:] - contact_labels[:-2])
+
+# 2nd derivative: 3-point central difference, same as in calculate_csd2d
+# (y[i-1] - 2*y[i] + y[i+1]) / delta**2, but without the minus sign
+d2 = np.full_like(lfp_syn_gabab_t, np.nan)
+d2[1:-1] = np.diff(lfp_syn_gabab_t, n=2) / delta**2
+
+csd_t = calculate_csd2d(lfp_syn_gabab_t[:, None], delta=delta)[:, 0]
+
+fig, axes = plt.subplots(4, 1, sharex=True, figsize=(6, 12), constrained_layout=True)
 
 axes[0].plot(contact_labels, lfp_syn_gabab_t, '*')
 axes[0].set_ylabel("LFP")
@@ -601,10 +609,12 @@ axes[1].set_ylabel("1st derivative")
 
 axes[2].plot(contact_labels, d2, '*')
 axes[2].set_ylabel("2nd derivative")
-axes[2].set_xlabel("z (µm)")
+
+axes[3].plot(contact_labels, csd_t, '*')
+axes[3].set_ylabel("CSD (calculate_csd2d)")
+axes[3].set_xlabel("z (µm)")
 
 plt.show()
-
 
 
 # --- CSD directly from GABA_B current sources ---
@@ -975,7 +985,7 @@ spiking_l5_gids = sorted(l5_gids & spike_gids_trial0)
 print(f"{len(spiking_l5_gids)} spiking L5 pyramidal cells (of {len(l5_gids)})")
 
 # 2) pick one -- e.g. the first spiking L5 pyramidal cell
-example_gid = 250#spiking_l5_gids[0]
+example_gid = 207#spiking_l5_gids[0]
 print(f"Selected gid = {example_gid}")
 
 # 3) filter the capacitive sources down to this one cell
@@ -990,8 +1000,21 @@ B_cap_cell, V_bin_cap_cell, _ = tme.build_binning_matrix_for_sources(
 csd_cap_cell = tme.compute_csd_from_sources(B_cap_cell, I_cap_cell, V_bin_cap_cell)
 csd_cap_cell_ = csd_cap_cell[:, 1:]  # drop first sample, matches times_
 
-# 5) plot CSD, then overlay this cell's own spike raster
-fig, ax = plt.subplots(constrained_layout=True)
+# 5) plot morphology | CSD (top row) + membrane potential (below CSD only)
+fig = plt.figure(figsize=(10, 6), constrained_layout=True)
+gs = fig.add_gridspec(2, 2, width_ratios=[1, 4], height_ratios=[3, 1])
+ax_morph = fig.add_subplot(gs[0, 0])
+ax = fig.add_subplot(gs[0, 1])
+ax_vm = fig.add_subplot(gs[1, 1])
+
+plott.plot_cell_morphology_for_lfp_csd(
+    net,
+    contact_positions=contact_labels,
+    cell_types=('L5_pyramidal',),
+    gid=example_gid,
+    ax=ax_morph,
+    show=False,
+)
 
 plott.plot_laminar_csd_AC(
     times_,
@@ -1013,13 +1036,364 @@ for t in cell_spike_times:
 
 ax.set_title(f"Capacitive CSD — spiking L5 pyramidal cell (gid={example_gid}), "
              f"{len(cell_spike_times)} spikes")
+
+# --- membrane potential panel ---
+vsoma = np.asarray(net.cell_response.vsec[0][example_gid]["soma"])
+vsoma_ = vsoma[1:]  # drop first sample, matches times_
+
+ax_vm.plot(times_, vsoma_, color='k', lw=1)
+for t in cell_spike_times:
+    ax_vm.axvline(t, color='k', linestyle='--', alpha=0.7, lw=1)
+ax_vm.set_xlabel("Time (ms)")
+ax_vm.set_ylabel("Vm (mV)")
+ax_vm.set_title("Somatic membrane potential")
+
+plt.show()
+
+
+#another version:
+# Capacitive current restricted to this cell's basal dendrites
+sources_cap_basal, I_cap_basal = tme.filter_sources(
+    sources_cap_cell, I_cap_cell, sections={"basal_1", "basal_2", "basal_3"}
+)
+I_cap_basal_total = I_cap_basal.sum(axis=0)[1:]  # sum over segments, drop first sample
+
+# Synaptic current for this same cell, restricted to the same basal sections
+sources_syn_cell, I_syn_cell = tme.filter_sources(
+    sources_syn, I_syn, gid_subset=[example_gid]
+)
+sources_syn_basal, I_syn_basal = tme.filter_sources(
+    sources_syn_cell, I_syn_cell, sections={"basal_1", "basal_2", "basal_3"}
+)
+I_syn_basal_total = I_syn_basal.sum(axis=0)[1:]
+
+fig, ax = plt.subplots(figsize=(8, 4))
+ax.plot(times_, I_cap_basal_total, label="Capacitive current (basal)")
+ax.plot(times_, I_syn_basal_total, label="Synaptic current (basal)")
+for t in cell_spike_times:
+    ax.axvline(t, color='k', linestyle='--', alpha=0.5, lw=1)
+ax.set_xlabel("Time (ms)")
+ax.set_ylabel("Current (nA)")
+ax.legend()
+ax.set_title(f"Basal dendrite currents — gid={example_gid}")
+plt.show()
+
+
+
+# --- capacitive, ionic, synaptic CSD for this single cell ---
+sources_ionic_cell, I_ionic_cell = tme.filter_sources(sources_ionic, I_ionic, gid_subset=[example_gid])
+sources_syn_cell, I_syn_cell = tme.filter_sources(sources_syn, I_syn, gid_subset=[example_gid])
+
+def csd_for_cell(sources, I, array_name="probe1"):
+    B, V_bin, _ = tme.build_binning_matrix_for_sources(net, sources, array_name=array_name)
+    csd = tme.compute_csd_from_sources(B, I, V_bin)
+    return csd[:, 1:]  # drop first sample, matches times_
+
+csd_ionic_cell_ = csd_for_cell(sources_ionic_cell, I_ionic_cell)
+csd_syn_cell_ = csd_for_cell(sources_syn_cell, I_syn_cell)
+# csd_cap_cell_ was already computed earlier
+
+# slab (electrode-bin) boundaries used by build_binning_matrix_for_sources
+z_edges = tme._z_edges_from_array(net, "probe1")
+
+fig = plt.figure(figsize=(16, 6), constrained_layout=True)
+gs = fig.add_gridspec(1, 4, width_ratios=[1, 4, 4, 4])
+ax_morph = fig.add_subplot(gs[0, 0])
+ax_cap = fig.add_subplot(gs[0, 1])
+ax_ionic = fig.add_subplot(gs[0, 2])
+ax_syn = fig.add_subplot(gs[0, 3])
+
+plott.plot_cell_morphology_for_lfp_csd(
+    net, contact_positions=contact_labels,
+    cell_types=('L5_pyramidal',), gid=example_gid,
+    ax=ax_morph, show=False,
+)
+
+panels = [
+    (ax_cap, csd_cap_cell_, "Capacitive"),
+    (ax_ionic, csd_ionic_cell_, "Ionic"),
+    (ax_syn, csd_syn_cell_, "Synaptic"),
+]
+
+for ax, csd_, title in panels:
+    vmax = np.max(np.abs(csd_))
+    plott.plot_laminar_csd_AC(
+        times_, csd_, contact_labels,
+        ax=ax, vmin=-vmax, vmax=vmax,
+        overlay_csd_traces=False, unit_csd="µA/mm³", sink="red", show=False,
+    )
+    ax.set_title(f"{title} CSD — gid={example_gid}")
+
+# faint red lines marking the slab (electrode-bin) boundaries, on every panel
+for ax in (ax_morph, ax_cap, ax_ionic, ax_syn):
+    for z in z_edges:
+        ax.axhline(z, color='red', alpha=0.2, lw=1)
+
+plt.show()
+
+
+
+template = net.cell_types["L5_pyramidal"]["cell_object"]
+
+def section_mean_z(section):
+    pts = np.asarray(template.sections[section]._end_pts, dtype=float)
+    return pts[:, 2].mean()
+
+sections = sorted(template.sections.keys(), key=section_mean_z, reverse=True)
+n_sections = len(sections)
+
+ncols = 4
+nrows = int(np.ceil(n_sections / ncols))
+fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 3 * nrows), constrained_layout=True)
+axes = np.atleast_1d(axes).flatten()
+
+for i, section in enumerate(sections):
+    ax = axes[i]
+    vm_section = np.asarray(net.cell_response.vsec[0][example_gid][section])[1:]
+
+    _, I_syn_sec_exc = tme.filter_sources(
+        sources_syn_cell, I_syn_cell, sections={section}, syn_names=["ampa", "nmda"]
+    )
+    _, I_syn_sec_inh = tme.filter_sources(
+        sources_syn_cell, I_syn_cell, sections={section}, syn_names=["gabaa", "gabab"]
+    )
+    I_exc_total = I_syn_sec_exc.sum(axis=0)[1:]
+    I_inh_total = I_syn_sec_inh.sum(axis=0)[1:]
+
+    ax.plot(times_, vm_section, color='k', lw=1)
+    for t in cell_spike_times:
+        ax.axvline(t, color='k', linestyle='--', alpha=0.4, lw=0.8)
+    ax.set_title(section, fontsize=10)
+    ax.set_xlabel("Time (ms)")
+    ax.set_ylabel("Vm (mV)")
+
+    ax2 = ax.twinx()
+    ax2.plot(times_, I_exc_total, color='tab:red', lw=1)
+    ax2.plot(times_, I_inh_total, color='tab:blue', lw=1)
+    ax2.set_ylabel("I (nA)")
+
+# hide any unused grid cells
+for j in range(n_sections, len(axes)):
+    axes[j].axis('off')
+
+fig.legend(
+    handles=[Line2D([0], [0], color='k', label='Vm'),
+             Line2D([0], [0], color='tab:red', label='Excitatory (AMPA+NMDA)'),
+             Line2D([0], [0], color='tab:blue', label='Inhibitory (GABA_A+GABA_B)')],
+    loc='lower right', fontsize=9,
+)
+fig.suptitle(f"Vm and synaptic current by type — gid={example_gid}, all compartments")
 plt.show()
 
 
 
 
 
+# THIS IS INTERESTING
+template = net.cell_types["L5_pyramidal"]["cell_object"]
 
+def section_mean_z(section):
+    pts = np.asarray(template.sections[section]._end_pts, dtype=float)
+    return pts[:, 2].mean()
+
+sections = sorted(template.sections.keys(), key=section_mean_z, reverse=True)
+colors = plt.cm.viridis(np.linspace(0, 1, len(sections)))
+highlight = {"apical_tuft", "soma"}
+
+fig, ax = plt.subplots(figsize=(9, 5), constrained_layout=True)
+
+for section, color in zip(sections, colors):
+    v = np.asarray(net.cell_response.vsec[0][example_gid][section])[1:]
+    lw = 2.5 if section in highlight else 1.0
+    zorder = 3 if section in highlight else 1
+    ax.plot(times_, v, color=color, lw=lw, label=section, zorder=zorder)
+
+for t in cell_spike_times:
+    ax.axvline(t, color='k', linestyle='--', alpha=0.4, lw=0.8, zorder=2)
+
+ax.set_xlabel("Time (ms)")
+ax.set_ylabel("Vm (mV)")
+ax.set_title(f"Membrane potential across all compartments — gid={example_gid}")
+ax.legend(loc='upper right', fontsize=8, ncol=2)
+plt.show()
+
+#combined with the csd
+# --- capacitive, ionic, synaptic CSD for this single cell ---
+sources_cap_cell, I_cap_cell = tme.filter_sources(sources_cap, I_cap, gid_subset=[example_gid])
+sources_ionic_cell, I_ionic_cell = tme.filter_sources(sources_ionic, I_ionic, gid_subset=[example_gid])
+sources_syn_cell, I_syn_cell = tme.filter_sources(sources_syn, I_syn, gid_subset=[example_gid])
+
+def csd_for_cell(sources, I, array_name="probe1"):
+    B, V_bin, _ = tme.build_binning_matrix_for_sources(net, sources, array_name=array_name)
+    csd = tme.compute_csd_from_sources(B, I, V_bin)
+    return csd[:, 1:]  # drop first sample, matches times_
+
+csd_cap_cell_ = csd_for_cell(sources_cap_cell, I_cap_cell)
+csd_ionic_cell_ = csd_for_cell(sources_ionic_cell, I_ionic_cell)
+csd_syn_cell_ = csd_for_cell(sources_syn_cell, I_syn_cell)
+
+# slab (electrode-bin) boundaries used by build_binning_matrix_for_sources
+z_edges = tme._z_edges_from_array(net, "probe1")
+
+fig = plt.figure(figsize=(16, 6), constrained_layout=True)
+gs = fig.add_gridspec(1, 4, width_ratios=[1, 4, 4, 4])
+ax_morph = fig.add_subplot(gs[0, 0])
+ax_cap = fig.add_subplot(gs[0, 1])
+ax_ionic = fig.add_subplot(gs[0, 2])
+ax_syn = fig.add_subplot(gs[0, 3])
+
+plott.plot_cell_morphology_for_lfp_csd(
+    net, contact_positions=contact_labels,
+    cell_types=('L5_pyramidal',), gid=example_gid,
+    ax=ax_morph, show=False,
+)
+
+panels = [
+    (ax_cap, csd_cap_cell_, "Capacitive"),
+    (ax_ionic, csd_ionic_cell_, "Ionic"),
+    (ax_syn, csd_syn_cell_, "Synaptic"),
+]
+
+for ax, csd_, title in panels:
+    vmax = np.max(np.abs(csd_))
+    plott.plot_laminar_csd_AC(
+        times_, csd_, contact_labels,
+        ax=ax, vmin=-vmax, vmax=vmax,
+        overlay_csd_traces=False, unit_csd="µA/mm³", sink="red", show=False,
+    )
+    ax.set_title(f"{title} CSD — gid={example_gid}")
+
+# faint red lines marking the slab (electrode-bin) boundaries, on every panel
+for ax in (ax_morph, ax_cap, ax_ionic, ax_syn):
+    for z in z_edges:
+        ax.axhline(z, color='red', alpha=0.2, lw=1)
+
+plt.show()
+
+
+# CSD as traces:
+def plot_csd_traces(ax, times_, csd_, contact_labels, title, scale_mult=2.0):
+    scale = scale_mult * np.diff(contact_labels)[0] / np.max(np.abs(csd_))
+    tme.plot_stacked_traces(ax, times_, csd_, depths=contact_labels, color='k', scale=scale)
+    ax.set_xlabel("Time (ms)")
+    ax.set_title(title)
+
+z_edges = tme._z_edges_from_array(net, "probe1")
+
+fig = plt.figure(figsize=(16, 6), constrained_layout=True)
+gs = fig.add_gridspec(1, 4, width_ratios=[1, 4, 4, 4])
+ax_morph = fig.add_subplot(gs[0, 0])
+ax_cap = fig.add_subplot(gs[0, 1])
+ax_ionic = fig.add_subplot(gs[0, 2])
+ax_syn = fig.add_subplot(gs[0, 3])
+
+plott.plot_cell_morphology_for_lfp_csd(
+    net, contact_positions=contact_labels,
+    cell_types=('L5_pyramidal',), gid=example_gid,
+    ax=ax_morph, show=False,
+)
+
+plot_csd_traces(ax_cap, times_, csd_cap_cell_, contact_labels, f"Capacitive CSD — gid={example_gid}")
+plot_csd_traces(ax_ionic, times_, csd_ionic_cell_, contact_labels, f"Ionic CSD — gid={example_gid}")
+plot_csd_traces(ax_syn, times_, csd_syn_cell_, contact_labels, f"Synaptic CSD — gid={example_gid}")
+
+for ax in (ax_morph, ax_cap, ax_ionic, ax_syn):
+    for z in z_edges:
+        ax.axhline(z, color='red', alpha=0.2, lw=1)
+
+fig.supxlabel(
+    "CSD sign convention: positive = source (current leaving the cell), negative = sink (current entering the cell)",
+    fontsize=10,
+)
+
+plt.show()
+
+
+# ZOOMS in
+def make_csd_traces_figure(xlim, scale_mult=2.0):
+    mask = (times_ >= xlim[0]) & (times_ <= xlim[1])
+
+    def plot_csd_traces(ax, csd_, title):
+        vmax = np.max(np.abs(csd_[:, mask]))
+        scale = scale_mult * np.diff(contact_labels)[0] / vmax
+        tme.plot_stacked_traces(ax, times_, csd_, depths=contact_labels, color='k', scale=scale)
+        ax.set_xlabel("Time (ms)")
+        ax.set_title(title)
+        ax.set_xlim(*xlim)
+
+    z_edges = tme._z_edges_from_array(net, "probe1")
+
+    fig = plt.figure(figsize=(16, 6), constrained_layout=True)
+    gs = fig.add_gridspec(1, 4, width_ratios=[1, 4, 4, 4])
+    ax_morph = fig.add_subplot(gs[0, 0])
+    ax_cap = fig.add_subplot(gs[0, 1])
+    ax_ionic = fig.add_subplot(gs[0, 2])
+    ax_syn = fig.add_subplot(gs[0, 3])
+
+    plott.plot_cell_morphology_for_lfp_csd(
+        net, contact_positions=contact_labels,
+        cell_types=('L5_pyramidal',), gid=example_gid,
+        ax=ax_morph, show=False,
+    )
+
+    plot_csd_traces(ax_cap, csd_cap_cell_, f"Capacitive CSD — gid={example_gid}")
+    plot_csd_traces(ax_ionic, csd_ionic_cell_, f"Ionic CSD — gid={example_gid}")
+    plot_csd_traces(ax_syn, csd_syn_cell_, f"Synaptic CSD — gid={example_gid}")
+
+    for ax in (ax_morph, ax_cap, ax_ionic, ax_syn):
+        for z in z_edges:
+            ax.axhline(z, color='red', alpha=0.2, lw=1)
+
+    fig.supxlabel(
+        "CSD sign convention: positive = source (current leaving the cell), negative = sink (current entering the cell)",
+        fontsize=10,
+    )
+    fig.suptitle(f"Time window: {xlim[0]}-{xlim[1]} ms")
+
+    plt.show()
+
+
+make_csd_traces_figure((50, 75))
+make_csd_traces_figure((135, 160))
+
+def make_vm_traces_figure(xlim=None, fixed_height=60.0, baseline_samps=50):
+    Vm_baseline = Vm_matrix - np.mean(Vm_matrix[:, :baseline_samps], axis=1, keepdims=True)
+    row_ptp = np.ptp(Vm_baseline, axis=1, keepdims=True)
+    Vm_normalized = Vm_baseline / row_ptp * fixed_height  # every row now has the same peak-to-peak height
+
+    z_edges = tme._z_edges_from_array(net, "probe1")
+
+    fig = plt.figure(figsize=(10, 6), constrained_layout=True)
+    gs = fig.add_gridspec(1, 2, width_ratios=[1, 4])
+    ax_morph = fig.add_subplot(gs[0, 0])
+    ax_vm = fig.add_subplot(gs[0, 1])
+
+    plott.plot_cell_morphology_for_lfp_csd(
+        net, contact_positions=contact_labels,
+        cell_types=('L5_pyramidal',), gid=example_gid,
+        ax=ax_morph, show=False,
+    )
+
+    tme.plot_stacked_traces(
+        ax_vm, times_, Vm_normalized, depths=section_depths,
+        color='k', scale=1.0, labels=sections,
+    )
+    ax_vm.set_yticks(section_depths)
+    ax_vm.set_yticklabels(sections)
+    ax_vm.set_xlabel("Time (ms)")
+    ax_vm.set_title(f"Membrane potential by compartment — gid={example_gid}")
+    if xlim is not None:
+        ax_vm.set_xlim(*xlim)
+
+    for ax in (ax_morph, ax_vm):
+        for z in z_edges:
+            ax.axhline(z, color='red', alpha=0.2, lw=1)
+
+    plt.show()
+
+make_vm_traces_figure()
+make_vm_traces_figure(xlim=(50, 75))
+make_vm_traces_figure(xlim=(135, 160))
 # UP TO HERE!!
 
 
