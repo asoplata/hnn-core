@@ -48,19 +48,6 @@ lfp_hnn = net.rec_arrays["probe1"].voltages[0]
 #lfp = net.rec_arrays["probe1"].voltages[0]  # HNN's LFP; trial 0
 contact_labels = np.asarray(depths, dtype=int)
 
-#tme.convert_currents_to_numpy(net, include_isec=True)
-
-'''
-# one example trace
-channel = "agg_i_mem"
-gid = list(net.gid_ranges["L5_pyramidal"])[0]
-trial_data = net.cell_response.transmembrane_currents[channel][0]  # trial 0
-section = list(trial_data[gid].keys())[0]
-segment = list(trial_data[gid][section].keys())[0]
-
-example = trial_data[gid][section][segment]
-print(len(example))        # length of that trace
-'''
 
 step = 4
 tme.downsample_currents(net, step=step, include_isec=True, include_vsec=True, include_ca=True)
@@ -74,17 +61,6 @@ delta = np.median(np.diff(depths))
 csd_from_lfp = calculate_csd2d(lfp_hnn, delta=delta)
 csd_from_lfp_ = csd_from_lfp[:, 1:]
 
-'''
-# one example trace
-channel = "agg_i_mem"
-gid = list(net.gid_ranges["L5_pyramidal"])[0]
-trial_data = net.cell_response.transmembrane_currents[channel][0]  # trial 0
-section = list(trial_data[gid].keys())[0]
-segment = list(trial_data[gid][section].keys())[0]
-
-example = trial_data[gid][section][segment]
-print(len(example))        # length of that trace
-'''
 # plot of LFP and CSD (from hnn output) to have a visual reference
 fig, axs = plt.subplots(2, 1, sharex=True, figsize=(6, 8),
                         gridspec_kw={'height_ratios': [3, 3]})
@@ -166,6 +142,7 @@ sigma = 0.3#1 # CHECK THIS, I think in HNN's CSD sigma is actually dropped.
 csd_in_hnn_units = csd_from_sources / (sigma * 1e3)   # → μV/μm²
 csd_in_hnn_units_ = csd_in_hnn_units[:, 1:]   
 
+'''
 vmax = max(np.abs(csd_from_lfp_).max(), np.abs(csd_in_hnn_units_).max())
 vmax_from_lfp = np.abs(csd_from_lfp_).max()
 vmax_from_hnn_units = np.abs(csd_in_hnn_units_).max()
@@ -268,6 +245,7 @@ plott.plot_lfp_morph_csd(
     overlay_raster_on_csd=True,
     sink="red")
 fig.suptitle("LFP/CSD from whole-network sources")
+'''
 
 
 ###################
@@ -314,7 +292,7 @@ csd_syn = tme.compute_csd_from_sources(
 
 csd_syn_ = csd_syn[:, 1:]
 
-# --- CSD as 2nd derivative of the synaptic-current LFP ---
+# --- CSD as 2nd derivative of the synaptic-current LFP --- This is not valid as not closed system
 vmax_syn_from_lfp = np.max(np.abs(csd_syn_from_lfp_))
 scale_csd_syn_from_lfp = 0.5 * np.diff(contact_labels)[0] / vmax_syn_from_lfp
 
@@ -399,6 +377,7 @@ lfp_cap = tme.reconstruct_lfp_from_sources(T_cap, I_cap)
 
 lfp_cap_, csd_cap_ = lfp_cap[:, 1:], csd_cap[:, 1:]
 
+'''
 vmax1 = np.max(np.abs(csd_cap_from_lfp_))
 
 fig1 = plott.plot_lfp_morph_csd(
@@ -425,7 +404,7 @@ fig2 = plott.plot_lfp_morph_csd(
     overlay_raster_on_csd=True,
 )
 fig2.suptitle("LFP/CSD from capacitive currents (compute_csd_from_sources)")
-
+'''
 
 
 #
@@ -462,6 +441,7 @@ lfp_ionic = tme.reconstruct_lfp_from_sources(T_ionic, I_ionic)
 
 lfp_ionic_, csd_ionic_ = lfp_ionic[:, 1:], csd_ionic[:, 1:]
 
+'''
 vmax1 = np.max(np.abs(csd_ionic_from_lfp_))
 
 fig1 = plott.plot_lfp_morph_csd(
@@ -488,8 +468,9 @@ fig2 = plott.plot_lfp_morph_csd(
     overlay_raster_on_csd=True,
 )
 fig2.suptitle("LFP/CSD from ionic currents (compute_csd_from_sources)")
+'''
 
-
+'''
 # asseses the difference between the two LFPs (from agg_i_mem and from components)
 contact_number = 8  # choose one electrode/contact
 plt.figure()
@@ -516,7 +497,7 @@ plt.xlabel("Time (ms)")
 plt.ylabel("Current (nA)")
 plt.title('Total membrane current summed over segments')
 # Comment: For Kirchhoff's law, this should be zero.
-
+'''
 
 
 
@@ -576,6 +557,7 @@ csd_syn_gabab = tme.compute_csd_from_sources(
 lfp_syn_gabab_ = lfp_syn_gabab[:, 1:]
 csd_syn_gabab_ = csd_syn_gabab[:, 1:]
 
+'''
 vmax1 = np.max(np.abs(csd_syn_gabab_from_lfp_))
 
 fig1 = plott.plot_lfp_morph_csd(
@@ -597,6 +579,7 @@ fig1 = plott.plot_lfp_morph_csd(
     sink="red")
 fig1.suptitle("LFP/CSD from GABA_B currents (2nd derivative of LFP)")
 ## THERE ARE ARTIFACTUAL SINKS! Explanation is in the second derivative of the LFP to compute the CSD. 
+
 # Look below: 
 
 lfp_syn_gabab_ = lfp_syn_gabab[:, 1:]
@@ -656,21 +639,8 @@ fig2 = plott.plot_lfp_morph_csd(
     overlay_raster_on_csd=True,
     sink="red")
 fig2.suptitle("LFP/CSD from GABA_B currents (compute_csd_from_sources)")
-
 '''
-# dipole from gabab only
-dpl_gabab = tme.reconstruct_dipole_from_sources(net, sources_syn_gabab, I_syn_gabab)
-dpl_gabab_ = dpl_gabab[1:]
 
-fig, ax = plt.subplots()
-ax.plot(times_, dpl_agg_i_mem_, 'k', label='Total (agg_i_mem)', lw=1.5)
-ax.plot(times_, dpl_gabab_, label='GABA_B', lw=1.5)
-ax.set_xlabel('Time (ms)')
-ax.set_ylabel('Dipole (nAm)')
-ax.legend()
-plt.show()
-#fig.suptitle("Dipole from synaptic currents")
-'''
 
 #### GABA_A only
 sources_syn_gabaa, I_syn_gabaa = tme.filter_sources(sources_syn, I_syn, syn_names=["gabaa"])
@@ -705,28 +675,7 @@ csd_syn_gabaa_ = csd_syn_gabaa[:, 1:]
 csd_syn_gabaa_from_lfp = calculate_csd2d(lfp_syn_gabaa, delta=delta)
 csd_syn_gabaa_from_lfp_ = csd_syn_gabaa_from_lfp[:, 1:]
 
-
-vmax1 = np.max(np.abs(csd_syn_gabaa_from_lfp_))
-
-fig1 = plott.plot_lfp_morph_csd(
-    times_,
-    lfp_syn_gabaa_,
-    csd_syn_gabaa_from_lfp_,
-    contact_labels,
-    net,
-    ext_inputs=net.cell_response,
-    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']},
-    scale_lfp=3.0,
-    voltage_scalebar=200,
-    vmin=-0.01,#vmax1,
-    vmax=0.01,#vmax1,
-    figsize=(18, 6),
-    overlay_csd_traces=True,
-    unit_csd="µV/µm²",
-    overlay_raster_on_csd=True,
-    sink="red")
-fig1.suptitle("LFP/CSD from GABA_A currents (2nd derivative of LFP)")
-
+'''
 # --- CSD directly from GABA_A current sources ---
 vmax2 = np.max(np.abs(csd_syn_gabaa_))
 
@@ -748,7 +697,7 @@ fig2 = plott.plot_lfp_morph_csd(
     overlay_raster_on_csd=True,
     sink="red")
 fig2.suptitle("LFP/CSD from GABA_A currents (compute_csd_from_sources)")
-
+'''
 
 ## AMPA only
 sources_syn_ampa, I_syn_ampa = tme.filter_sources(sources_syn, I_syn, syn_names=["ampa"])
@@ -809,30 +758,7 @@ lfp_syn_ampa = tme.reconstruct_lfp_from_sources(
 lfp_syn_ampa_ = lfp_syn_ampa[:, 1:]
 csd_syn_ampa_ = csd_syn_ampa[:, 1:]
 
-# --- CSD as 2nd derivative of the AMPA-current LFP ---
-csd_syn_ampa_from_lfp_ = calculate_csd2d(lfp_syn_ampa_, delta=delta)
-vmax1 = np.max(np.abs(csd_syn_ampa_from_lfp_))
-
-fig1 = plott.plot_lfp_morph_csd(
-    times_,
-    lfp_syn_ampa_,
-    csd_syn_ampa_from_lfp_,
-    contact_labels,
-    net,
-    ext_inputs=net.cell_response,
-    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']},
-    scale_lfp=3.0,
-    voltage_scalebar=200,
-    vmin=-vmax1,
-    vmax=vmax1,
-    figsize=(18, 6),
-    overlay_csd_traces=True,
-    unit_csd="µV/µm²",
-    overlay_raster_on_csd=True,
-    sink="red")
-fig1.suptitle("LFP/CSD from AMPA currents (2nd derivative of LFP)")
-
-# --- CSD directly from AMPA current sources ---
+'''
 vmax2 = np.max(np.abs(csd_syn_ampa_))
 
 fig2 = plott.plot_lfp_morph_csd(
@@ -853,6 +779,7 @@ fig2 = plott.plot_lfp_morph_csd(
     overlay_raster_on_csd=True,
     sink="red")
 fig2.suptitle("LFP/CSD from AMPA currents (compute_csd_from_sources)")
+'''
 
 ## NMDA only
 sources_syn_nmda, I_syn_nmda = tme.filter_sources(sources_syn, I_syn, syn_names=["nmda"])
@@ -884,29 +811,6 @@ lfp_syn_nmda = tme.reconstruct_lfp_from_sources(
 lfp_syn_nmda_ = lfp_syn_nmda[:, 1:]
 csd_syn_nmda_ = csd_syn_nmda[:, 1:]
 
-# --- CSD as 2nd derivative of the NMDA-current LFP ---
-csd_syn_nmda_from_lfp_ = calculate_csd2d(lfp_syn_nmda_, delta=delta)
-vmax1 = np.max(np.abs(csd_syn_nmda_from_lfp_))
-
-fig1 = plott.plot_lfp_morph_csd(
-    times_,
-    lfp_syn_nmda_,
-    csd_syn_nmda_from_lfp_,
-    contact_labels,
-    net,
-    ext_inputs=net.cell_response,
-    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']},
-    scale_lfp=3.0,
-    voltage_scalebar=200,
-    vmin=-vmax1,
-    vmax=vmax1,
-    figsize=(18, 6),
-    overlay_csd_traces=True,
-    unit_csd="µV/µm²",
-    overlay_raster_on_csd=True,
-    sink="red")
-fig1.suptitle("LFP/CSD from NMDA currents (2nd derivative of LFP)")
-
 # --- CSD directly from NMDA current sources ---
 vmax2 = np.max(np.abs(csd_syn_nmda_))
 
@@ -936,61 +840,6 @@ total_csd_syn_ = csd_syn_ampa_ + csd_syn_nmda_ + csd_syn_gabaa_ + csd_syn_gabab_
 csd_syn_residual_ = csd_syn_ - total_csd_syn_
 vmax_check = np.max(np.abs(csd_syn_residual_)) # IT'S OKAY!
 
-
-
-
-
-'''
-for name, drive in net.external_drives.items():
-    print(name, drive)
-
-fig, ax = plt.subplots()
-ax.plot(times, np.sum(I_syn_gabab, axis=0), label='GABA-B')
-ax.plot(times, np.sum(I_syn_gabaa, axis=0), label='GABA-A')
-ax.plot(times, np.sum(I_syn_ampa,  axis=0), label='AMPA')
-ax.plot(times, np.sum(I_syn_nmda,  axis=0), label='NMDA')
-ax.set_xlabel('Time (ms)')
-ax.set_ylabel('Current (nA)')
-ax.legend()
-plt.show()
-'''
-#################
-# FIGURE panel for meetings:
-#############
-#directly from sources, not from LFP
-fig_all = plott.make_csd_contribution_summary_figure(
-    net, contact_labels, times_,
-    csd_from_sources_, csd_cap_, csd_ionic_, csd_syn_,
-    csd_syn_gabab_, csd_syn_gabaa_, csd_syn_ampa_, csd_syn_nmda_,
-    vmax_row0=60, vmax_row1=10,
-    suptitle="Whole network (all pyramidal cells) - from sources",
-)
-plt.show()
-
-''' The following cannot be done as the CSD cannot be computed from the LFP of individual contributions, only from the total LFP.
-# from lfp
-vmax_row0 = max(
-    np.max(np.abs(csd_from_lfp_)),
-    np.max(np.abs(csd_cap_from_lfp_)),
-    np.max(np.abs(csd_ionic_from_lfp_)),
-    np.max(np.abs(csd_syn_from_lfp_)),
-)
-vmax_row1 = max(
-    np.max(np.abs(csd_syn_gabab_from_lfp_)),
-    np.max(np.abs(csd_syn_gabaa_from_lfp_)),
-    np.max(np.abs(csd_syn_ampa_from_lfp_)),
-    np.max(np.abs(csd_syn_nmda_from_lfp_)),
-)
-
-fig_all_from_lfp = plott.make_csd_contribution_summary_figure(
-    net, contact_labels, times_,
-    csd_from_lfp_, csd_cap_from_lfp_, csd_ionic_from_lfp_, csd_syn_from_lfp_,
-    csd_syn_gabab_from_lfp_, csd_syn_gabaa_from_lfp_, csd_syn_ampa_from_lfp_, csd_syn_nmda_from_lfp_,
-    vmax_row0=0.06, vmax_row1=0.01,
-    suptitle="Whole network (all pyramidal cells) - from LFP (2nd derivative)",
-)
-plt.show()
-'''
 
 ###########################
 # THIS PART IS ALL ABOUT CALCULATING AND PLOTTING CSD FOR A SINGLE CELL
@@ -1609,787 +1458,3 @@ def make_figure(xlim):
 make_figure((25, 50))
 make_figure((60, 85))
 make_figure((130, 155))
-
-
-
-##############################################
-# PART RELATED TO SINGLE CELL FINISHES HERE  #
-##############################################
-
-
-
-# UP TO HERE!!
-
-
-
-##################
-# TO plot the contributions to the CSD from specific ionic currents
-##################
-
-
-def compute_lfp_csd_for_sources(net, sources, I, array_name="probe1"):
-    B, V_bin, _ = tme.build_binning_matrix_for_sources(net, sources, array_name=array_name)
-    csd = tme.compute_csd_from_sources(B, I, V_bin)
-    T = tme.build_transfer_resistance_matrix_for_sources(net, sources, array_name=array_name)
-    lfp = tme.reconstruct_lfp_from_sources(T, I)
-    return lfp[:, 1:], csd[:, 1:]
-
-# for checking the contribution from specific ionic currents (ana capacitive)
-sources_intr, I_intr = tme.collect_intrinsic_sources(
-    net,
-    trial_idx=0,
-    cell_types=["L2_pyramidal", "L5_pyramidal"],
-    channels=["agg_i_cap", "ina_hh2", "ik_hh2", "ik_kca", "ik_km",
-              "ica_ca", "ica_cat", "il_hh2", "i_ar"],
-)
-sources_agg_i_cap, I_agg_i_cap = tme.filter_sources(sources_intr, I_intr, labels=["agg_i_cap"])
-sources_ina, I_ina = tme.filter_sources(sources_intr, I_intr, labels=["ina_hh2"])
-sources_ik,  I_ik  = tme.filter_sources(sources_intr, I_intr, labels=["ik_hh2"])
-sources_ik_kca, I_ik_kca = tme.filter_sources(sources_intr, I_intr, labels=["ik_kca"])
-sources_ik_km, I_ik_km = tme.filter_sources(sources_intr, I_intr, labels=["ik_km"])
-sources_ica_ca, I_ica_ca = tme.filter_sources(sources_intr, I_intr, labels=["ica_ca"])
-sources_ica_cat, I_ica_cat = tme.filter_sources(sources_intr, I_intr, labels=["ica_cat"])
-sources_il, I_il = tme.filter_sources(sources_intr, I_intr, labels=["il_hh2"])
-sources_i_ar, I_i_ar = tme.filter_sources(sources_intr, I_intr, labels=["i_ar"])    
-
-
-lfp_agg_i_cap_, csd_agg_i_cap_ = compute_lfp_csd_for_sources(net, sources_agg_i_cap, I_agg_i_cap)
-lfp_ina_,       csd_ina_       = compute_lfp_csd_for_sources(net, sources_ina,       I_ina)
-lfp_ik_,        csd_ik_        = compute_lfp_csd_for_sources(net, sources_ik,        I_ik)
-lfp_ik_kca_,    csd_ik_kca_    = compute_lfp_csd_for_sources(net, sources_ik_kca,    I_ik_kca)
-lfp_ik_km_,     csd_ik_km_     = compute_lfp_csd_for_sources(net, sources_ik_km,     I_ik_km)
-lfp_ica_ca_,    csd_ica_ca_    = compute_lfp_csd_for_sources(net, sources_ica_ca,    I_ica_ca)
-lfp_ica_cat_,   csd_ica_cat_   = compute_lfp_csd_for_sources(net, sources_ica_cat,   I_ica_cat)
-lfp_il_,        csd_il_        = compute_lfp_csd_for_sources(net, sources_il,        I_il)
-lfp_i_ar_,      csd_i_ar_      = compute_lfp_csd_for_sources(net, sources_i_ar,      I_i_ar)
-
-'''
-fig = plott.plot_lfp_morph_csd(
-    times_, 
-    lfp_agg_i_cap_, 
-    csd_agg_i_cap_, 
-    contact_labels, 
-    net, 
-    ext_inputs=net.cell_response, 
-    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']}, 
-    scale_lfp=3.0,
-    voltage_scalebar=200,
-    vmin=-10,
-    vmax=10,
-    figsize=(18, 6),
-    overlay_csd_traces=False,
-    unit_csd="µA/mm³")
-fig.suptitle("LFP/CSD from capacitive currents")
-'''
-
-
-intrinsic_panels = [
-    (lfp_agg_i_cap_, csd_agg_i_cap_, "Capacitive (agg_i_cap)"),
-    (lfp_ina_,       csd_ina_,       "Na (ina_hh2)"),
-    (lfp_ik_,        csd_ik_,        "K (ik_hh2)"),
-    (lfp_ik_kca_,    csd_ik_kca_,    "KCa (ik_kca)"),
-    (lfp_ik_km_,     csd_ik_km_,     "KM (ik_km)"),
-    (lfp_ica_ca_,    csd_ica_ca_,    "Ca (ica_ca)"),
-    (lfp_ica_cat_,   csd_ica_cat_,   "CaT (ica_cat)"),
-    (lfp_il_,        csd_il_,        "Leak (il_hh2)"),
-    (lfp_i_ar_,      csd_i_ar_,      "Ih (i_ar)"),
-]
-
-for lfp_, csd_, title in intrinsic_panels:
-    vmax = np.max(np.abs(csd_))
-    fig = plott.plot_lfp_morph_csd(
-        times_, lfp_, csd_, contact_labels, net,
-        ext_inputs=net.cell_response,
-        spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']},
-        scale_lfp=3.0,
-        voltage_scalebar=200,
-        vmin=-vmax,
-        vmax=vmax,
-        figsize=(18, 6),
-        overlay_csd_traces=True,
-        unit_csd="µA/mm³",
-        overlay_raster_on_csd=True,
-        sink="r"
-    )
-    fig.suptitle(f"LFP/CSD from {title}")
-
-
-sources_subset, I_subset = tme.collect_intrinsic_sources(
-    net, trial_idx=0,
-    cell_types=["L2_pyramidal", "L5_pyramidal"],
-    channels=["ina_hh2", "ik_hh2", "ica_ca", "ik_km"],
-)
-
-B_subset, V_bin_subset, _ = tme.build_binning_matrix_for_sources(net, sources_subset, array_name="probe1")
-csd_subset = tme.compute_csd_from_sources(B_subset, I_subset, V_bin_subset)
-csd_subset_ = csd_subset[:, 1:]
-
-T_subset = tme.build_transfer_resistance_matrix_for_sources(net, sources_subset, array_name="probe1")
-lfp_subset = tme.reconstruct_lfp_from_sources(T_subset, I_subset)
-lfp_subset_ = lfp_subset[:, 1:]
-
-vmax = np.max(np.abs(csd_subset_))
-fig = plott.plot_lfp_morph_csd(
-    times_, lfp_subset_, csd_subset_, contact_labels, net,
-    ext_inputs=net.cell_response,
-    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']},
-    scale_lfp=3.0,
-    voltage_scalebar=200,
-    vmin=-vmax,
-    vmax=vmax,
-    figsize=(18, 6),
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    overlay_raster_on_csd=True,
-    sink="r"
-)
-fig.suptitle("LFP/CSD from Na + K(hh2) + Ca(HVA) + K(M)")
-
-
-# Which subset of channels dominates, and how much of the ionic CSD pattern a smaller combination can reconstruct on its own?
-channel_names = ["ina_hh2", "ik_hh2", "ik_kca", "ik_km", "ica_ca", "ica_cat", "il_hh2", "i_ar"]
-
-csd_by_channel = {}
-for ch in channel_names:
-    sources_ch, I_ch = tme.collect_intrinsic_sources(
-        net, trial_idx=0,
-        cell_types=["L2_pyramidal", "L5_pyramidal"],
-        channels=[ch],
-    )
-    B_ch, V_bin_ch, _ = tme.build_binning_matrix_for_sources(net, sources_ch, array_name="probe1")
-    csd_ch = tme.compute_csd_from_sources(B_ch, I_ch, V_bin_ch)
-    csd_by_channel[ch] = csd_ch[:, 1:]  # drop first sample, matches times_
-
-# sanity check: summing all channels should reproduce the full ionic CSD
-csd_sum_check = sum(csd_by_channel.values())
-print("max |sum(channels) - ionic CSD| =", np.max(np.abs(csd_sum_check - csd_ionic_)))
-
-# Test whether a smaller subset of channels, summed with no fitting/weighting (coefficient 1,
-# same as the full decomposition), can still closely reproduce the full ionic CSD on its own.
-# R² = fraction of the ionic CSD's variance explained by that subset's unweighted sum.
-# max_err = worst-case absolute discrepancy (µA/mm³) between the subset's sum and the real ionic CSD.
-def check_subset(subset):
-    y_pred = sum(csd_by_channel[ch] for ch in subset)
-    diff = csd_ionic_ - y_pred
-    r2 = 1 - np.sum(diff**2) / np.sum((csd_ionic_ - csd_ionic_.mean())**2)
-    max_err = np.max(np.abs(diff))
-    return r2, max_err
-
-for subset in [["ina_hh2", "ik_hh2"], ["ina_hh2", "ik_hh2", "ik_kca", "ik_km"], ["ica_ca", "ica_cat"]]:
-    r2, max_err = check_subset(subset)
-    print(f"subset={subset}")
-    print(f"   R² = {r2:.4f}   max|error| = {max_err:.2f} µA/mm³")
-
-def check_subset_per_depth(subset):
-    y_pred = sum(csd_by_channel[ch] for ch in subset)
-    diff = csd_ionic_ - y_pred
-    ss_res = np.sum(diff**2, axis=1)  # sum over time, per depth bin
-    ss_tot = np.sum((csd_ionic_ - csd_ionic_.mean(axis=1, keepdims=True))**2, axis=1)
-    r2_per_depth = 1 - ss_res / ss_tot
-    return r2_per_depth  # one R² value per contact_labels depth
-
-
-
-
-
-####
-# check: is the sum of all the ionic and capacitive matching what we got before?
-####
-csd_cap_ion_ = csd_agg_i_cap_ + csd_ina_ + csd_ik_ + csd_ik_kca_ + csd_ik_km_ + csd_ica_ca_ + csd_ica_cat_ + csd_il_ + csd_i_ar_
-resid = csd_intr_ - csd_cap_ion_
-print(np.min(resid))
-print(np.max(resid))
-
-
-
-#################
-# WITHOUT APICAL OBLIQUE
-#################
-sources_agg, I_agg = tme.collect_intrinsic_sources(
-    net, trial_idx=0,
-    cell_types=["L2_pyramidal", "L5_pyramidal"],
-    channels=["agg_i_mem"],
-)
-
-keep_sections = {src.section for src in sources_agg} - {"apical_oblique"}
-
-sources_agg_no_oblique, I_agg_no_oblique = tme.filter_sources(
-    sources_agg, I_agg, sections=keep_sections
-)
-lfp_agg_no_oblique_, csd_agg_no_oblique_ = compute_lfp_csd_for_sources(net, sources_agg_no_oblique, I_agg_no_oblique)
-
-
-fig = plott.plot_lfp_morph_csd(
-    times_, 
-    lfp_agg_no_oblique_, 
-    csd_agg_no_oblique_, 
-    contact_labels, 
-    net, 
-    ext_inputs=net.cell_response, 
-    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']}, 
-    scale_lfp=3.0,
-    voltage_scalebar=200,
-    vmin=-60,
-    vmax=60,
-    figsize=(18, 6),
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    overlay_raster_on_csd=True,
-    sink="r")
-fig.suptitle("LFP/CSD from agg_i_mem, excluding apical obliques")
-
-
-
-
-
-sources_syn_no_oblique, I_syn_no_oblique = tme.filter_sources(
-    sources_syn, I_syn, sections=keep_sections
-)
-lfp_syn_no_oblique_, csd_syn_no_oblique_ = compute_lfp_csd_for_sources(net, sources_syn_no_oblique, I_syn_no_oblique)
-
-fig = plott.plot_lfp_morph_csd(
-    times_, 
-    lfp_syn_no_oblique_, 
-    csd_syn_no_oblique_, 
-    contact_labels, 
-    net, 
-    ext_inputs=net.cell_response, 
-    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']}, 
-    scale_lfp=3.0,
-    voltage_scalebar=200,
-    vmin=-60,
-    vmax=60,
-    figsize=(18, 6),
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="r")
-fig.suptitle("LFP/CSD synaptic, excluding apical obliques")
-
-
-
-
-sources_ion_no_oblique, I_ion_no_oblique = tme.filter_sources(
-    sources_ionic, I_ionic, sections=keep_sections
-)
-lfp_ion_no_oblique_, csd_ion_no_oblique_ = compute_lfp_csd_for_sources(net, sources_ion_no_oblique, I_ion_no_oblique)
-
-fig = plott.plot_lfp_morph_csd(
-    times_, 
-    lfp_ion_no_oblique_, 
-    csd_ion_no_oblique_, 
-    contact_labels, 
-    net, 
-    ext_inputs=net.cell_response, 
-    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']}, 
-    scale_lfp=3.0,
-    voltage_scalebar=200,
-    vmin=-60,
-    vmax=60,
-    figsize=(18, 6),
-    overlay_csd_traces=False,
-    unit_csd="µA/mm³",
-    sink="r")
-fig.suptitle("LFP/CSD ionic, excluding apical obliques")
-
-
-sources_cap_no_oblique, I_cap_no_oblique = tme.filter_sources(
-    sources_cap, I_cap, sections=keep_sections
-)
-lfp_cap_no_oblique_, csd_cap_no_oblique_ = compute_lfp_csd_for_sources(net, sources_cap_no_oblique, I_cap_no_oblique)
-
-fig = plott.plot_lfp_morph_csd(
-    times_, 
-    lfp_cap_no_oblique_, 
-    csd_cap_no_oblique_, 
-    contact_labels, 
-    net, 
-    ext_inputs=net.cell_response, 
-    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']}, 
-    scale_lfp=3.0,
-    voltage_scalebar=200,
-    vmin=-60,
-    vmax=60,
-    figsize=(18, 6),
-    overlay_csd_traces=False,
-    unit_csd="µA/mm³",
-    sink="r")
-fig.suptitle("LFP/CSD capacitive, excluding apical obliques")
-
-sources_ampa_no_oblique, I_ampa_no_oblique = tme.filter_sources(
-    sources_syn_ampa, I_syn_ampa, sections=keep_sections
-)
-lfp_ampa_no_oblique_, csd_ampa_no_oblique_ = compute_lfp_csd_for_sources(net, sources_ampa_no_oblique, I_ampa_no_oblique)
-
-sources_nmda_no_oblique, I_nmda_no_oblique = tme.filter_sources(
-    sources_syn_nmda, I_syn_nmda, sections=keep_sections
-)
-lfp_nmda_no_oblique_, csd_nmda_no_oblique_ = compute_lfp_csd_for_sources(net, sources_nmda_no_oblique, I_nmda_no_oblique)
-
-sources_gabaa_no_oblique, I_gabaa_no_oblique = tme.filter_sources(
-    sources_syn_gabaa, I_syn_gabaa, sections=keep_sections
-)
-lfp_gabaa_no_oblique_, csd_gabaa_no_oblique_ = compute_lfp_csd_for_sources(net, sources_gabaa_no_oblique, I_gabaa_no_oblique)
-
-sources_gabab_no_oblique, I_gabab_no_oblique = tme.filter_sources(
-    sources_syn_gabab, I_syn_gabab, sections=keep_sections
-)
-lfp_gabab_no_oblique_, csd_gabab_no_oblique_ = compute_lfp_csd_for_sources(net, sources_gabab_no_oblique, I_gabab_no_oblique)
-
-csd_reconstructed_no_oblique_ = csd_syn_no_oblique_ + csd_cap_no_oblique_ + csd_ion_no_oblique_
-csd_residual_no_oblique_ = csd_agg_no_oblique_ - csd_reconstructed_no_oblique_
-## this is basically the same error we get from the reconstruction taking into account all the sections
-
-#################
-# FIGURE panel for meetings:
-#############
-#directly from sources, not from LFP
-fig_all = plott.make_csd_contribution_summary_figure(
-    net, contact_labels, times_,
-    csd_agg_no_oblique_, csd_cap_no_oblique_, csd_ion_no_oblique_, csd_syn_no_oblique_,
-    csd_gabab_no_oblique_, csd_gabaa_no_oblique_, csd_ampa_no_oblique_, csd_nmda_no_oblique_,
-    vmax_row0=60, vmax_row1=10,
-    suptitle="Whole network - no apical obliques",
-)
-plt.show()
-
-
-
-
-##############################
-# Dividing spiking from non-spiking pyramidal cells and assess contributions to the CSD
-##############################
-
-pyr_gids = set(net.gid_ranges["L2_pyramidal"]) | set(net.gid_ranges["L5_pyramidal"])
-spike_gids_trial0 = set(np.asarray(net.cell_response.spike_gids[0]).tolist())
-
-spiking_gids = pyr_gids & spike_gids_trial0
-non_spiking_gids = pyr_gids - spiking_gids
-
-print(f"{len(spiking_gids)} spiking / {len(non_spiking_gids)} non-spiking (of {len(pyr_gids)} total)")
-#182 spiking / 18 non-spiking (of 200 total)
-
-def csd_for_subset(sources, I, gid_subset, array_name="probe1"):
-    sub_sources, sub_I = tme.filter_sources(sources, I, gid_subset=gid_subset)
-    B, V_bin, _ = tme.build_binning_matrix_for_sources(net, sub_sources, array_name=array_name)
-    return tme.compute_csd_from_sources(B, sub_I, V_bin)[:, 1:]
-
-source_pairs = {
-    "csd_from_sources_": (sources_agg,        I_agg),
-    "csd_cap_":          (sources_cap_,       I_cap_),
-    "csd_ionic_":        (sources_ionic_,     I_ionic_),
-    "csd_syn_":          (sources_syn,        I_syn),
-    "csd_syn_gabab_":    (sources_syn_gabab,  I_syn_gabab),
-    "csd_syn_gabaa_":    (sources_syn_gabaa,  I_syn_gabaa),
-    "csd_syn_ampa_":     (sources_syn_ampa,   I_syn_ampa),
-    "csd_syn_nmda_":     (sources_syn_nmda,   I_syn_nmda),
-}
-
-def csd_dict_for_subset(gid_subset):
-    return {
-        name: csd_for_subset(sources, I, gid_subset)
-        for name, (sources, I) in source_pairs.items()
-    }
-
-csd_spiking = csd_dict_for_subset(spiking_gids)
-csd_nonspiking = csd_dict_for_subset(non_spiking_gids) 
-# there's only one non-spiking L5 pyramidal cell (gid = 269)
-
-
-resid = csd_from_sources_ - (csd_spiking['csd_from_sources_'] + csd_nonspiking['csd_from_sources_'])
-print(np.max(resid))
-print(np.min(resid))
-
-
-fig_spiking = plott.make_csd_contribution_summary_figure(
-    net, contact_labels, times_,
-    csd_from_sources_=csd_spiking["csd_from_sources_"],
-    csd_cap_=csd_spiking["csd_cap_"],
-    csd_ionic_=csd_spiking["csd_ionic_"],
-    csd_syn_=csd_spiking["csd_syn_"],
-    csd_syn_gabab_=csd_spiking["csd_syn_gabab_"],
-    csd_syn_gabaa_=csd_spiking["csd_syn_gabaa_"],
-    csd_syn_ampa_=csd_spiking["csd_syn_ampa_"],
-    csd_syn_nmda_=csd_spiking["csd_syn_nmda_"],
-    vmax_row0=60, vmax_row1=10,
-    suptitle="Spiking pyramidal cells (182/200)",
-    cell_response=net.cell_response,
-    overlay_raster=False,
-)
-
-fig_nonspiking = plott.make_csd_contribution_summary_figure(
-    net, contact_labels, times_,
-    csd_from_sources_=csd_nonspiking["csd_from_sources_"],
-    csd_cap_=csd_nonspiking["csd_cap_"],
-    csd_ionic_=csd_nonspiking["csd_ionic_"],
-    csd_syn_=csd_nonspiking["csd_syn_"],
-    csd_syn_gabab_=csd_nonspiking["csd_syn_gabab_"],
-    csd_syn_gabaa_=csd_nonspiking["csd_syn_gabaa_"],
-    csd_syn_ampa_=csd_nonspiking["csd_syn_ampa_"],
-    csd_syn_nmda_=csd_nonspiking["csd_syn_nmda_"],
-    vmax_row0=20, vmax_row1=5,
-    suptitle="Non-spiking pyramidal cells (18/200)",
-)
-
-
-
-
-
-
-'''
-fig = plott.plot_lfp_morph_csd(
-    times_, 
-    lfp_cap_no_oblique_,  #### WRONG IN THIS CONTEXT
-    csd_ion_no_oblique_,
-    #csd_residual_no_oblique_, 
-    contact_labels, 
-    net, 
-    ext_inputs=net.cell_response, 
-    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']}, 
-    scale_lfp=3.0,
-    voltage_scalebar=200,
-    vmin=-60,
-    vmax=60,
-    figsize=(18, 6),
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="r")
-fig.suptitle("ionic")
-'''
-'''
-fig, axes = plt.subplots(1, 6, constrained_layout=True, figsize=(28, 4))
-
-plott.plot_cell_morphology_for_lfp_csd(
-    net,
-    contact_positions=contact_labels,
-    cell_types=('L2_pyramidal', 'L5_pyramidal'),
-    ax=axes[0],
-    show=False,
-)
-'''
-####
-
-#The following generates two figures to directly compare the full network
-# to the one with no apical obliques included in the lfp/csd calculation. 
-
-
-# ---- Full network ----
-fig, axes = plt.subplots(1, 6, constrained_layout=True, figsize=(28, 4),
-                         gridspec_kw={'width_ratios': [1, 1, 1, 1, 1, 0.25]})
-
-vmax_row0 = 60
-titles_row0 = ["Total (agg_i_mem)", "Capacitive", "Ionic", "Synaptic"]
-data_row0 = [csd_from_sources_, csd_cap_, csd_ionic_, csd_syn_]
-
-axes[0].set_title("Morphology")
-plott.plot_cell_morphology_for_lfp_csd(
-    net, contact_positions=contact_labels,
-    cell_types=('L2_pyramidal', 'L5_pyramidal'),
-    ax=axes[0], show=False,
-)
-
-for ax, data, title in zip(axes[1:5], data_row0, titles_row0):
-    plott.plot_laminar_csd_AC(
-        times_, data, contact_labels,
-        ax=ax, vmin=-vmax_row0, vmax=vmax_row0,
-        overlay_csd_traces=True,
-        unit_csd="µA/mm³",
-        sink="red",
-        colorbar=False,
-        show=False,
-    )
-    ax.set_title(title)
-    ax.set_xlabel('')
-    ax.set_ylabel('')
-
-axes[5].axis('off')
-cax = axes[5].inset_axes([0.35, 0.15, 0.06, 0.25])
-cbar = fig.colorbar(axes[1].collections[-1], cax=cax)
-cbar.set_label("CSD (µA/mm³)")
-
-fig.suptitle('full network')
-plt.show()
-
-
-# ---- No apical obliques ----
-fig, axes = plt.subplots(1, 6, constrained_layout=True, figsize=(28, 4),
-                                                  gridspec_kw={'width_ratios': [1, 1, 1, 1, 1, 0.25]})
-
-titles_row0 = ["Total (agg_i_mem)", "Capacitive", "Ionic", "Synaptic"]
-data_row0 = [csd_agg_no_oblique_, csd_cap_no_oblique_, csd_ion_no_oblique_, csd_syn_no_oblique_]
-
-axes[0].set_title("Morphology")
-plott.plot_cell_morphology_for_lfp_csd(
-    net, contact_positions=contact_labels,
-    cell_types=('L2_pyramidal', 'L5_pyramidal'),
-    ax=axes[0], show=False,
-)
-
-for ax, data, title in zip(axes[1:5], data_row0, titles_row0):
-    plott.plot_laminar_csd_AC(
-        times_, data, contact_labels,
-        ax=ax, vmin=-vmax_row0, vmax=vmax_row0,
-        overlay_csd_traces=True,
-        unit_csd="µA/mm³",
-        sink="red",
-        colorbar=False,
-        show=False,
-    )
-    ax.set_title(title)
-    ax.set_xlabel('')
-    ax.set_ylabel('')
-
-axes[5].axis('off')
-cax = axes[5].inset_axes([0.35, 0.15, 0.06, 0.25])
-cbar = fig.colorbar(axes[1].collections[-1], cax=cax)
-cbar.set_label("CSD (µA/mm³)")
-
-fig.suptitle('no apical obliques')
-plt.show()
-
-####
-
-
-
-fig_all = plott.make_csd_contribution_summary_figure(
-    net, contact_labels, times_,
-    csd_agg_no_oblique_, csd_cap_no_oblique_, csd_ion_no_oblique_, csd_syn_no_oblique_,
-    csd_gabab_no_oblique_, csd_gabaa_no_oblique_, csd_ampa_no_oblique_, csd_nmda_no_oblique_,
-    vmax_row0=60, vmax_row1=10,
-    suptitle="no apical oblique",
-)
-plt.show()
-
-
-
-csd_agg_from_apical_obliques = csd_from_sources_ - csd_agg_no_oblique_
-
-
-csd_agg_from_apical_obliques = csd_from_sources_ - csd_agg_no_oblique_
-
-fig = plott.plot_laminar_csd_AC(
-    times_,
-    csd_agg_from_apical_obliques,
-    contact_labels,
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="red",
-)
-fig.suptitle("CSD contribution from apical obliques (Total − no-oblique)")
-plt.show()
-
-csd_ion_from_apical_obliques = csd_ionic_ - csd_ion_no_oblique_
-
-fig = plott.plot_laminar_csd_AC(
-    times_,
-    csd_ion_from_apical_obliques,
-    contact_labels,
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="red",
-)
-fig.suptitle("Ionic CSD contribution from apical obliques")
-plt.show()
-
-csd_cap_from_apical_obliques = csd_cap_ - csd_cap_no_oblique_
-
-fig = plott.plot_laminar_csd_AC(
-    times_,
-    csd_cap_from_apical_obliques,
-    contact_labels,
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="red",
-)
-fig.suptitle("Capacitive CSD contribution from apical obliques")
-plt.show()
-
-
-csd_syn_from_apical_obliques = csd_syn_ - csd_syn_no_oblique_
-
-fig = plott.plot_laminar_csd_AC(
-    times_,
-    csd_syn_from_apical_obliques,
-    contact_labels,
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="red",
-)
-fig.suptitle("Synaptic CSD contribution from apical obliques")
-plt.show()
-
-
-
-
-# check if results match with keeping apical_oblique only
-keep_sections = {"apical_oblique"}
-
-sources_agg_only_oblique, I_agg_only_oblique = tme.filter_sources(
-    sources_agg, I_agg, sections=keep_sections
-)
-lfp_agg_only_oblique_, csd_agg_only_oblique_ = compute_lfp_csd_for_sources(net, sources_agg_only_oblique, I_agg_only_oblique)
-
-fig = plott.plot_laminar_csd_AC(
-    times_,
-    csd_agg_only_oblique_,
-    contact_labels,
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="red",
-)
-fig.suptitle("Synaptic CSD contribution from apical obliques (ground-truth)")
-plt.show()
-
-
-# Look at contributions from other sections
-for cell_type in ("L2_pyramidal", "L5_pyramidal"):
-    sections = net.cell_types[cell_type]["cell_object"].sections
-    print(cell_type, list(sections.keys()))
-
-#apical_trunk
-keep_sections = {"apical_trunk"}
-
-sources_agg_only_trunk, I_agg_only_trunk = tme.filter_sources(
-    sources_agg, I_agg, sections=keep_sections
-)
-lfp_agg_only_trunk_, csd_agg_only_trunk_ = compute_lfp_csd_for_sources(net, sources_agg_only_trunk, I_agg_only_trunk)
-
-fig = plott.plot_laminar_csd_AC(
-    times_,
-    csd_agg_only_trunk_,
-    contact_labels,
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="red",
-)
-fig.suptitle("CSD contribution from apical trunk")
-plt.show()
-
-# synaptic should be zero - and it is!
-sources_syn_only_trunk, I_syn_only_trunk = tme.filter_sources(
-    sources_syn, I_syn, sections=keep_sections
-)
-lfp_syn_only_trunk_, csd_syn_only_trunk_ = compute_lfp_csd_for_sources(net, sources_syn_only_trunk, I_syn_only_trunk)
-
-fig = plott.plot_laminar_csd_AC(
-    times_,
-    csd_syn_only_trunk_,
-    contact_labels,
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="red",
-)
-fig.suptitle("Synaptic CSD contribution from apical trunk")
-plt.show()
-
-# look at ionic currents from apical trunk
-sources_ionic_only_trunk, I_ionic_only_trunk = tme.filter_sources(
-    sources_ionic, I_ionic, sections=keep_sections
-)
-lfp_ionic_only_trunk_, csd_ionic_only_trunk_ = compute_lfp_csd_for_sources(net, sources_ionic_only_trunk, I_ionic_only_trunk)
-
-fig = plott.plot_laminar_csd_AC(
-    times_,
-    csd_ionic_only_trunk_,
-    contact_labels,
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="red",
-)
-fig.suptitle("Ionic CSD contribution from apical trunk")
-plt.show()
-
-
-sources_cap_only_trunk, I_cap_only_trunk = tme.filter_sources(
-    sources_cap, I_cap, sections=keep_sections
-)
-lfp_cap_only_trunk_, csd_cap_only_trunk_ = compute_lfp_csd_for_sources(net, sources_cap_only_trunk, I_cap_only_trunk)
-
-fig = plott.plot_laminar_csd_AC(
-    times_,
-    csd_cap_only_trunk_,
-    contact_labels,
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="red",
-)
-fig.suptitle("Capacitive CSD contribution from apical trunk")
-plt.show()
-
-
-# apical_1
-#apical_1
-keep_sections = {"apical_1"}
-
-sources_agg_only_apical1, I_agg_only_apical1 = tme.filter_sources(
-    sources_agg, I_agg, sections=keep_sections
-)
-lfp_agg_only_apical1_, csd_agg_only_apical1_ = compute_lfp_csd_for_sources(net, sources_agg_only_apical1, I_agg_only_apical1)
-
-fig = plott.plot_laminar_csd_AC(
-    times_,
-    csd_agg_only_apical1_,
-    contact_labels,
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="red",
-)
-fig.suptitle("CSD contribution from apical_1")
-plt.show()
-
-# synaptic should be zero - apical_1 isn't a proximal or distal drive target
-sources_syn_only_apical1, I_syn_only_apical1 = tme.filter_sources(
-    sources_syn, I_syn, sections=keep_sections
-)
-lfp_syn_only_apical1_, csd_syn_only_apical1_ = compute_lfp_csd_for_sources(net, sources_syn_only_apical1, I_syn_only_apical1)
-
-fig = plott.plot_laminar_csd_AC(
-    times_,
-    csd_syn_only_apical1_,
-    contact_labels,
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="red",
-)
-fig.suptitle("Synaptic CSD contribution from apical_1")
-plt.show()
-
-# look at ionic currents from apical_1
-sources_ionic_only_apical1, I_ionic_only_apical1 = tme.filter_sources(
-    sources_ionic, I_ionic, sections=keep_sections
-)
-lfp_ionic_only_apical1_, csd_ionic_only_apical1_ = compute_lfp_csd_for_sources(net, sources_ionic_only_apical1, I_ionic_only_apical1)
-
-fig = plott.plot_laminar_csd_AC(
-    times_,
-    csd_ionic_only_apical1_,
-    contact_labels,
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="red",
-)
-fig.suptitle("Ionic CSD contribution from apical_1")
-plt.show()
-
-
-sources_cap_only_apical1, I_cap_only_apical1 = tme.filter_sources(
-    sources_cap, I_cap, sections=keep_sections
-)
-lfp_cap_only_apical1_, csd_cap_only_apical1_ = compute_lfp_csd_for_sources(net, sources_cap_only_apical1, I_cap_only_apical1)
-
-fig = plott.plot_laminar_csd_AC(
-    times_,
-    csd_cap_only_apical1_,
-    contact_labels,
-    overlay_csd_traces=True,
-    unit_csd="µA/mm³",
-    sink="red",
-)
-fig.suptitle("Capacitive CSD contribution from apical_1")
-plt.show()
-
-
-
-
-
-
-######
