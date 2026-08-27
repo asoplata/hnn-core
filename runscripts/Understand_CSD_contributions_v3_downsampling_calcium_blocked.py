@@ -22,7 +22,7 @@ net = jones_2009_model()
 add_erp_drives_to_jones_model(net)
 net.set_cell_positions(inplane_distance=30.)
 #net.connectivity.clear() #<- clears everything, including drives
-net.clear_connectivity()  # this keeps drives, removes recurrent
+#net.clear_connectivity()  # this keeps drives, removes recurrent
 
 
 # Laminar probe
@@ -34,6 +34,19 @@ electrode_pos = [(135, 135, z) for z in depths]
 net.add_electrode_array('probe1', electrode_pos)
 
 n_trials = 1
+
+# Block calcium currents (both high-threshold 'ca' and T-type 'cat') in every
+# section of every L5 pyramidal cell, to test whether bursting depends on Ca.
+# Do this BEFORE simulate_dipole() — the NEURON cells are built from this
+# template at simulation time, so it must happen while net is still fresh.
+
+l5pyr_template = net.cell_types["L5_pyramidal"]["cell_object"]
+for sec_name, sec in l5pyr_template.sections.items():
+    for mech in ("ca", "cat"):
+        if mech in sec.mechs:
+            del sec.mechs[mech]
+            print(f"Removed '{mech}' from L5_pyramidal section '{sec_name}'")
+
 
 if "dpls" not in locals():
     with JoblibBackend(1):
@@ -116,7 +129,9 @@ results = {
 }
 #with open("runscripts/data/sim_results_dt0025.pkl", "wb") as f:
 #with open("runscripts/data/sim_results_dt000625.pkl", "wb") as f:
-with open("runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_norecconn.pkl", "wb") as f:
+#with open("runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_norecconn.pkl", "wb") as f:
+#with open("runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_norecconn_calcium_blocked.pkl", "wb") as f:
+with open("runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_calcium_blocked.pkl", "wb") as f:
     pickle.dump(results, f)
 
 print(results.keys())

@@ -790,7 +790,23 @@ fig_all = plott.make_csd_contribution_summary_figure(
 )
 plt.show()
 
+# slab (electrode-bin) boundaries, same convention used elsewhere in this script
+z_edges = tme._z_edges_from_array(net, "probe1")
 
+fig_all = plott.make_csd_contribution_summary_figure(
+    net, contact_labels, times_,
+    csd_from_sources_, csd_cap_, csd_ionic_, csd_syn_,
+    csd_syn_gabab_, csd_syn_gabaa_, csd_syn_ampa_, csd_syn_nmda_,
+    vmax_row0=60, vmax_row1=10,
+    suptitle="Whole network (all pyramidal cells) - from sources",
+)
+
+# overlay slab boundaries only on the morphology panel
+ax_morph = next(ax for ax in fig_all.axes if ax.get_title() == "Morphology")
+for z in z_edges:
+    ax_morph.axhline(z, color='red', alpha=0.4, lw=1)
+
+plt.show()
 
 ##################
 # TO plot the contributions to the CSD from specific ionic currents
@@ -910,9 +926,6 @@ fig = plott.plot_lfp_morph_csd(
 fig.suptitle("LFP/CSD from Na + K(hh2) + Ca(HVA) + K(M)")
 
 
-# ============================================================
-# Generic helpers: build any combination, score it, plot it
-# ============================================================
 
 # Which subset of channels dominates, and how much of the ionic CSD pattern a smaller combination can reconstruct on its own?
 channel_names = ["ina_hh2", "ik_hh2", "ik_kca", "ik_km", "ica_ca", "ica_cat", "il_hh2", "i_ar"]
@@ -1064,14 +1077,7 @@ def plot_residual_csd(csd_pred, target, title, vmin=None, vmax=None):
     plt.show()
 
 
-
-
-# The next part is about undestanding which currents are most important for reconstructing i) the ionic CSD and ii) the full CSD.
-
-
-# ============================================================
-# Define current groups
-# ============================================================
+### Let's now test all the subsets of ionic currents to see which ones are most important for reconstructing the ionic CSD 
 
 all_ionic = [
     "ina_hh2",
@@ -1083,6 +1089,69 @@ all_ionic = [
     "il_hh2",
     "i_ar",
 ]
+
+from itertools import combinations
+
+ionic_candidates = [
+    list(combo)
+    for r in range(1, len(all_ionic) + 1)
+    for combo in combinations(all_ionic, r)
+]
+
+results = []
+
+for subset in ionic_candidates:
+    _, csd_pred = combined_lfp_csd(subset)
+
+    residual = csd_ionic_ - csd_pred
+
+    ss_res = np.sum(residual ** 2)
+    ss_tot = np.sum((csd_ionic_ - np.mean(csd_ionic_)) ** 2)
+
+    r2 = 1 - ss_res / ss_tot
+    rmse = np.sqrt(np.mean(residual ** 2))
+    rel_residual = (
+        np.linalg.norm(residual)
+        / np.linalg.norm(csd_ionic_)
+    )
+
+    results.append({
+        "subset": subset,
+        "n_currents": len(subset),
+        "r2": r2,
+        "rmse": rmse,
+        "relative_residual": rel_residual,
+    })
+
+
+for n in range(1, len(all_ionic) + 1):
+    candidates_n = [
+        result for result in results
+        if result["n_currents"] == n
+    ]
+
+    best = min(
+        candidates_n,
+        key=lambda x: x["relative_residual"]
+    )
+
+    print(
+        f'n={n} | '
+        f'R²={best["r2"]:.4f} | '
+        f'RMSE={best["rmse"]:.4f} | '
+        f'RelRes={best["relative_residual"]:.4f} | '
+        f'{best["subset"]}'
+    )
+
+
+# The next part is about undestanding which currents are most important for reconstructing i) the ionic CSD and ii) the full CSD.
+
+
+# ============================================================
+# Define current groups
+# ============================================================
+
+
 
 selected_ionic = [
     "ina_hh2",
@@ -1324,7 +1393,7 @@ plt.title("Reconstruction R² by depth")
 plt.legend()
 plt.show()
 
-### UP TO HER
+### UP TO HERE
 
 '''
 # Which subset of channels dominates, and how much of the ionic CSD pattern a smaller combination can reconstruct on its own?
@@ -1599,6 +1668,130 @@ csd_reconstructed_no_oblique_ = csd_syn_no_oblique_ + csd_cap_no_oblique_ + csd_
 csd_residual_no_oblique_ = csd_agg_no_oblique_ - csd_reconstructed_no_oblique_
 ## this is basically the same error we get from the reconstruction taking into account all the sections
 
+# no apical trunk
+sources_agg, I_agg = tme.collect_intrinsic_sources(
+    net, trial_idx=0,
+    cell_types=["L2_pyramidal", "L5_pyramidal"],
+    channels=["agg_i_mem"],
+)
+
+keep_sections = {src.section for src in sources_agg} - {"apical_trunk"}
+
+sources_agg_no_trunk, I_agg_no_trunk = tme.filter_sources(
+    sources_agg, I_agg, sections=keep_sections
+)
+lfp_agg_no_trunk_, csd_agg_no_trunk_ = compute_lfp_csd_from_sources(net, sources_agg_no_trunk, I_agg_no_trunk)
+
+sources_syn_no_trunk, I_syn_no_trunk = tme.filter_sources(
+    sources_syn, I_syn, sections=keep_sections
+)
+lfp_syn_no_trunk_, csd_syn_no_trunk_ = compute_lfp_csd_from_sources(net, sources_syn_no_trunk, I_syn_no_trunk)
+
+sources_ion_no_trunk, I_ion_no_trunk = tme.filter_sources(
+    sources_ionic, I_ionic, sections=keep_sections
+)
+lfp_ion_no_trunk_, csd_ion_no_trunk_ = compute_lfp_csd_from_sources(net, sources_ion_no_trunk, I_ion_no_trunk)
+
+# no apical_1
+sources_agg, I_agg = tme.collect_intrinsic_sources(
+    net, trial_idx=0,
+    cell_types=["L2_pyramidal", "L5_pyramidal"],
+    channels=["agg_i_mem"],
+)
+
+keep_sections = {src.section for src in sources_agg} - {"apical_1"}
+
+sources_agg_no_apical1, I_agg_no_apical1 = tme.filter_sources(
+    sources_agg, I_agg, sections=keep_sections
+)
+lfp_agg_no_apical1_, csd_agg_no_apical1_ = compute_lfp_csd_from_sources(net, sources_agg_no_apical1, I_agg_no_apical1)
+
+sources_syn_no_apical1, I_syn_no_apical1 = tme.filter_sources(
+    sources_syn, I_syn, sections=keep_sections
+)
+lfp_syn_no_apical1_, csd_syn_no_apical1_ = compute_lfp_csd_from_sources(net, sources_syn_no_apical1, I_syn_no_apical1)
+
+# no apical_1
+sources_ion_no_apical1, I_ion_no_apical1 = tme.filter_sources(
+    sources_ionic, I_ionic, sections=keep_sections
+)
+lfp_ion_no_apical1_, csd_ion_no_apical1_ = compute_lfp_csd_from_sources(net, sources_ion_no_apical1, I_ion_no_apical1)
+
+def plot_full_vs_excluded_comparison(
+    net, contact_labels, times_,
+    csd_total_full, csd_ionic_full,
+    csd_total_excl, csd_ionic_excl,
+    exclude_label,     # e.g. "no apical oblique", "no apical trunk", "no apical_1"
+    vmax=60,
+    gid=None,
+):
+    """2x3 figure: Morphology | Total (full vs. excluded) | Ionic (full vs. excluded)."""
+    fig, axes = plt.subplots(2, 3, figsize=(10, 8), constrained_layout=True)
+
+    row_specs = [
+        ("Total (agg_i_mem)", csd_total_full, csd_total_excl),
+        ("Ionic", csd_ionic_full, csd_ionic_excl),
+    ]
+
+    for row, (label, data_full, data_excl) in enumerate(row_specs):
+        plott.plot_cell_morphology_for_lfp_csd(
+            net,
+            contact_positions=contact_labels,
+            cell_types=('L2_pyramidal', 'L5_pyramidal'),
+            gid=gid,
+            ax=axes[row, 0],
+            show=False,
+        )
+
+        for col, (data, suffix) in enumerate(
+            [(data_full, "full network"), (data_excl, exclude_label)], start=1
+        ):
+            plott.plot_laminar_csd_AC(
+                times_, data, contact_labels,
+                ax=axes[row, col], vmin=-vmax, vmax=vmax,
+                overlay_csd_traces=True,
+                unit_csd="µA/mm³",
+                sink="red",
+                colorbar=True,
+                show=False,
+            )
+            axes[row, col].set_title(f"{label} — {suffix}")
+
+    fig.suptitle(f"Full network vs. {exclude_label} — Total & Ionic")
+    return fig
+
+
+# ---- No apical oblique ----
+fig_oblique = plot_full_vs_excluded_comparison(
+    net, contact_labels, times_,
+    csd_from_sources_, csd_ionic_,
+    csd_agg_no_oblique_, csd_ion_no_oblique_,
+    exclude_label="no apical oblique",
+)
+plt.show()
+
+# ---- No apical trunk ----
+fig_trunk = plot_full_vs_excluded_comparison(
+    net, contact_labels, times_,
+    csd_from_sources_, csd_ionic_,
+    csd_agg_no_trunk_, csd_ion_no_trunk_,
+    exclude_label="no apical trunk",
+)
+plt.show()
+
+# ---- No apical_1 ----
+fig_apical1 = plot_full_vs_excluded_comparison(
+    net, contact_labels, times_,
+    csd_from_sources_, csd_ionic_,
+    csd_agg_no_apical1_, csd_ion_no_apical1_,
+    exclude_label="no apical_1",
+)
+plt.show()
+
+
+
+
+
 #################
 # FIGURE panel for meetings:
 #############
@@ -1649,6 +1842,181 @@ ax.set_title("Ionic CSD: full network - no apical oblique", fontsize=11)
 ax.tick_params(axis='both', labelsize=8)
 
 plt.show()
+
+
+#################
+# WITHOUT APICAL TRUNK
+#################
+sources_agg, I_agg = tme.collect_intrinsic_sources(
+    net, trial_idx=0,
+    cell_types=["L2_pyramidal", "L5_pyramidal"],
+    channels=["agg_i_mem"],
+)
+
+keep_sections = {src.section for src in sources_agg} - {"apical_trunk"}
+
+sources_agg_no_trunk, I_agg_no_trunk = tme.filter_sources(
+    sources_agg, I_agg, sections=keep_sections
+)
+lfp_agg_no_trunk_, csd_agg_no_trunk_ = compute_lfp_csd_from_sources(net, sources_agg_no_trunk, I_agg_no_trunk)
+
+
+fig = plott.plot_lfp_morph_csd(
+    times_, 
+    lfp_agg_no_trunk_, 
+    csd_agg_no_trunk_, 
+    contact_labels, 
+    net, 
+    ext_inputs=net.cell_response, 
+    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']}, 
+    scale_lfp=3.0,
+    voltage_scalebar=200,
+    vmin=-60,
+    vmax=60,
+    figsize=(18, 6),
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    overlay_raster_on_csd=True,
+    sink="r")
+fig.suptitle("LFP/CSD from agg_i_mem, excluding apical trunk")
+
+
+
+
+
+sources_syn_no_trunk, I_syn_no_trunk = tme.filter_sources(
+    sources_syn, I_syn, sections=keep_sections
+)
+lfp_syn_no_trunk_, csd_syn_no_trunk_ = compute_lfp_csd_from_sources(net, sources_syn_no_trunk, I_syn_no_trunk)
+
+fig = plott.plot_lfp_morph_csd(
+    times_, 
+    lfp_syn_no_trunk_, 
+    csd_syn_no_trunk_, 
+    contact_labels, 
+    net, 
+    ext_inputs=net.cell_response, 
+    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']}, 
+    scale_lfp=3.0,
+    voltage_scalebar=200,
+    vmin=-60,
+    vmax=60,
+    figsize=(18, 6),
+    overlay_csd_traces=True,
+    unit_csd="µA/mm³",
+    sink="r")
+fig.suptitle("LFP/CSD synaptic, excluding apical trunk")
+
+
+
+
+sources_ion_no_trunk, I_ion_no_trunk = tme.filter_sources(
+    sources_ionic, I_ionic, sections=keep_sections
+)
+lfp_ion_no_trunk_, csd_ion_no_trunk_ = compute_lfp_csd_from_sources(net, sources_ion_no_trunk, I_ion_no_trunk)
+
+fig = plott.plot_lfp_morph_csd(
+    times_, 
+    lfp_ion_no_trunk_, 
+    csd_ion_no_trunk_, 
+    contact_labels, 
+    net, 
+    ext_inputs=net.cell_response, 
+    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']}, 
+    scale_lfp=3.0,
+    voltage_scalebar=200,
+    vmin=-60,
+    vmax=60,
+    figsize=(18, 6),
+    overlay_csd_traces=False,
+    unit_csd="µA/mm³",
+    sink="r")
+fig.suptitle("LFP/CSD ionic, excluding apical trunk")
+
+
+sources_cap_no_trunk, I_cap_no_trunk = tme.filter_sources(
+    sources_cap, I_cap, sections=keep_sections
+)
+lfp_cap_no_trunk_, csd_cap_no_trunk_ = compute_lfp_csd_from_sources(net, sources_cap_no_trunk, I_cap_no_trunk)
+
+fig = plott.plot_lfp_morph_csd(
+    times_, 
+    lfp_cap_no_trunk_, 
+    csd_cap_no_trunk_, 
+    contact_labels, 
+    net, 
+    ext_inputs=net.cell_response, 
+    spike_types={'Distal': ['evdist'], 'Proximal': ['evprox']}, 
+    scale_lfp=3.0,
+    voltage_scalebar=200,
+    vmin=-60,
+    vmax=60,
+    figsize=(18, 6),
+    overlay_csd_traces=False,
+    unit_csd="µA/mm³",
+    sink="r")
+fig.suptitle("LFP/CSD capacitive, excluding apical trunk")
+
+sources_ampa_no_trunk, I_ampa_no_trunk = tme.filter_sources(
+    sources_syn_ampa, I_syn_ampa, sections=keep_sections
+)
+lfp_ampa_no_trunk_, csd_ampa_no_trunk_ = compute_lfp_csd_from_sources(net, sources_ampa_no_trunk, I_ampa_no_trunk)
+
+sources_nmda_no_trunk, I_nmda_no_trunk = tme.filter_sources(
+    sources_syn_nmda, I_syn_nmda, sections=keep_sections
+)
+lfp_nmda_no_trunk_, csd_nmda_no_trunk_ = compute_lfp_csd_from_sources(net, sources_nmda_no_trunk, I_nmda_no_trunk)
+
+sources_gabaa_no_trunk, I_gabaa_no_trunk = tme.filter_sources(
+    sources_syn_gabaa, I_syn_gabaa, sections=keep_sections
+)
+lfp_gabaa_no_trunk_, csd_gabaa_no_trunk_ = compute_lfp_csd_from_sources(net, sources_gabaa_no_trunk, I_gabaa_no_trunk)
+
+sources_gabab_no_trunk, I_gabab_no_trunk = tme.filter_sources(
+    sources_syn_gabab, I_syn_gabab, sections=keep_sections
+)
+lfp_gabab_no_trunk_, csd_gabab_no_trunk_ = compute_lfp_csd_from_sources(net, sources_gabab_no_trunk, I_gabab_no_trunk)
+
+csd_reconstructed_no_trunk_ = csd_syn_no_trunk_ + csd_cap_no_trunk_ + csd_ion_no_trunk_
+csd_residual_no_trunk_ = csd_agg_no_trunk_ - csd_reconstructed_no_trunk_
+## this is basically the same error we get from the reconstruction taking into account all the sections
+
+#################
+# FIGURE panel for meetings:
+#############
+#directly from sources, not from LFP
+fig_all = plott.make_csd_contribution_summary_figure(
+    net, contact_labels, times_,
+    csd_agg_no_trunk_, csd_cap_no_trunk_, csd_ion_no_trunk_, csd_syn_no_trunk_,
+    csd_gabab_no_trunk_, csd_gabaa_no_trunk_, csd_ampa_no_trunk_, csd_nmda_no_trunk_,
+    vmax_row0=60, vmax_row1=10,
+    suptitle="Whole network - no apical trunk",
+)
+plt.show()
+
+
+
+csd_ionic_diff_ = csd_ionic_ - csd_ion_no_trunk_
+
+vmax_diff = np.max(np.abs(csd_ionic_diff_))
+scale_csd_traces_diff = 0.5 * np.diff(contact_labels)[0] / vmax_diff
+
+fig, ax = plt.subplots(1, 1, figsize=(6, 5), constrained_layout=True)
+
+plott.plot_laminar_csd_AC(
+    times_, csd_ionic_diff_, contact_labels,
+    ax=ax, vmin=-vmax_diff, vmax=vmax_diff,
+    overlay_csd_traces=True, scale_csd_traces=scale_csd_traces_diff,
+    unit_csd="µA/mm³", sink="red", show=False,
+)
+ax.set_title("Ionic CSD: full network - no apical trunk", fontsize=11)
+ax.tick_params(axis='both', labelsize=8)
+
+plt.show()
+
+
+
+
 
 ##############################
 # Dividing spiking from non-spiking pyramidal cells and assess contributions to the CSD

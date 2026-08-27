@@ -32,8 +32,10 @@ l5_component_channels = [
 # load from here:
 #with open('runscripts/data/sim_results_dt0025.pkl', 'rb') as f:
 #with open('runscripts/data/sim_results_dt000625.pkl', 'rb') as f: #from -625 up
-with open('runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc.pkl', 'rb') as f: #from -550 up
+#with open('runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc.pkl', 'rb') as f: #from -550 up
 #with open('runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_norecconn.pkl', 'rb') as f: #from -550 up
+#with open('runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_norecconn_calcium_blocked.pkl', 'rb') as f: #from -550 up
+with open('runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_calcium_blocked.pkl', 'rb') as f: #from -550 up    
     results = pickle.load(f)
 # to run simulation: use Undestand_CSD_contributions_v3.py
 
@@ -936,8 +938,6 @@ sources_agg, I_agg = tme.collect_intrinsic_sources(
 sources_agg_cell, I_agg_cell = tme.filter_sources(sources_agg, I_agg, gid_subset=[example_gid])
 
 
-# PARENTHESIS MOVIE OPENS HERE (we want to understand if sinks/sources distribute as in Einevoll's paper)
-# this should be used in a network with no recurrent connectivity
 
 I_agg_cell_sum_seg = np.sum(I_agg_cell, axis=0)
 plt.figure()
@@ -965,6 +965,10 @@ csd_agg_cell_ = csd_for_cell(sources_agg_cell, I_agg_cell)
 csd_ionic_cell_ = csd_for_cell(sources_ionic_cell, I_ionic_cell)
 csd_syn_cell_ = csd_for_cell(sources_syn_cell, I_syn_cell)
 # csd_cap_cell_ was already computed earlier
+
+# PARENTHESIS MOVIE OPENS HERE (we want to understand if sinks/sources distribute as in Einevoll's paper)
+# this should be used in a network with no recurrent connectivity
+
 
 # slab (electrode-bin) boundaries used by build_binning_matrix_for_sources
 z_edges = tme._z_edges_from_array(net, "probe1")
@@ -1427,7 +1431,7 @@ def zero_crossings(trace, times, threshold=0.0, direction='rising'):
         raise ValueError("direction must be 'rising' or 'falling'")
     return times[idx + 1]
 
-sections_to_plot = ['apical_tuft', 'apical_oblique', 'soma', 'basal_2']
+sections_to_plot = ['apical_tuft', 'apical_oblique', 'basal_2', 'soma']
 
 def make_syn_vm_figure(xlim=None):
     fig, axes = plt.subplots(len(sections_to_plot), 1, figsize=(10, 8),
@@ -1500,7 +1504,7 @@ def zero_crossings(trace, times, threshold=0.0, direction='rising'):
         raise ValueError("direction must be 'rising' or 'falling'")
     return times[idx + 1]
 
-sections_to_plot = ['apical_tuft', 'apical_oblique', 'soma', 'basal_2']
+sections_to_plot = ['apical_tuft', 'apical_oblique', 'basal_2', 'soma']
 
 def make_syn_vm_figure(xlim=None):
     fig, axes = plt.subplots(len(sections_to_plot), 1, figsize=(10, 8),
