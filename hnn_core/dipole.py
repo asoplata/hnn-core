@@ -883,7 +883,7 @@ class Dipole(object):
         )
 
     def _baseline_renormalize_dueckerET(self):
-        """Baseline correction based on calcium model without drives"""
+        """Baseline correction based on Duecker model without drives"""
 
         hnn_core_root = Path(hnn_core.__file__).parent
         # load the baseline dipole

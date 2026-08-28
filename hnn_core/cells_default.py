@@ -19,8 +19,6 @@ from .params_default import (
 # Units for gbar: S/cm^2 unless otherwise noted
 # units for taur: ms
 
-"""KD: comment: initialize membrane potential here as it's not overridden by h.finitialize unless called as h.finitialize(-65)"""
-
 
 def _get_dends(
     params,

@@ -455,7 +455,8 @@ def test_mpi_failure(run_hnn_core_fixture):
 
 @pytest.mark.uses_mpi
 @pytest.mark.duecker
-# DEBUG, currently only uses MPI
+# TODO currently only tests against MPI, but expanded Duecker model testing will happen
+# in a new fresh PR.
 # @pytest.mark.parametrize("backend", ["mpi", "joblib"])
 def test_compare_duecker_model_output():
     """Test that the Duecker model dipole output does not change"""
