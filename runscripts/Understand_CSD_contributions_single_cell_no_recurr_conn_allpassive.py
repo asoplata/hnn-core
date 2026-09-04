@@ -7,6 +7,7 @@ import postproc_tm_currents_dipole_lfp_csd as tme
 from hnn_core.extracellular import calculate_csd2d
 import Plotting_tools as plott
 import matplotlib.pyplot as plt
+import os
 
 from hnn_core import (
     JoblibBackend,
@@ -28,16 +29,37 @@ l5_component_channels = [
     "il_hh2",
     "i_ar",
 ]
-
+'''
 # load from here:
 #with open('runscripts/data/sim_results_dt0025.pkl', 'rb') as f:
 #with open('runscripts/data/sim_results_dt000625.pkl', 'rb') as f: #from -625 up
 #with open('runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc.pkl', 'rb') as f: #from -550 up
-with open('runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_norecconn.pkl', 'rb') as f: #from -550 up
+#with open('runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_norecconn.pkl', 'rb') as f: #from -550 up
 #with open('runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_norecconn_calcium_blocked.pkl', 'rb') as f: #from -550 up
 #with open('runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_calcium_blocked.pkl', 'rb') as f: #from -550 up    
+
+#with open('runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_noreccon_allpassive.pkl', 'rb') as f: #from -550 up
+with open('runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_noreccon_allpassive_excsoma.pkl', 'rb') as f: #from -550 up
     results = pickle.load(f)
 # to run simulation: use Undestand_CSD_contributions_v3.py
+'''
+
+#pkl_path = 'runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_norecconn_all_passive_excsoma.pkl'
+#pkl_path = 'runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_norecconn_all_passive.pkl'
+pkl_path = 'runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_norecconn.pkl'
+#pkl_path = 'runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_noreccon_allpassive_newprobe.pkl'
+#pkl_path = 'runscripts/data/sim_results_dt000625_withmembranepot_newelect_calc_noreccon_allpassive_newprobe2.pkl'
+
+
+with open(pkl_path, 'rb') as f:
+    results = pickle.load(f)
+
+run_tag = os.path.splitext(os.path.basename(pkl_path))[0].replace(
+    "sim_results_dt000625_withmembranepot_newelect_calc_", ""
+)
+
+FIGURES_DIR = "/Users/annacattani/Documents/HNN/hnn-core/runscripts/Figures"
+os.makedirs(FIGURES_DIR, exist_ok=True)
 
 dpl = results['dpl']
 net = results['net']
@@ -323,7 +345,7 @@ fig1.suptitle("LFP/CSD from synaptic currents (2nd derivative of LFP)")
 # --- CSD directly from synaptic current sources ---
 vmax_syn = np.max(np.abs(csd_syn_))
 scale_csd_syn = 0.5 * np.diff(contact_labels)[0] / vmax_syn
-
+'''
 fig2 = plott.plot_lfp_morph_csd(
     times_,
     lfp_syn_,
@@ -343,7 +365,7 @@ fig2 = plott.plot_lfp_morph_csd(
     overlay_raster_on_csd=True,
     sink="red")
 fig2.suptitle("LFP/CSD from synaptic currents (compute_csd_from_sources)")
-
+'''
 #
 # From capacitive currents only
 #
@@ -889,11 +911,15 @@ plott.plot_cell_morphology_for_lfp_csd(
     show=False,
 )
 
+vmax_cap = np.percentile(np.abs(csd_cap_cell_), 99)
+
 plott.plot_laminar_csd_AC(
     times_,
     csd_cap_cell_,
     contact_labels,
     ax=ax,
+    vmin=-vmax_cap,
+    vmax=vmax_cap,
     overlay_csd_traces=True,
     unit_csd="µA/mm³",
     sink="red",
@@ -921,6 +947,7 @@ ax_vm.set_xlabel("Time (ms)")
 ax_vm.set_ylabel("Vm (mV)")
 ax_vm.set_title("Somatic membrane potential")
 
+fig.savefig(os.path.join(FIGURES_DIR, f"capacitive_csd_vm_{run_tag}.png"), dpi=150)
 plt.show()
 
 # --- total, capacitive, ionic, synaptic CSD for this single cell ---
@@ -966,18 +993,58 @@ csd_ionic_cell_ = csd_for_cell(sources_ionic_cell, I_ionic_cell)
 csd_syn_cell_ = csd_for_cell(sources_syn_cell, I_syn_cell)
 # csd_cap_cell_ was already computed earlier
 
+# --- LFP, zoomed into the windows around this cell's external-drive inputs ---
+# (same per-gid windows used elsewhere in this script for the CSD/calcium trace figures)
+if example_gid == 226:
+    lfp_windows = [(25, 50), (60, 85), (130, 155)]
+elif example_gid == 207:
+    lfp_windows = [(60, 85), (135, 160)]
+else:
+    lfp_windows = [(times_[0], times_[-1])]  # fall back to the full trace
+
+T_agg_cell = tme.build_transfer_resistance_matrix_for_sources(
+    net, sources_agg_cell, array_name="probe1",
+)
+lfp_agg_cell = tme.reconstruct_lfp_from_sources(T_agg_cell, I_agg_cell)
+lfp_agg_cell_ = lfp_agg_cell[:, 1:]  # drop first sample, matches times_
+
 
 
 # slab (electrode-bin) boundaries used by build_binning_matrix_for_sources
 z_edges = tme._z_edges_from_array(net, "probe1")
 
-fig = plt.figure(figsize=(18, 6), constrained_layout=True)
-gs = fig.add_gridspec(1, 5, width_ratios=[1, 4, 4, 4, 4])
+fig = plt.figure(figsize=(18, 8), constrained_layout=True)
+gs = fig.add_gridspec(2, 5, width_ratios=[1, 4, 4, 4, 4], height_ratios=[2.5, 2])
 ax_morph = fig.add_subplot(gs[0, 0])
 ax_total = fig.add_subplot(gs[0, 1])
 ax_cap = fig.add_subplot(gs[0, 2])
 ax_ionic = fig.add_subplot(gs[0, 3])
 ax_syn = fig.add_subplot(gs[0, 4])
+
+gs_lfp = gs[1, :].subgridspec(1, len(lfp_windows))
+axes_lfp = [fig.add_subplot(gs_lfp[0, j]) for j in range(len(lfp_windows))]
+for i, (ax_lfp, (t0, t1)) in enumerate(zip(axes_lfp, lfp_windows)):
+    plott.plot_laminar_lfp_AC(
+        times_, lfp_agg_cell_, contact_labels,
+        ax=ax_lfp, scale=10.0, voltage_scalebar=None, show=False,
+    )
+    ax_r_lfp = ax_lfp.figure.axes[-1]  # the twinx "HNN z" axis the function just created
+
+    # thin out the depth tick labels -- one per contact is unreadable in a short panel
+    tick_step = 4
+    for a in (ax_lfp, ax_r_lfp):
+        yt = a.get_yticks()
+        ytl = [t.get_text() for t in a.get_yticklabels()]
+        a.set_yticks(yt[::tick_step])
+        a.set_yticklabels(ytl[::tick_step])
+
+    ax_lfp.set_xlim(t0, t1)
+    ax_lfp.set_title(f"LFP, t = {t0}-{t1} ms", fontsize=9)
+    if i > 0:
+        ax_lfp.set_ylabel('')
+        ax_lfp.tick_params(axis='y', labelleft=False)
+        ax_r_lfp.set_ylabel('')
+        ax_r_lfp.set_yticklabels([])
 
 plott.plot_cell_morphology_for_lfp_csd(
     net, contact_positions=contact_labels,
@@ -992,8 +1059,13 @@ panels = [
     (ax_syn, csd_syn_cell_, "Synaptic"),
 ]
 
+vmax_panels = np.percentile(
+    np.abs(np.concatenate([csd_agg_cell_, csd_cap_cell_, csd_ionic_cell_, csd_syn_cell_])),
+    99,
+)
+
 for i, (ax, csd_, title) in enumerate(panels):
-    vmax = 1
+    vmax = vmax_panels
     plott.plot_laminar_csd_AC(
         times_, csd_, contact_labels,
         ax=ax, vmin=-vmax, vmax=vmax,
@@ -1009,6 +1081,202 @@ for ax in (ax_morph, ax_total, ax_cap, ax_ionic, ax_syn):
         ax.axhline(z, color='red', alpha=0.2, lw=1)
 
 fig.suptitle(f"gid={example_gid}", fontsize=11)
+fig.savefig(os.path.join(FIGURES_DIR, f"csd_panels_total_cap_ionic_syn_{run_tag}.png"), dpi=150)
+plt.show()
+
+
+# --- Standalone figure: this cell's LFP as seen by the close probe (probe2) ---
+array_name = "probe2"
+
+# contact z-positions for probe2 (same z-grid as probe1 if you reused `depths` for z)
+contact_pos2 = np.array(net.rec_arrays[array_name].positions)
+depths2 = contact_pos2[:, 2]
+contact_labels2 = np.asarray(depths2, dtype=int)
+
+# forward-reconstruct this cell's LFP contribution onto probe2
+T_agg_cell2 = tme.build_transfer_resistance_matrix_for_sources(
+    net, sources_agg_cell, array_name=array_name,
+)
+lfp_agg_cell2 = tme.reconstruct_lfp_from_sources(T_agg_cell2, I_agg_cell)
+lfp_agg_cell2_ = lfp_agg_cell2[:, 1:]  # drop first sample, matches times_
+
+# --- locate the external-drive synapses on this cell, for the morphology panel ---
+gid = example_gid
+cell_type = 'L5_pyramidal'
+template = net.cell_types[cell_type]['cell_object']
+sect_loc = template.sect_loc  # e.g. {'proximal': [...], 'distal': [...]}
+
+soma_pos = np.asarray(net.pos_dict[cell_type][gid - net.gid_ranges[cell_type][0]], dtype=float)
+x_off = soma_pos[0]  # matches center_x=True inside _draw_cell_morphology
+
+drive_names = set(net.external_drives.keys())
+syn_sections = set()
+for conn in net.connectivity:
+    if conn['target_type'] != cell_type:
+        continue
+    if conn['src_type'] not in drive_names:
+        continue
+    targets = set()
+    for tgt_list in conn['gid_pairs'].values():
+        targets.update(tgt_list)
+    if gid not in targets:
+        continue
+    loc = conn['loc']  # 'proximal' or 'distal'
+    syn_sections.update(sect_loc[loc])
+
+syn_xz = []
+for name in syn_sections:
+    sec = template.sections[name]
+    pts = np.asarray(sec._end_pts, dtype=float) + soma_pos
+    x_mid = 0.5 * (pts[0, 0] + pts[1, 0]) - x_off
+    z_mid = 0.5 * (pts[0, 2] + pts[1, 2])
+    syn_xz.append((x_mid, z_mid))
+syn_xz = np.array(syn_xz)
+
+# --- figure ---
+'''
+fig2 = plt.figure(figsize=(5 * len(lfp_windows) + 3, 6), constrained_layout=True)
+gs2 = fig2.add_gridspec(1, len(lfp_windows) + 1, width_ratios=[1] + [4] * len(lfp_windows))
+
+ax_morph2 = fig2.add_subplot(gs2[0, 0])
+axes_lfp2 = [fig2.add_subplot(gs2[0, j + 1]) for j in range(len(lfp_windows))]
+
+plott.plot_cell_morphology_for_lfp_csd(
+    net, contact_positions=contact_labels2,
+    cell_types=('L5_pyramidal',), gid=example_gid,
+    ax=ax_morph2, show=False,
+)
+
+# hide the secondary "HNN depth" axis on the right, keep every number on the left
+ax_hnn2 = ax_morph2.child_axes[-1]
+ax_hnn2.set_ylabel('')
+ax_hnn2.set_yticklabels([])
+ax_hnn2.tick_params(axis='y', length=0)
+
+ax_morph2.scatter(
+    syn_xz[:, 0], syn_xz[:, 1],
+    marker='x', s=80, color='red', linewidths=2, zorder=5,
+    label='external-drive synapse',
+)
+ax_morph2.legend(loc='upper right', fontsize=7)
+
+for i, (ax_lfp, (t0, t1)) in enumerate(zip(axes_lfp2, lfp_windows)):
+    plott.plot_laminar_lfp_AC(
+        times_, lfp_agg_cell2_, contact_labels2,
+        ax=ax_lfp, scale=10.0, voltage_scalebar=None, show=False,
+    )
+    ax_r_lfp = ax_lfp.figure.axes[-1]  # twinx "HNN z" axis
+
+    # thin out the left-axis depth ticks -- one per contact is unreadable in a short panel
+    tick_step = 1
+    yt = ax_lfp.get_yticks()
+    ytl = [t.get_text() for t in ax_lfp.get_yticklabels()]
+    ax_lfp.set_yticks(yt[::tick_step])
+    ax_lfp.set_yticklabels(ytl[::tick_step])
+
+    # hide the right-hand "HNN z" axis entirely
+    ax_r_lfp.set_ylabel('')
+    ax_r_lfp.set_yticklabels([])
+    ax_r_lfp.tick_params(axis='y', length=0)
+
+    ax_lfp.set_xlim(t0, t1)
+    ax_lfp.set_title(f"LFP (probe2), t = {t0}-{t1} ms", fontsize=9)
+
+fig2.suptitle(f"gid={example_gid}: LFP at close probe (probe2)", fontsize=11)
+fig2.savefig(os.path.join(FIGURES_DIR, f"lfp_probe2_{run_tag}.png"), dpi=150)
+plt.show()
+'''
+
+# another version:
+# --- Standalone figure: this cell's LFP as seen by probe3 ---
+# --- Standalone figure: this cell's LFP as seen by probe3 ---
+array_name = "probe3"
+
+contact_pos3 = np.array(net.rec_arrays[array_name].positions)
+depths3 = contact_pos3[:, 2]
+contact_labels3 = np.asarray(depths3, dtype=int)
+
+T_agg_cell3 = tme.build_transfer_resistance_matrix_for_sources(
+    net, sources_agg_cell, array_name=array_name,
+)
+lfp_agg_cell3 = tme.reconstruct_lfp_from_sources(T_agg_cell3, I_agg_cell)
+lfp_agg_cell3_ = lfp_agg_cell3[:, 1:]
+
+# --- synapse locations (probe-independent) ---
+gid = example_gid
+cell_type = 'L5_pyramidal'
+template = net.cell_types[cell_type]['cell_object']
+sect_loc = template.sect_loc
+
+soma_pos = np.asarray(net.pos_dict[cell_type][gid - net.gid_ranges[cell_type][0]], dtype=float)
+x_off = soma_pos[0]
+
+drive_names = set(net.external_drives.keys())
+syn_sections = set()
+for conn in net.connectivity:
+    if conn['target_type'] != cell_type:
+        continue
+    if conn['src_type'] not in drive_names:
+        continue
+    targets = set()
+    for tgt_list in conn['gid_pairs'].values():
+        targets.update(tgt_list)
+    if gid not in targets:
+        continue
+    loc = conn['loc']
+    syn_sections.update(sect_loc[loc])
+
+syn_xz = []
+for name in syn_sections:
+    sec = template.sections[name]
+    pts = np.asarray(sec._end_pts, dtype=float) + soma_pos
+    x_mid = 0.5 * (pts[0, 0] + pts[1, 0]) - x_off
+    z_mid = 0.5 * (pts[0, 2] + pts[1, 2])
+    syn_xz.append((x_mid, z_mid))
+syn_xz = np.array(syn_xz)
+
+# --- figure ---
+fig3 = plt.figure(figsize=(5 * len(lfp_windows) + 3, 6), constrained_layout=True)
+gs3 = fig3.add_gridspec(1, len(lfp_windows) + 1, width_ratios=[1] + [4] * len(lfp_windows))
+
+ax_morph3 = fig3.add_subplot(gs3[0, 0])
+axes_lfp3 = [fig3.add_subplot(gs3[0, j + 1]) for j in range(len(lfp_windows))]
+
+plott.plot_cell_morphology_for_lfp_csd(
+    net, contact_positions=contact_labels3,
+    cell_types=('L5_pyramidal',), gid=example_gid,
+    ax=ax_morph3, show=False,
+)
+
+ax_morph3.scatter(
+    syn_xz[:, 0], syn_xz[:, 1],
+    marker='x', s=80, color='red', linewidths=2, zorder=5,
+    label='external-drive synapse',
+)
+ax_morph3.legend(loc='upper right', fontsize=7)
+
+for i, (ax_lfp, (t0, t1)) in enumerate(zip(axes_lfp3, lfp_windows)):
+    plott.plot_laminar_lfp_AC(
+        times_, lfp_agg_cell3_, contact_labels3,
+        ax=ax_lfp, scale=10.0, voltage_scalebar=None, show=False,
+    )
+    ax_r_lfp = ax_lfp.figure.axes[-1]
+
+    tick_step = 1
+    yt = ax_lfp.get_yticks()
+    ytl = [t.get_text() for t in ax_lfp.get_yticklabels()]
+    ax_lfp.set_yticks(yt[::tick_step])
+    ax_lfp.set_yticklabels(ytl[::tick_step])
+
+    ax_r_lfp.set_ylabel('')
+    ax_r_lfp.set_yticklabels([])
+    ax_r_lfp.tick_params(axis='y', length=0)
+
+    ax_lfp.set_xlim(t0, t1)
+    ax_lfp.set_title(f"LFP (probe3), t = {t0}-{t1} ms", fontsize=9)
+
+fig3.suptitle(f"gid={example_gid}: LFP at probe3", fontsize=11)
+fig3.savefig(os.path.join(FIGURES_DIR, f"lfp_probe3_{run_tag}.png"), dpi=150)
 plt.show()
 
 def get_segment_positions(net, sources, center_on_soma=True):
@@ -1041,13 +1309,28 @@ seg_pos = get_segment_positions(net, sources_agg_cell)  # recompute with the fix
 
 # PARENTHESIS MOVIE OPENS HERE (we want to understand if sinks/sources distribute as in Einevoll's paper)
 # this should be used in a network with no recurrent connectivity
-
-import os
 import matplotlib.animation as animation
+from matplotlib.colors import SymLogNorm
 
-vmin, vmax = -0.1, 0.1  # nA
+# auto-scale to the actual current range in this passive simulation
+vmax = np.percentile(np.abs(I_agg_cell), 99.5)
+vmin = -vmax
+linthresh = vmax / 50
+norm = SymLogNorm(linthresh=linthresh, linscale=1.0, vmin=vmin, vmax=vmax, base=10)
 
-fig, ax = plt.subplots(1, 1, figsize=(5, 7), constrained_layout=True)
+s_min, s_max = 15, 200
+size_denom = np.max(np.abs(I_agg_cell))
+
+def sizes_for(I_vals):
+    return s_min + (s_max - s_min) * (np.abs(I_vals) / size_denom)
+
+# somatic membrane potential, for the new panel below the morphology
+soma_vm = np.array(net.cell_response.vsec[0][example_gid]['soma'])
+
+fig, (ax, ax_vm) = plt.subplots(
+    2, 1, figsize=(5, 9), gridspec_kw={'height_ratios': [5, 1]},
+    constrained_layout=True,
+)
 
 plott._draw_cell_morphology(
     ax, net, cell_type="L5_pyramidal", gid=example_gid, color_by_region=False,
@@ -1055,8 +1338,8 @@ plott._draw_cell_morphology(
 
 sc = ax.scatter(
     seg_pos[:, 0], seg_pos[:, 2],
-    c=I_agg_cell[:, 1], cmap="jet_r", vmin=vmin, vmax=vmax,
-    s=40, edgecolor='k', linewidth=0.3, zorder=5,
+    c=I_agg_cell[:, 1], cmap="jet_r", norm=norm,
+    s=sizes_for(I_agg_cell[:, 1]), edgecolor='k', linewidth=0.3, zorder=5,
 )
 cbar = fig.colorbar(sc, ax=ax)
 cbar.set_label("Transmembrane current (nA)")
@@ -1081,6 +1364,13 @@ def _annot_text(I_t):
 
 annot.set_text(_annot_text(I_agg_cell[:, 1]))  # initialize for the first frame
 
+# --- bottom panel: somatic Vm trace with a moving marker for the current frame ---
+ax_vm.plot(times, soma_vm, color='indigo', lw=1)
+ax_vm.set_xlabel("Time (ms)")
+ax_vm.set_ylabel("$V_m$ soma (mV)")
+ax_vm.set_xlim(times[0], times[-1])
+vline = ax_vm.axvline(times[1], color='k', lw=1.2)
+
 frame_step = 4
 frame_idx = np.arange(1, len(times), frame_step)  # start at 1, skip the first time step
 
@@ -1088,16 +1378,19 @@ def update(i):
     t_idx = frame_idx[i]
     I_t = I_agg_cell[:, t_idx]
     sc.set_array(I_t)
+    sc.set_sizes(sizes_for(I_t))
     title.set_text(f"agg_i_mem spatial distribution, gid={example_gid}\nt = {times[t_idx]:.2f} ms")
     annot.set_text(_annot_text(I_t))
-    return sc, title, annot
+    vline.set_xdata([times[t_idx], times[t_idx]])
+    return sc, title, annot, vline
 
 ani = animation.FuncAnimation(fig, update, frames=len(frame_idx), interval=50, blit=False)
 
 FIGURES_DIR = "/Users/annacattani/Documents/HNN/hnn-core/runscripts/Figures"
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
-save_path = os.path.join(FIGURES_DIR, "agg_i_mem_movie.mp4")
+save_path = os.path.join(FIGURES_DIR, f"agg_i_mem_movie_{run_tag}.mp4")
+#save_path = os.path.join(FIGURES_DIR, "agg_i_mem_movie_all_passive.mp4")
 print(f"Saving to: {save_path}")
 
 try:
@@ -1109,6 +1402,27 @@ except Exception as e:
 print(f"File exists at save_path? {os.path.exists(save_path)}")
 if os.path.exists(save_path):
     print(f"File size: {os.path.getsize(save_path)} bytes")
+
+def render_at_time(t_query):
+    t_idx = int(np.argmin(np.abs(times - t_query)))
+    I_t = I_agg_cell[:, t_idx]
+    sc.set_array(I_t)
+    sc.set_sizes(sizes_for(I_t))
+    title.set_text(f"agg_i_mem spatial distribution, gid={example_gid}\nt = {times[t_idx]:.2f} ms")
+    annot.set_text(_annot_text(I_t))
+    vline.set_xdata([times[t_idx], times[t_idx]])
+    return t_idx, times[t_idx]
+
+snapshot_times = [25.33, 25.73, 30.13, 32.23, 40, 50.62, 67.42, 72.33, 138.12, 140.92, 147]
+
+for t_query in snapshot_times:
+    t_idx, t_actual = render_at_time(t_query)
+    fname = f"agg_i_mem_movie_{run_tag}_t{t_actual:.2f}ms.png"
+    #fname = f"agg_i_mem_movie_all_passive_t{t_actual:.2f}ms.png"
+    save_path = os.path.join(FIGURES_DIR, fname)
+    fig.savefig(save_path, dpi=150)
+    print(f"Saved {save_path}  (requested t={t_query}, actual t={t_actual:.2f} ms)")
+
 # PARENTHESIS MOVIE CLOSES HERE
 
 
