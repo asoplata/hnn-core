@@ -87,7 +87,7 @@ def _gather_trial_data(sim_data, net, n_trials, postproc, baseline_correction=Tr
         N_pyr_x = net._N_pyr_x
         N_pyr_y = net._N_pyr_y
         if baseline_correction:
-            dpl._baseline_renormalize(N_pyr_x, N_pyr_y)
+            dpl._correct_baseline(N_pyr_x, N_pyr_y)
             dpl._convert_fAm_to_nAm()  # always applied, cf. #264, convert after baseline correction
         else:
             warn("No baseline correction applied.")

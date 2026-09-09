@@ -28,7 +28,7 @@ def test_dipole(tmp_path, run_hnn_core_fixture):
     times = np.arange(0, 6000 * params["dt"], params["dt"])
     data = np.random.random((6000, 3))
     dipole = Dipole(times, data)
-    dipole._baseline_renormalize(params["N_pyr_x"], params["N_pyr_y"])
+    dipole._correct_baseline(params["N_pyr_x"], params["N_pyr_y"])
     dipole._convert_fAm_to_nAm()
 
     # test smoothing and scaling

@@ -474,7 +474,7 @@ def _rmse_corr(dpl, exp_dpl, tstart=0.0, tstop=0.0, weights=None):
     return err if np.isfinite(err) else 1e6
 
 
-def _baseline_renormalize_dueckerET(dpl, N_pyr_x, N_pyr_y):
+def _correct_baseline_dueckerET(dpl, N_pyr_x, N_pyr_y):
     """Baseline correction based on Duecker model without drives"""
 
     # exponential decay function
@@ -491,7 +491,7 @@ def _baseline_renormalize_dueckerET(dpl, N_pyr_x, N_pyr_y):
     # order of operations the same between the Neymotin model and the Duecker model in
     # `parallel_backends.py::_gather_trial_data` after a simulation, the Duecker
     # baseline correction is converted to fAm here, then the rest of the function runs,
-    # and then AFTER the baseline has been renormalized, the units are converted back to
+    # and then AFTER the baseline has been corrected, the units are converted back to
     # nAm inside `parallel_backends.py::_gather_trial_data` by using
     # `Dipole._convert_fAm_to_nAm`. This way, we don't need to have any Duecker/Neymotin
     # variant logic inside `parallel_backends.py::_gather_trial_data`.
@@ -516,8 +516,8 @@ def _baseline_renormalize_dueckerET(dpl, N_pyr_x, N_pyr_y):
     return dpl
 
 
-def _baseline_renormalize_neymotin2020(dpl, N_pyr_x, N_pyr_y):
-    """Only baseline renormalize if the units are fAm.
+def _correct_baseline_neymotin2020(dpl, N_pyr_x, N_pyr_y):
+    """Only correct baseline if the units are fAm.
 
     Parameters
     ----------
@@ -634,7 +634,7 @@ class Dipole(object):
         self.scale_applied = 1  # for visualisation
         self._model_variant = model_variant
 
-    def _baseline_renormalize(self, N_pyr_x, N_pyr_y):
+    def _correct_baseline(self, N_pyr_x, N_pyr_y):
         """Apply the baseline correction appropriate to this model variant.
 
         Parameters
@@ -676,7 +676,7 @@ class Dipole(object):
     def _convert_fAm_to_nAm(self):
         """The NEURON simulator output is in fAm, convert to nAm
 
-        NB! Must be run `after` :meth:`Dipole.baseline_renormalization`
+        NB! Must be run `after` :meth:`Dipole.correct_baseline`
         """
         for key in self.data.keys():
             self.data[key] *= 1e-6
