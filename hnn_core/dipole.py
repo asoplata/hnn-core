@@ -66,8 +66,10 @@ def simulate_dipole(
         :meth:`~hnn_core.dipole.Dipole.scale` methods instead. Default: False.
     verbose : bool
         If True, print build steps and simulation progress to console. Default: True.
-    baseline_correction : bool
-        If True, applies baseline correction to simulated dipole (depends on net._model_variant)
+    baseline_correction : bool, default=True
+        Whether to apply the baseline correction after simulation (which correction is
+        used depends on ``Network._model_variant``). Defaults to True, applying the
+        appropriate correction.
 
     Returns
     -------

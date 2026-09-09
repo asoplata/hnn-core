@@ -665,10 +665,12 @@ class JoblibBackend(object):
             The simulation stop time (ms).
         dt : float
             The integration time step of h.CVode (ms)
-        postproc : bool
+        postproc : bool, default=False
             If False, no postprocessing applied to the dipole
-        baseline_correction : bool
-                If True, applies baseline correction to simulated dipole (depends on net._model_variant)
+        baseline_correction : bool, default=True
+            Whether to apply the baseline correction after simulation (which correction
+            is used depends on ``Network._model_variant``). Defaults to True, applying
+            the appropriate correction.
 
         Returns
         -------
@@ -1082,10 +1084,12 @@ class MPIBackend(object):
             The integration time step of h.CVode (ms)
         n_trials : int
             Number of trials to simulate.
-        postproc : bool
+        postproc : bool, default=False
             If False, no postprocessing applied to the dipole
-        baseline_correction : bool
-                If True, applies baseline correction to simulated dipole (depends on net._model_variant)
+        baseline_correction : bool, default=True
+            Whether to apply the baseline correction after simulation (which correction
+            is used depends on ``Network._model_variant``). Defaults to True, applying
+            the appropriate correction.
 
         Returns
         -------
