@@ -75,6 +75,20 @@ default_drive_colors = {
 }
 
 
+# Map of how `Network._model_variant` cases apply to different
+# `Dipole._baseline_renormalize` functions. This is applied at the time of `Dipole`
+# creation, but contains information about differences between network models, so it is
+# located here.
+MODEL_VARIANT_MAPPING = {
+    None: _baseline_renormalize_neymotin2020,
+    "neymotin_2020_model": _baseline_renormalize_neymotin2020,
+    "jones_2009_model": _baseline_renormalize_neymotin2020,
+    "law_2021_model": _baseline_renormalize_neymotin2020,
+    "calcium_model": _baseline_renormalize_neymotin2020,
+    "duecker_ET_model": _baseline_renormalize_dueckerET,
+}
+
+
 def _validate_params_for_model(
     net,
     params,
@@ -272,9 +286,6 @@ def neymotin_2020_model(
 
     # Ensure model_variant and params' cell types match current model
     net._model_variant = _validate_params_for_model(net, params, "neymotin_2020_model")
-
-    # baseline normalization
-    net._baseline_renormalize = _baseline_renormalize_neymotin2020
 
     # source of synapse is always at soma
     # layer2 Pyr -> layer2 Pyr
@@ -730,7 +741,6 @@ def duecker_ET_model(
     )
 
     delay = net.delay
-    net._baseline_renormalize = _baseline_renormalize_dueckerET
 
     # layer2 Pyr -> layer2 Pyr
     lamtha = 6.125  # calculated from human data Campganola et al. 2022
