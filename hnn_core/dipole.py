@@ -153,6 +153,9 @@ def simulate_dipole(
 def _read_dipole_txt(fname, extension=".txt"):
     """Read dipole values from a txt file and create a Dipole instance.
 
+    All Dipoles read this way are assumed to be of the "neymotin_2020_model" variant
+    type, and not the "duecker_ET_model" variant type.
+
     Parameters
     ----------
     fname : str or io.StringIO
@@ -179,6 +182,9 @@ def _read_dipole_txt(fname, extension=".txt"):
 
 def _read_dipole_hdf5(fname):
     """Read dipole values from a hdf5 file and create a Dipole instance.
+
+    All Dipoles read this way are assumed to be of the "neymotin_2020_model" variant
+    type, and not the "duecker_ET_model" variant type.
 
     Parameters
     ----------
@@ -378,9 +384,9 @@ def _anticorr(dpl, exp_dpl, tstart=0.0, tstop=0.0, weights=None):
     tstop : None | float
         Time at end of range over which to calculate Anticorrelation
     weights : None | array
-        An array of weights to be applied to each point in
-        simulated dpl. Must have length >= dpl.data . If None, weights will be replaced with 1's for typical Anticorrelation
-        calculation.
+        An array of weights to be applied to each point in simulated dpl. Must have
+        length >= dpl.data . If None, weights will be replaced with 1's for typical
+        Anticorrelation calculation.
 
     Returns
     -------
@@ -475,7 +481,30 @@ def _rmse_corr(dpl, exp_dpl, tstart=0.0, tstop=0.0, weights=None):
 
 
 def _correct_baseline_dueckerET(dpl, N_pyr_x, N_pyr_y):
-    """Baseline correction based on Duecker model without drives"""
+    """Correct the baseline of the dipole based on the Duecker ET model.
+
+    Due to the unequal distribution of particular ion channels across the L2 and L5
+    pyramidal cells, the dipole moment's zero point needs to be corrected. This function
+    applies a correction based on the the results from Duecker model simulations without
+    external drives.
+
+    This assumes the dipole is currently in units of fAm. After this function is run,
+    the dipole is expected to be converted to units of nAm using
+    `Dipole._convert_fAm_to_nAm`.
+
+    This should be called via `Dipole._correct_baseline(N_pyr_x, N_pyr_y)`, not
+    independently. `Dipole` will use the correct version of the function based on
+    `Network._model_variant`.
+
+    Parameters
+    ----------
+    dpl : Dipole
+        The instance of Dipole class
+    N_pyr_x : int
+        Number of cells in the network along the x-axis (assuming a grid)
+    N_pyr_y : int
+        Number of cells in the network along the y-axis (assuming a grid)
+    """
 
     # exponential decay function
     def _exp_decay(t, A, C, b):
@@ -517,14 +546,28 @@ def _correct_baseline_dueckerET(dpl, N_pyr_x, N_pyr_y):
 
 
 def _correct_baseline_neymotin2020(dpl, N_pyr_x, N_pyr_y):
-    """Only correct baseline if the units are fAm.
+    """Correct the baseline of the dipole based on the Neymotin 2020 model.
+
+    Due to the unequal distribution of particular ion channels across the L2 and L5
+    pyramidal cells, the dipole moment's zero point needs to be corrected. This function
+    applies a correction based on the Neymotin 2020 and Jones 2009 models.
+
+    This assumes the dipole is currently in units of fAm. After this function is run,
+    the dipole is expected to be converted to units of nAm using
+    `Dipole._convert_fAm_to_nAm`.
+
+    This should be called via `Dipole._correct_baseline(N_pyr_x, N_pyr_y)`, not
+    independently. `Dipole` will use the correct version of the function based on
+    `Network._model_variant`.
 
     Parameters
     ----------
+    dpl : Dipole
+        The instance of Dipole class
     N_pyr_x : int
-        Nr of cells (x)
+        Number of cells in the network along the x-axis (assuming a grid)
     N_pyr_y : int
-        Nr of cells (y)
+        Number of cells in the network along the y-axis (assuming a grid)
     """
     # N_pyr cells in grid. This is PER LAYER
     N_pyr = N_pyr_x * N_pyr_y
