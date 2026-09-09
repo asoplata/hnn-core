@@ -484,7 +484,17 @@ def _baseline_renormalize_dueckerET(dpl, N_pyr_x, N_pyr_y):
     with open(hnn_core_root / "param" / "bsl_corr_duecker_ET.json", "r") as f:
         bsl_dpl = json.load(f)
 
-    scale = N_pyr_x * N_pyr_y / bsl_dpl["N_pyr_ref"]
+    # The Duecker baseline correction data was original done in units of nAm (after
+    # `Dipole._convert_fAm_to_nAm` had been applied). HOWEVER, in order to make the
+    # order of operations the same between the Neymotin model and the Duecker model in
+    # `parallel_backends.py::_gather_trial_data` after a simulation, the Duecker
+    # baseline correction is converted to fAm here, then the rest of the function runs,
+    # and then AFTER the baseline has been renormalized, the units are converted back to
+    # nAm inside `parallel_backends.py::_gather_trial_data` by using
+    # `Dipole._convert_fAm_to_nAm`. This way, we don't need to have any Duecker/Neymotin
+    # variant logic inside `parallel_backends.py::_gather_trial_data`.
+    nAm_to_fAm = 1e6
+    scale = N_pyr_x * N_pyr_y / bsl_dpl["N_pyr_ref"] * nAm_to_fAm
 
     A_L2 = bsl_dpl["L2"][-1] * scale
     A_L5 = bsl_dpl["L5"][-1] * scale

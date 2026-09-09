@@ -19,11 +19,7 @@ from pathlib import Path
 from typing import Union
 
 from .cell_response import CellResponse
-from .dipole import (
-    Dipole,
-    _baseline_renormalize_dueckerET,
-    _baseline_renormalize_neymotin2020,
-)
+from .dipole import Dipole
 from .network_builder import _simulate_single_trial
 
 _BACKEND = None
@@ -81,45 +77,21 @@ def _gather_trial_data(sim_data, net, n_trials, postproc, baseline_correction=Tr
             arr._times = sim_data[idx]["rec_times"][arr_name]
 
         # dipole
-        dpl = Dipole(times=sim_data[idx]["times"], data=sim_data[idx]["dpl_data"])
+        dpl = Dipole(
+            times=sim_data[idx]["times"],
+            data=sim_data[idx]["dpl_data"],
+            model_variant=net._model_variant,
+        )
 
         # get number of pyramidal neurons
         N_pyr_x = net._N_pyr_x
         N_pyr_y = net._N_pyr_y
         if baseline_correction:
-            model_variant = getattr(net, "_model_variant", "neymotin_2020_model")
-            if model_variant in [
-                "neymotin_2020_model",
-                "jones_2009_model",
-                "law_2021_model",
-                "calcium_model",
-            ]:
-                model_variant = "neymotin_2020_model"
-
-                baseline_correction = getattr(
-                    net, "_baseline_renormalize", _baseline_renormalize_neymotin2020
-                )
-                dpl = baseline_correction(dpl, N_pyr_x, N_pyr_y)
-                dpl._convert_fAm_to_nAm()  # always applied, cf. #264, convert after baseline correction
-
-            elif model_variant == "duecker_ET_model":
-                baseline_correction = getattr(
-                    net, "_baseline_renormalize", _baseline_renormalize_dueckerET
-                )
-                # convert to nAm before baseline correction
-                dpl._convert_fAm_to_nAm()  # always applied, cf. #264
-                dpl = baseline_correction(dpl, N_pyr_x, N_pyr_y)
+            dpl._baseline_renormalize(N_pyr_x, N_pyr_y)
+            dpl._convert_fAm_to_nAm()  # always applied, cf. #264, convert after baseline correction
         else:
             warn("No baseline correction applied.")
             dpl._convert_fAm_to_nAm()
-
-        # # KD: should this be an error?
-        # if dpl.baseline_applied != model_variant:
-        #     warn(
-        #         f"Baseline correction for {dpl.baseline_applied} applied to "
-        #         f"model of type {model_variant}. Your results are "
-        #         "likely going to be incorrect."
-        #     )
 
         if postproc:
             window_len = net._params["dipole_smooth_win"]  # specified in ms
