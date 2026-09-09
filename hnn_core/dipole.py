@@ -937,7 +937,7 @@ def _baseline_renormalize_dueckerET(dpl, N_pyr_x, N_pyr_y):
     dpl.data["L5"][1:] -= exp_fit_l5
 
     dpl.data["agg"] = dpl.data["L2"] + dpl.data["L5"]
-    dpl.baseline_applied = "duecker_ET_model"
+    # dpl.baseline_applied = "duecker_ET_model"
 
     return dpl
 
@@ -994,6 +994,6 @@ def _baseline_renormalize_neymotin2020(dpl, N_pyr_x, N_pyr_y):
     # recalculate the aggregate dipole based on the baseline
     # normalized ones
     dpl.data["agg"] = dpl.data["L2"] + dpl.data["L5"]
-    dpl.baseline_applied = "neymotin_2020_model"
+    # dpl.baseline_applied = "neymotin_2020_model"
 
     return dpl

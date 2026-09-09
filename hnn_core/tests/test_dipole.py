@@ -28,7 +28,7 @@ def test_dipole(tmp_path, run_hnn_core_fixture):
     times = np.arange(0, 6000 * params["dt"], params["dt"])
     data = np.random.random((6000, 3))
     dipole = Dipole(times, data)
-    dipole._baseline_renormalize(params["N_pyr_x"], params["N_pyr_y"])
+    # dipole._baseline_renormalize(params["N_pyr_x"], params["N_pyr_y"])
     dipole._convert_fAm_to_nAm()
 
     # test smoothing and scaling
@@ -210,13 +210,6 @@ def test_dipole_simulation():
             record_isec=False,
             record_ca="abc",
         )
-    with pytest.raises(ValueError, match="'bsl_cor' must be"):
-        simulate_dipole(
-            net,
-            tstop=25.0,
-            bsl_cor="GIGAMUNGUS",
-        )
-
     # test Network.copy() returns 'bare' network after simulating
     dpl = simulate_dipole(net, tstop=25.0, n_trials=1)[0]
     assert net._dt == 0.025
@@ -382,12 +375,12 @@ def test_dipole_simulation_with_renamed_cells():
 @requires_mpi4py
 @requires_psutil
 @pytest.mark.uses_mpi
-def test_dipole_bsl_cor(run_hnn_core_fixture):
-    """Test that all values of bsl_cor work in simulate_dipole"""
+def test_dipole_baseline_correction(run_hnn_core_fixture):
+    """Test that all values of baseline_correction work in simulate_dipole"""
     for backend in {"joblib", "mpi"}:
-        for bsl_cor in {"jones", "duecker"}:
+        for baseline_correction in {True, False}:
             _, _ = run_hnn_core_fixture(
                 backend=backend,
                 reduced=True,
-                bsl_cor=bsl_cor,
+                baseline_correction=baseline_correction,
             )

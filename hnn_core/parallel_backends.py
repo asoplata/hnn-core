@@ -28,6 +28,7 @@ from .network_builder import _simulate_single_trial
 
 _BACKEND = None
 
+
 def _thread_handler(event, out, queue):
     while not event.is_set():
         line = out.readline()
@@ -112,13 +113,13 @@ def _gather_trial_data(sim_data, net, n_trials, postproc, baseline_correction=Tr
             warn("No baseline correction applied.")
             dpl._convert_fAm_to_nAm()
 
-        # KD: should this be an error?
-        if dpl.baseline_applied != model_variant:
-            warn(
-                f"Baseline correction for {dpl.baseline_applied} applied to "
-                f"model of type {model_variant}. Your results are "
-                "likely going to be incorrect."
-            )
+        # # KD: should this be an error?
+        # if dpl.baseline_applied != model_variant:
+        #     warn(
+        #         f"Baseline correction for {dpl.baseline_applied} applied to "
+        #         f"model of type {model_variant}. Your results are "
+        #         "likely going to be incorrect."
+        #     )
 
         if postproc:
             window_len = net._params["dipole_smooth_win"]  # specified in ms

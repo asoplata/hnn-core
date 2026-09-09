@@ -144,9 +144,9 @@ def rerun_and_save_duecker_model(suffix="new", backend="mpi"):
     # --------------------------------------------------------------------------------------
     if backend == "mpi":
         with MPIBackend(mpi_cmd="mpiexec"):
-            dpls = simulate_dipole(net, tstop=170.0, bsl_cor="duecker")
+            dpls = simulate_dipole(net, tstop=170.0, baseline_correction=True)
     elif backend == "joblib":
-        dpls = simulate_dipole(net, tstop=170.0, bsl_cor="duecker")
+        dpls = simulate_dipole(net, tstop=170.0, baseline_correction=True)
     else:
         raise ValueError(f"backend must be either 'mpi' or 'joblib', got '{backend}'")
 
