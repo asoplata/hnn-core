@@ -550,7 +550,7 @@ def _correct_baseline_neymotin2020(dpl, N_pyr_x, N_pyr_y):
 
     Due to the unequal distribution of particular ion channels across the L2 and L5
     pyramidal cells, the dipole moment's zero point needs to be corrected. This function
-    applies a correction based on the Neymotin 2020 and Jones 2009 models.
+    applies a correction based on the Jones 2009 [1]_ and Neymotin 2020 [2]_ models.
 
     This assumes the dipole is currently in units of fAm. After this function is run,
     the dipole is expected to be converted to units of nAm using
@@ -559,6 +559,16 @@ def _correct_baseline_neymotin2020(dpl, N_pyr_x, N_pyr_y):
     This should be called via `Dipole._correct_baseline(N_pyr_x, N_pyr_y)`, not
     independently. `Dipole` will use the correct version of the function based on
     `Network._model_variant`.
+
+    .. [1] Jones, Stephanie R., et al. "Quantitative Analysis and
+           Biophysically Realistic Neural Modeling of the MEG Mu Rhythm:
+           Rhythmogenesis and Modulation of Sensory-Evoked Responses."
+           Journal of Neurophysiology 102, 3554–3572 (2009).
+           https://doi.org/10.1152/jn.00535.2009
+
+    .. [2] Neymotin, Samuel A, et al. 2020. "Human Neocortical Neurosolver (HNN), a New
+           Software Tool for Interpreting the Cellular and Network Origin of Human
+           MEG/EEG Data." eLife 9 (January):e51214. https://doi.org/10.7554/eLife.51214
 
     Parameters
     ----------
