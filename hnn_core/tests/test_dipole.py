@@ -378,7 +378,7 @@ def test_dipole_simulation_with_renamed_cells():
 def test_dipole_baseline_correction(run_hnn_core_fixture):
     """Test that all values of baseline_correction work in simulate_dipole"""
     for backend in {"joblib", "mpi"}:
-        for baseline_correction in {True, False}:
+        for baseline_correction in [True, False]:
             _, _ = run_hnn_core_fixture(
                 backend=backend,
                 reduced=True,
