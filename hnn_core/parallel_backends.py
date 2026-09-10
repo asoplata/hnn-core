@@ -34,10 +34,37 @@ def _thread_handler(event, out, queue):
 
 
 def _gather_trial_data(sim_data, net, n_trials, postproc, baseline_correction=True):
-    """Arrange data by trial
+    """Arrange data by trial; to be called after ``<Backend>.simulate``
 
-    To be called after simulate(). Returns list of Dipoles, one for each trial,
-    and saves spiking info in net (instance of Network).
+    Parameters
+    ----------
+    sim_data : list of dict
+        List of dictionaries containing simulation data for each trial as returned by
+        either the ``parallel`` call in ``JoblibBackend`` or by ``run_subprocess`` in
+        ``MPIBackend``.
+    net : Network object
+        The Network object that was simulated.
+    n_trials : int
+        Number of trials simulated.
+    postproc : bool
+         Deprecated. If True, smoothing (``dipole_smooth_win``) and scaling
+        (``dipole_scalefctr``) values are read from the ``Network``'s parameter file,
+        and applied to the dipole objects before returning (the default ``Network``
+        parameter file, `hnn_core/param/default.json`, uses a smoothing value of 30 ms
+        and a scaling factor of 3000). Note that this setting only affects the dipole
+        waveforms, and not somatic voltages, possible extracellular recordings etc. The
+        preferred way is to use the :meth:`~hnn_core.dipole.Dipole.smooth` and
+        :meth:`~hnn_core.dipole.Dipole.scale` methods instead. In all preceding
+        codepaths, this defaults to False.
+    baseline_correction : bool, default=True
+        Whether to apply the baseline correction after simulation (which correction is
+        used depends on ``Network._model_variant``). Defaults to True, applying the
+        appropriate correction.
+
+    Returns
+    -------
+    dpls : list of Dipole
+        Returns a list of Dipoles, one for each trial, and saves spiking info in ``net``
     """
     dpls = list()
 
@@ -657,16 +684,23 @@ class JoblibBackend(object):
         Parameters
         ----------
         net : Network object
-            The Network object specifying how cells are
-            connected.
-        n_trials : int
-            Number of trials to simulate.
+            The Network object specifying how cells are connected.
         tstop : float
             The simulation stop time (ms).
         dt : float
             The integration time step of h.CVode (ms)
+        n_trials : int
+            Number of trials to simulate.
         postproc : bool, default=False
-            If False, no postprocessing applied to the dipole
+            Deprecated. If True, smoothing (``dipole_smooth_win``) and scaling
+            (``dipole_scalefctr``) values are read from the ``Network``'s parameter
+            file, and applied to the dipole objects before returning (the default
+            ``Network`` parameter file, `hnn_core/param/default.json`, uses a smoothing
+            value of 30 ms and a scaling factor of 3000). Note that this setting only
+            affects the dipole waveforms, and not somatic voltages, possible
+            extracellular recordings etc. The preferred way is to use the
+            :meth:`~hnn_core.dipole.Dipole.smooth` and
+            :meth:`~hnn_core.dipole.Dipole.scale` methods instead.
         baseline_correction : bool, default=True
             Whether to apply the baseline correction after simulation (which correction
             is used depends on ``Network._model_variant``). Defaults to True, applying
@@ -1085,7 +1119,15 @@ class MPIBackend(object):
         n_trials : int
             Number of trials to simulate.
         postproc : bool, default=False
-            If False, no postprocessing applied to the dipole
+            Deprecated. If True, smoothing (``dipole_smooth_win``) and scaling
+            (``dipole_scalefctr``) values are read from the ``Network``'s parameter
+            file, and applied to the dipole objects before returning (the default
+            ``Network`` parameter file, `hnn_core/param/default.json`, uses a smoothing
+            value of 30 ms and a scaling factor of 3000). Note that this setting only
+            affects the dipole waveforms, and not somatic voltages, possible
+            extracellular recordings etc. The preferred way is to use the
+            :meth:`~hnn_core.dipole.Dipole.smooth` and
+            :meth:`~hnn_core.dipole.Dipole.scale` methods instead.
         baseline_correction : bool, default=True
             Whether to apply the baseline correction after simulation (which correction
             is used depends on ``Network._model_variant``). Defaults to True, applying
