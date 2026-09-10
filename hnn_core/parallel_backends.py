@@ -116,9 +116,15 @@ def _gather_trial_data(sim_data, net, n_trials, postproc, baseline_correction=Tr
         if baseline_correction:
             dpl._correct_baseline(N_pyr_x, N_pyr_y)
             dpl._convert_fAm_to_nAm()  # always applied, cf. #264, convert after baseline correction
+            dpl._baseline_correction_applied = True
+            net._baseline_correction_applied = True
         else:
             warn("No baseline correction applied.")
             dpl._convert_fAm_to_nAm()
+            # Only in case someone sets it to True, then runs a simulation, then sets it
+            # to False, and then runs another simulation.
+            dpl._baseline_correction_applied = False
+            net._baseline_correction_applied = False
 
         if postproc:
             window_len = net._params["dipole_smooth_win"]  # specified in ms

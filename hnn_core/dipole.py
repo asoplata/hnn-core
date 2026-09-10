@@ -670,6 +670,7 @@ class Dipole(object):
         self.sfreq = 1000.0 / (times[1] - times[0])  # NB assumes len > 1
         self.scale_applied = 1  # for visualisation
         self._model_variant = model_variant
+        self._baseline_correction_applied = False
 
     def _correct_baseline(self, N_pyr_x, N_pyr_y):
         """Apply the baseline correction appropriate to this model variant.
