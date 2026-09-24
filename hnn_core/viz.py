@@ -658,6 +658,7 @@ def plot_spikes_raster(
     ax=None,
     show=True,
     cell_types=None,
+    spike_types=None,
     gid_ranges=None,
     colors=None,
     show_legend=True,
@@ -735,29 +736,34 @@ def plot_spikes_raster(
     if trial_idx is None:
         trial_idx = list(range(n_trials))
 
-    # Get spike types from cell response
-    unique_spike_types = cell_response.cell_types
-
     # validate trial argument
     if isinstance(trial_idx, int):
         trial_idx = [trial_idx]
     _validate_type(trial_idx, list, "trial_idx", "int, list of int")
 
+    if cell_types is not None:
+        spike_types = cell_types
+        warnings.warn(
+            "The `cell_types` argument is deprecated and will be removed in future ",
+            FutureWarning,
+        )
+
     # validate cell types
-    if cell_types:
-        _validate_type(cell_types, list, "cell_types", "list of str")
+    if spike_types is not None:
+        _validate_type(spike_types, list, "cell_types", "list of str")
         # allowed are spikes that fired (including drives) and generally cells in network
         allowed_types = np.unique(
-            cell_response.cell_types + cell_response._cell_type_names
+            cell_response.unique_spike_type_names + cell_response._cell_type_names
         )
-        if not set(cell_types).issubset(allowed_types):
+        spike_type_names = spike_types
+        if not set(spike_type_names).issubset(allowed_types):
             raise ValueError(
                 "Invalid cell types provided. "
                 f"Must be of set {allowed_types}. "
-                f"Got {cell_types}"
+                f"Got {spike_type_names}"
             )
     else:
-        cell_types = cell_response._cell_type_names
+        spike_type_names = cell_response._cell_type_names
 
     # validate gid_ranges argument
     _validate_type(gid_ranges, (dict, None), "gid_ranges", "dict")
@@ -767,32 +773,39 @@ def plot_spikes_raster(
     _validate_type(colors, (list, dict, None), "color", "list of str, or dict")
 
     # Set colors
-    if cell_type_metadata is not None and "color" in cell_type_metadata[cell_types[0]]:
+    if (
+        cell_ty_metadata is not None
+        and "color" in cell_type_metadata[spike_type_names[0]]
+    ):
         cell_colors = {
             cell: cell_type_metadata.get(cell, {}).get("color", "k")
-            for cell in cell_types
+            for cell in spike_type_names
         }
     else:
         default_colors = plt.rcParams["axes.prop_cycle"].by_key()["color"][
-            : len(cell_types)
+            : len(spike_type_names)
         ]
-        cell_colors = {cell: color for cell, color in zip(cell_types, default_colors)}
+        cell_colors = {
+            cell: color for cell, color in zip(spike_type_names, default_colors)
+        }
 
     if colors:
         if isinstance(colors, list):
-            if len(colors) != len(cell_types):
+            if len(colors) != len(spike_type_names):
                 raise ValueError(
                     f"Number of colors must be equal to number of "
                     f"cell types. {len(colors)} colors provided "
-                    f"for {len(cell_types)} cell types."
+                    f"for {len(spike_type_names)} cell types."
                 )
-            cell_colors = {cell: color for cell, color in zip(cell_types, colors)}
+            cell_colors = {cell: color for cell, color in zip(spike_type_names, colors)}
         if isinstance(colors, dict):
             # Check valid cell types
-            if not set(colors.keys()).issubset(set(unique_spike_types)):
+            if not set(colors.keys()).issubset(
+                set(cell_response.unique_spike_type_names)
+            ):
                 raise ValueError(
                     "Invalid cell types provided. "
-                    f"Must be of set {unique_spike_types}. "
+                    f"Must be of set {cell_response.unique_spike_type_names}. "
                     f"Got {colors.keys()}"
                 )
             cell_colors.update(colors)
@@ -808,13 +821,13 @@ def plot_spikes_raster(
         marker_size = 1.0
 
     # Extract desired trials
-    spike_times = np.concatenate(
+    spike_times_trial_data = np.concatenate(
         np.array(cell_response._spike_times, dtype=object)[trial_idx]
     )
-    spike_types = np.concatenate(
+    spike_types_trial_data = np.concatenate(
         np.array(cell_response._spike_types, dtype=object)[trial_idx]
     )
-    spike_gids = np.concatenate(
+    spike_gids_trial_data = np.concatenate(
         np.array(cell_response._spike_gids, dtype=object)[trial_idx]
     )
 
@@ -828,14 +841,16 @@ def plot_spikes_raster(
     events = []
 
     for cell_type, color in cell_colors.items():
-        cell_type_gids = np.unique(spike_gids[spike_types == cell_type])
+        cell_type_gids = np.unique(
+            spike_gids_trial_data[spike_types_trial_data == cell_type]
+        )
         cell_type_times, cell_type_ypos = [], []
 
         if len(cell_type_gids) > 0:
             max_gid = max(max_gid, max(cell_type_gids))
 
         for gid in cell_type_gids:
-            gid_time = spike_times[spike_gids == gid]
+            gid_time = spike_times_trial_data[spike_gids_trial_data == gid]
             cell_type_times.append(gid_time)
             cell_type_ypos.append(gid)
 
@@ -865,8 +880,8 @@ def plot_spikes_raster(
     # Extent of y-axis based on maximum gid in gid_ranges if provided, otherwise the range of the cells that
     # spiked
     if gid_ranges is not None:
-        raster_min = min(min(gid_ranges[cell_type]) for cell_type in cell_types)
-        raster_max = max(max(gid_ranges[cell_type]) for cell_type in cell_types)
+        raster_min = min(min(gid_ranges[cell_type]) for cell_type in spike_type_names)
+        raster_max = max(max(gid_ranges[cell_type]) for cell_type in spike_type_names)
         # Show every cell of the plotted types, including the silent ones, with
         # enough padding for the markers of the outermost cells
         ax.set_ylim(raster_max + marker_size / 2, raster_min - marker_size / 2)

@@ -680,12 +680,13 @@ class TestCellResponsePlotters:
         )
 
         # case 3: plotting a subset of cell types spans the gids of those types only
-        fig = cell_response.plot_spikes_raster(
-            show=False,
-            marker_size=marker_size,
-            gid_ranges=gid_ranges,
-            cell_types=["L2_basket", "L2_pyramidal"],
-        )
+        with pytest.warns(FutureWarning, match="is deprecated and will be removed"):
+            fig = cell_response.plot_spikes_raster(
+                show=False,
+                marker_size=marker_size,
+                gid_ranges=gid_ranges,
+                cell_types=["L2_basket", "L2_pyramidal"],
+            )
         assert fig.axes[0].get_ylim() == pytest.approx(
             (max(gid_ranges["L2_pyramidal"]) + marker_size, 0)
         )
