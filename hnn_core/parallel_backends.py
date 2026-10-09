@@ -9,6 +9,7 @@ import re
 import shlex
 import pickle
 import base64
+import tempfile
 import time
 from warnings import warn
 from subprocess import Popen, PIPE, TimeoutExpired
@@ -137,14 +138,14 @@ def _gather_trial_data(sim_data, net, n_trials, postproc, baseline_correction):
     return dpls
 
 
-def _get_mpi_env(autoload_mpi_library=True, mpi_lib_path=None):
+def _get_mpi_env(autoload_mpi_library=True, mpi_lib_path=None, mpi_implementation=None):
     """Set some MPI environment variables.
 
     Parameters
     ----------
     autoload_mpi_library : bool, default=True
         Whether to automatically locate the MPI library file shipped by the PyPI
-        'openmpi' package (if installed) and point NEURON to it via the
+        'openmpi' or 'mpich' package (if installed) and point NEURON to it via the
         'MPI_LIB_NRN_PATH' environment variable. If True (the default) and the MPI
         library is found, 'MPI_LIB_NRN_PATH' will be overwritten if it has already been
         set in your environment. Forced to False if 'mpi_lib_path' is provided.
@@ -156,13 +157,18 @@ def _get_mpi_env(autoload_mpi_library=True, mpi_lib_path=None):
         forced to False and 'MPI_LIB_NRN_PATH' will be overwritten if it has already
         been set in your environment. Note that we do not validate the whether the file
         is correct or will work with NEURON.
+    mpi_implementation : None | str, default=None
+        The MPI implementation of the launcher, as returned by
+        `_detect_mpi_implementation`: 'openmpi', 'mpich', or None if unknown. Used to
+        decide which PyPI package to search for the MPI library, and whether to set
+        OpenMPI-specific environment variables.
     """
     my_env = os.environ.copy()
-    # For Linux systems
-    if sys.platform != "win32":
+    # OpenMPI-specific settings; these are unnecessary for MPICH
+    if (sys.platform != "win32") and (mpi_implementation != "mpich"):
         my_env["OMPI_MCA_btl_base_warn_component_unused"] = "0"
 
-    if "darwin" in sys.platform:
+    if ("darwin" in sys.platform) and (mpi_implementation != "mpich"):
         my_env["PMIX_MCA_gds"] = "^ds12"  # open-mpi/ompi/issues/7516
         my_env["TMPDIR"] = "/tmp"  # open-mpi/ompi/issues/2956
 
@@ -174,7 +180,9 @@ def _get_mpi_env(autoload_mpi_library=True, mpi_lib_path=None):
     # correspond to the important library file that NEURON needs in order to use MPI:
     # libmpi.so.40 (linux) / libmpi.40.dylib (macos), and libmpi.so (linux) /
     # libmpi.dylib (macos). The former is the ACTUAL library file that we need, while
-    # the latter is a linker script that points to the former.
+    # the latter is a linker script that points to the former. The PyPI "mpich" package
+    # has the exact same layout and problem, except that its real library file is
+    # named libmpi.so.12 (linux) / libmpi.12.dylib (macos).
     #
     # We face two problems:
     # 1. Firstly, Python wheels cannot ship true symlinks, and so the "openmpi"'s
@@ -195,7 +203,12 @@ def _get_mpi_env(autoload_mpi_library=True, mpi_lib_path=None):
     #   the *exact* library file.
     # 2. We use a regular expression (written by Claude, of course) that matches the
     #   library file (either libmpi.so.<number> or libmpi.<number>.dylib), then set the
-    #   "MPI_LIB_NRN_PATH" environment variable to that file.
+    #   "MPI_LIB_NRN_PATH" environment variable to that file. We search the package
+    #   that matches the implementation of the "mpiexec" launcher, since both packages
+    #   install an "mpiexec" executable, and the launcher and library must match.
+    #
+    # NEURON then decides by itself whether the loaded library is OpenMPI or MPICH, and
+    # mpi4py uses whichever library NEURON has already loaded.
     #
     # I've manually inspected all the linux x86_64 and macox arm64 wheels in
     # https://pypi.org/project/openmpi/#history and verified that the filenames are
@@ -204,31 +217,82 @@ def _get_mpi_env(autoload_mpi_library=True, mpi_lib_path=None):
     if mpi_lib_path is not None:
         my_env["MPI_LIB_NRN_PATH"] = str(mpi_lib_path)
     elif autoload_mpi_library:
-        mpi_lib = _get_pip_openmpi_lib()
+        mpi_lib = _get_pip_mpi_lib(mpi_implementation)
         if mpi_lib is not None:
             my_env["MPI_LIB_NRN_PATH"] = mpi_lib
 
     return my_env
 
 
-def _get_pip_openmpi_lib():
-    """Return the path of libmpi from the PyPI 'openmpi' package, if any."""
+def _get_pip_mpi_lib(mpi_implementation=None):
+    """Return the path of libmpi from the PyPI 'openmpi' or 'mpich' package, if any.
+
+    Only the package matching 'mpi_implementation' is searched. If it is None (i.e.
+    the implementation is unknown), 'openmpi' is searched first, then 'mpich'.
+    """
     from importlib.metadata import PackageNotFoundError, distribution
 
+    if mpi_implementation is None:
+        package_names = ["openmpi", "mpich"]
+    else:
+        package_names = [mpi_implementation]
+
+    for package_name in package_names:
+        try:
+            files = distribution(package_name).files or []
+        except PackageNotFoundError:
+            continue
+        for f in files:
+            # Should match libmpi.so.40 / libmpi.so.12 (linux) and libmpi.40.dylib /
+            # libmpi.12.dylib (macos)
+            if re.fullmatch(r"libmpi(\.\d+\.dylib|\.so\.\d+)", f.name):
+                # Not using Path here since environment variables have to use strings,
+                # and we do NOT want to follow symlinks in this unique case:
+                return os.path.abspath(f.locate())
+
+    print(
+        f"MPI library from PyPI package(s) {package_names} not found; attempting to "
+        "use system MPI if available."
+    )
+    return None
+
+
+def _detect_mpi_implementation(mpi_cmd):
+    """Detect the MPI implementation of an MPI launcher.
+
+    Parameters
+    ----------
+    mpi_cmd : str
+        The MPI launcher command, such as 'mpiexec'. Only its first word is run.
+
+    Returns
+    -------
+    mpi_implementation : None | str
+        'openmpi' for Open MPI, 'mpich' for MPICH and its derivatives that use the
+        Hydra launcher (e.g. Intel MPI), or None if the launcher could not be run or
+        was not recognized.
+    """
+    from subprocess import run
+
+    use_posix = True if sys.platform != "win32" else False
     try:
-        files = distribution("openmpi").files or []
-    except PackageNotFoundError:
-        print(
-            "PyPI 'openmpi' package not found; attempting to use system MPI if "
-            "available."
+        launcher = shlex.split(mpi_cmd, posix=use_posix)[0]
+        result = run(
+            [launcher, "--version"],
+            stdout=PIPE,
+            stderr=PIPE,
+            universal_newlines=True,
+            timeout=10,
         )
+    except (IndexError, OSError, TimeoutExpired):
         return None
-    for f in files:
-        # Should match libmpi.so.40 (linux) / libmpi.40.dylib (macos)
-        if re.fullmatch(r"libmpi(\.\d+\.dylib|\.so\.\d+)", f.name):
-            # Not using Path here since environment variables have to use strings, and
-            # we do NOT want to follow symlinks in this unique case:
-            return os.path.abspath(f.locate())
+
+    version_info = (result.stdout + result.stderr).lower()
+    # Open MPI 5 prints "(Open MPI)", while Open MPI 4 prints "(OpenRTE)"
+    if ("open mpi" in version_info) or ("openrte" in version_info):
+        return "openmpi"
+    if ("hydra" in version_info) or ("mpich" in version_info):
+        return "mpich"
     return None
 
 
@@ -275,6 +339,11 @@ def run_subprocess(
 
     threads_started = False
 
+    # The network is written to a temp file, and only the file's path is sent over
+    # stdin. Sending the (potentially large) network directly over stdin fails with
+    # MPICH, whose launcher aborts if rank 0 does not read its stdin fast enough.
+    net_path_file = _write_net_tempfile(pickled_obj)
+
     try:
         ## Timing subproces
         t_start = time.time()
@@ -307,9 +376,11 @@ def run_subprocess(
         ## loop while the process is running the simulation
         # This loop coordinates the parent-child communication protocol:
         #
-        # 1. Send the network: on the first iteration, serializes and writes the
-        #    network object to the child's stdin via _write_net(). The child's
-        #    rank 0 reads it, deserializes it, and broadcasts it to all MPI ranks.
+        # 1. Send the network: before the loop, the network object is serialized and
+        #    written to a temp file via _write_net_tempfile(). On the first iteration,
+        #    the path of that file is written to the child's stdin via
+        #    _write_net_file_signal(). The child's rank 0 reads the file,
+        #    deserializes it, and broadcasts it to all MPI ranks.
         #
         # 2. Wait for results: after sending, polls the child's stdout
         #    (_echo_child_output) for NEURON progress output and stderr
@@ -370,9 +441,9 @@ def run_subprocess(
             if not sent_network:
                 # Send network object to child so it can start
                 try:
-                    _write_net(proc.stdin, pickled_obj)
+                    _write_net_file_signal(proc.stdin, net_path_file)
                 except BrokenPipeError:
-                    # child failed during _write_net(). get the
+                    # child failed during _write_net_file_signal(). get the
                     # output and break out of loop on the next
                     # iteration
                     warn(
@@ -421,6 +492,13 @@ def run_subprocess(
 
     except KeyboardInterrupt:
         warn("Received KeyboardInterrupt. Stopping simulation process...")
+    finally:
+        # The child only reads the network file at startup, so it is safe to remove
+        # it once we are no longer waiting on the child.
+        try:
+            os.unlink(net_path_file)
+        except OSError:
+            pass
 
     if threads_started:
         # stop the threads
@@ -707,6 +785,25 @@ def _write_net(stream, pickled_net):
     stream.write("@start_of_net@")
     stream.write(pickled_net.decode())
     stream.write("@end_of_net:%d@\n" % len(pickled_net))
+    stream.flush()
+
+
+def _write_net_tempfile(pickled_net):
+    """Write the pickled network to a temp file and return the file's path."""
+    fd, tmp_path = tempfile.mkstemp(prefix="hnn_mpi_net_", suffix=".txt")
+    try:
+        with os.fdopen(fd, "w") as f:
+            _write_net(f, pickled_net)
+    except Exception:
+        os.unlink(tmp_path)
+        raise
+    return tmp_path
+
+
+def _write_net_file_signal(stream, net_path_file):
+    """Signal the child process with the path of the network temp file."""
+    stream.flush()
+    stream.write("@net_file:%s@\n" % net_path_file)
     stream.flush()
 
 
@@ -1038,8 +1135,9 @@ class MPIBackend(object):
         in which case it will attempt to detect the number of cores (including
         hardware-threads) and start parallel simulation over all of them.
     mpi_cmd : str
-        The name of the mpi launcher executable. Will use 'mpiexec' (openmpi)
-        by default.
+        The name of the mpi launcher executable. Will use 'mpiexec' by default.
+        Both Open MPI and MPICH launchers are supported; which one is in use is
+        detected automatically by running '<mpi_cmd> --version'.
     use_hwthreading_if_found : bool
         Specifies whether the class should try to detect hardware-threading,
         and, if it is found, then both use MPI's '--use-hwthread-cpus' option
@@ -1064,26 +1162,30 @@ class MPIBackend(object):
         if hardware-threading is detected. If this argument is set to 'True',
         then '--use-hwthread-cpus' will always be used, regardless of
         hardware-threading detection. If 'False', then '--use-hwthread-cpus'
-        will never be used.
+        will never be used. Ignored if MPICH is detected, since MPICH does not
+        support (or need) this option.
     override_oversubscribe_option : None | bool
         Force use of MPI's '--oversubscribe' support if changed from its
         default value of 'None'. By default, '--oversubscribe' is only passed
         if the user specifies a custom number of cores via 'n_procs' and if
         that number exceeds the number of detected available cores. If this
         argument is set to 'True', then '--oversubscribe' will always be
-        used. If 'False', then '--oversubscribe' will never be used.
+        used. If 'False', then '--oversubscribe' will never be used. Ignored if
+        MPICH is detected, since MPICH always allows oversubscription.
     verbose : bool, default False
         If True, prints progress messages and status updates to stdout.
     autoload_mpi_library : bool, default=True
         Whether to automatically locate the MPI library file shipped by the PyPI
-        'openmpi' package (if installed) and point NEURON to it via the
+        'openmpi' or 'mpich' package (whichever matches the detected MPI
+        implementation, if installed) and point NEURON to it via the
         'MPI_LIB_NRN_PATH' environment variable. If True (the default) and the MPI
         library is found, 'MPI_LIB_NRN_PATH' will be overwritten if it has already been
         set in your environment. Forced to False if 'mpi_lib_path' is provided.
     mpi_lib_path : None | str | Path, default=None
         Absolute path to a user-supplied MPI library file (NOT a directory) such as
         '/usr/lib/libmpi.so.40' on Linux or '/usr/lib/libmpi.40.dylib' on macOS that
-        NEURON should load. This file path will be passed to NEURON via the
+        NEURON should load (for MPICH, these are usually named 'libmpi.so.12' and
+        'libmpi.12.dylib'). This file path will be passed to NEURON via the
         'MPI_LIB_NRN_PATH' environment variable. If provided, 'autoload_mpi_library' is
         forced to False and 'MPI_LIB_NRN_PATH' will be overwritten if it has already
         been set in your environment. Note that we do not validate the whether the file
@@ -1097,6 +1199,10 @@ class MPIBackend(object):
         with the JoblibBackend
     mpi_cmd : list of str
         The mpi command with number of procs and options to be passed to Popen
+    mpi_implementation : None | str
+        The detected MPI implementation of the launcher: 'openmpi', 'mpich', or
+        None if it could not be determined (in which case Open MPI is assumed for
+        the launcher options).
     expected_data_length : int
         Used to check consistency between data that was sent and what
         MPIBackend received.
@@ -1148,15 +1254,34 @@ class MPIBackend(object):
         # Begin constructing the main command.
         self.mpi_cmd = mpi_cmd
 
+        # MPICH's launcher (Hydra) rejects OpenMPI's '--use-hwthread-cpus' and
+        # '--oversubscribe' options, and does not need them: it does not bind processes
+        # to physical cores by default, and always allows oversubscription.
+        self.mpi_implementation = _detect_mpi_implementation(mpi_cmd)
+        is_mpich = self.mpi_implementation == "mpich"
+        if is_mpich and (
+            (override_hwthreading_option is True)
+            or (override_oversubscribe_option is True)
+        ):
+            warn(
+                "MPICH was detected as the MPI implementation. The "
+                "'--use-hwthread-cpus' and '--oversubscribe' options are not "
+                "supported by MPICH and will not be passed; MPICH allows both "
+                "hardware-threading and oversubscription by default."
+            )
+
         # Use the hwthread option if the user wants to force it. Otherwise, use
         # hardware-threading if:
         # 1. the user has not changed 'override_hwthreading_option',
         # 2. if the user wants to use hardware-threading, and
         # 3. hardware-threading is detected.
-        if (override_hwthreading_option is True) or (
-            (override_hwthreading_option is None)
-            and (use_hwthreading_if_found is True)
-            and hwthreading_available
+        if (not is_mpich) and (
+            (override_hwthreading_option is True)
+            or (
+                (override_hwthreading_option is None)
+                and (use_hwthreading_if_found is True)
+                and hwthreading_available
+            )
         ):
             self.mpi_cmd += " --use-hwthread-cpus"
 
@@ -1165,7 +1290,13 @@ class MPIBackend(object):
         # 'override_oversubscribe_option', use our original heuristic: did user
         # specify the number of cores (see `n_procs` logic above), AND did they
         # specify more cores than are available?
-        if (override_oversubscribe_option is True) or (
+        if is_mpich:
+            if self.n_procs > n_available_cores:
+                warn(
+                    "Number of requested MPI processes exceeds available "
+                    "cores. MPICH allows MPI oversubscription by default."
+                )
+        elif (override_oversubscribe_option is True) or (
             (override_oversubscribe_option is None)
             and (self.n_procs > n_available_cores)
         ):
@@ -1286,6 +1417,7 @@ class MPIBackend(object):
         env = _get_mpi_env(
             autoload_mpi_library=self.autoload_mpi_library,
             mpi_lib_path=self.mpi_lib_path,
+            mpi_implementation=self.mpi_implementation,
         )
         self.proc, sim_data = run_subprocess(
             command=self.mpi_cmd,

@@ -15,6 +15,8 @@ from hnn_core.parallel_backends import (
     _get_data_info_from_child_err,
     _extract_data,
     _extract_data_length,
+    _write_net_file_signal,
+    _write_net_tempfile,
     requires_mpi4py,
 )
 
@@ -117,6 +119,25 @@ def test_str_to_net():
     # process input from queue
     with pytest.raises(ValueError, match=expected_string):
         _str_to_net(input_str)
+
+
+def test_net_tempfile():
+    """Test sending the network to the child via a temp file"""
+    net = neymotin_2020_model(mesh_shape=(3, 3))
+    pickled_net = base64.b64encode(pickle.dumps(net))
+
+    net_path_file = _write_net_tempfile(pickled_net)
+    try:
+        # Only the file path, not the network itself, is sent over stdin
+        with io.StringIO() as stream:
+            _write_net_file_signal(stream, net_path_file)
+            assert stream.getvalue() == "@net_file:%s@\n" % net_path_file
+
+        with open(net_path_file, "r") as f:
+            received_net = _str_to_net(f.read())
+        assert isinstance(received_net, Network)
+    finally:
+        os.unlink(net_path_file)
 
 
 def test_child_run():

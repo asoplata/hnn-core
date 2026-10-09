@@ -90,7 +90,7 @@ if __name__ == "__main__":
             "joblib",
             "psutil",
             "mpi4py ; platform_system != 'Windows'",
-            "openmpi>5.0.0 ; platform_system != 'Windows'",
+            "mpich>5.0.0 ; platform_system != 'Windows'",
         ],
         "test": [
             "codespell",

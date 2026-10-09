@@ -1,6 +1,7 @@
 from pathlib import Path
 from os import environ
 import io
+import sys
 import itertools
 from contextlib import redirect_stdout
 from threading import Thread, Event
@@ -25,25 +26,29 @@ from hnn_core.parallel_backends import (
     requires_mpi4py,
     requires_psutil,
     _determine_cores_hwthreading,
+    _detect_mpi_implementation,
     _get_mpi_env,
-    _get_pip_openmpi_lib,
+    _get_pip_mpi_lib,
 )
 from hnn_core.network_builder import NetworkBuilder
 
 
-def _has_pip_openmpi():
-    """Check whether the PyPI 'openmpi' package is installed."""
+def _has_pip_package(package_name):
+    """Check whether a PyPI package (e.g. 'openmpi' or 'mpich') is installed."""
     from importlib.metadata import PackageNotFoundError, distribution
 
     try:
-        distribution("openmpi")
+        distribution(package_name)
     except PackageNotFoundError:
         return False
     return True
 
 
 requires_pip_openmpi = pytest.mark.skipif(
-    not _has_pip_openmpi(), reason="requires the PyPI 'openmpi' package"
+    not _has_pip_package("openmpi"), reason="requires the PyPI 'openmpi' package"
+)
+requires_pip_mpich = pytest.mark.skipif(
+    not _has_pip_package("mpich"), reason="requires the PyPI 'mpich' package"
 )
 
 
@@ -271,8 +276,8 @@ class TestParallelBackends:
             UserWarning,
             match=(
                 "Number of requested MPI processes exceeds "
-                "available cores. Enabling MPI "
-                "oversubscription automatically."
+                "available cores. (Enabling MPI "
+                "oversubscription automatically|MPICH allows)"
             ),
         ):
             with MPIBackend(
@@ -281,7 +286,9 @@ class TestParallelBackends:
                 override_oversubscribe_option=override_oversubscribe_option,
             ) as backend:
                 assert backend.n_procs == oversubscribed_procs
-                assert "--oversubscribe" in " ".join(backend.mpi_cmd)
+                # MPICH always allows oversubscription, and rejects the option
+                is_mpich = backend.mpi_implementation == "mpich"
+                assert ("--oversubscribe" in " ".join(backend.mpi_cmd)) != is_mpich
                 simulate_dipole(net, tstop=40)
 
         # Case 2: Check that '--oversubscribe' option is passed if
@@ -296,7 +303,7 @@ class TestParallelBackends:
             use_hwthreading_if_found=use_hwthreading_if_found,
             override_oversubscribe_option=override_oversubscribe_option,
         ) as backend:
-            assert "--oversubscribe" in " ".join(backend.mpi_cmd)
+            assert ("--oversubscribe" in " ".join(backend.mpi_cmd)) != is_mpich
 
         # Case 3: Check that the simulation fails if oversubscribe is forced
         # off
@@ -307,10 +314,14 @@ class TestParallelBackends:
             override_oversubscribe_option=override_oversubscribe_option,
         ) as backend:
             assert "--oversubscribe" not in " ".join(backend.mpi_cmd)
-            with pytest.raises(
-                RuntimeError, match="MPI simulation failed. Return code: 1"
-            ):
+            # MPICH cannot forbid oversubscription, so the simulation succeeds
+            if is_mpich:
                 simulate_dipole(net, tstop=40)
+            else:
+                with pytest.raises(
+                    RuntimeError, match="MPI simulation failed. Return code: 1"
+                ):
+                    simulate_dipole(net, tstop=40)
 
     @requires_mpi4py
     @requires_psutil
@@ -365,7 +376,9 @@ class TestParallelBackends:
             override_oversubscribe_option=override_oversubscribe_option,
             override_hwthreading_option=override_hwthreading_option,
         ) as backend:
-            if detected_hwthreading:
+            # MPICH does not support (or need) the hwthread option
+            is_mpich = backend.mpi_implementation == "mpich"
+            if detected_hwthreading and not is_mpich:
                 assert "--use-hwthread-cpus" in " ".join(backend.mpi_cmd)
             simulate_dipole(net, tstop=40)
 
@@ -380,7 +393,7 @@ class TestParallelBackends:
             override_oversubscribe_option=override_oversubscribe_option,
             override_hwthreading_option=override_hwthreading_option,
         ) as backend:
-            assert "--use-hwthread-cpus" in " ".join(backend.mpi_cmd)
+            assert ("--use-hwthread-cpus" in " ".join(backend.mpi_cmd)) != is_mpich
 
         # Case 3: Check that hwthreading turns off if forced off.
         override_hwthreading_option = False
@@ -451,6 +464,10 @@ class TestParallelBackends:
 @requires_mpi4py
 @requires_psutil
 @pytest.mark.uses_mpi
+@pytest.mark.skipif(
+    _detect_mpi_implementation("mpiexec") == "mpich",
+    reason="the failure is caused by an OpenMPI-specific setting",
+)
 def test_mpi_failure(run_hnn_core_fixture):
     """Test that an MPI failure is handled and messages are printed"""
     # this MPI parameter will cause a MPI job to fail
@@ -537,27 +554,31 @@ class _FakeDistribution:
         self.files = files
 
 
-def _fake_openmpi_package(monkeypatch, file_paths):
-    """Make the PyPI 'openmpi' package appear to contain 'file_paths'."""
+def _fake_pip_packages(monkeypatch, packages):
+    """Make PyPI packages appear installed, as a dict of {name: file_paths}."""
     import importlib.metadata
 
-    files = [_FakePackageFile(path) for path in file_paths]
-    # _get_pip_openmpi_lib imports 'distribution' at call time, so we patch the source
+    def _distribution(name):
+        if name not in packages:
+            raise importlib.metadata.PackageNotFoundError(name)
+        return _FakeDistribution([_FakePackageFile(path) for path in packages[name]])
+
+    # _get_pip_mpi_lib imports 'distribution' at call time, so we patch the source
     # module rather than hnn_core.parallel_backends
+    monkeypatch.setattr(importlib.metadata, "distribution", _distribution)
+
+
+def _fake_pip_mpi_lib(monkeypatch, mpi_lib):
+    """Make _get_pip_mpi_lib return 'mpi_lib' without searching anything."""
+    from hnn_core import parallel_backends
+
     monkeypatch.setattr(
-        importlib.metadata, "distribution", lambda name: _FakeDistribution(files)
+        parallel_backends, "_get_pip_mpi_lib", lambda mpi_implementation=None: mpi_lib
     )
 
 
-def _fake_pip_openmpi_lib(monkeypatch, mpi_lib):
-    """Make _get_pip_openmpi_lib return 'mpi_lib' without searching anything."""
-    from hnn_core import parallel_backends
-
-    monkeypatch.setattr(parallel_backends, "_get_pip_openmpi_lib", lambda: mpi_lib)
-
-
-class TestGetPipOpenmpiLib:
-    """Tests for locating libmpi inside the PyPI 'openmpi' package"""
+class TestGetPipMpiLib:
+    """Tests for locating libmpi inside the PyPI 'openmpi' or 'mpich' package"""
 
     # Files that look similar to the real library but must NOT be matched. Notably,
     # 'libmpi.so' and 'libmpi.dylib' are linker scripts that NEURON cannot load.
@@ -566,55 +587,164 @@ class TestGetPipOpenmpiLib:
         "libmpi.dylib",
         "libmpi_mpifh.so.40",
         "libmpi.so.40.1.0",
+        "libmpi_abi.so.1",
     ]
 
+    @pytest.mark.parametrize("package_name", ["openmpi", "mpich"])
     @pytest.mark.parametrize(
         "lib_name",
         ["libmpi.so.40", "libmpi.40.dylib", "libmpi.so.12", "libmpi.12.dylib"],
     )
-    def test_lib_found(self, monkeypatch, tmp_path, lib_name):
+    def test_lib_found(self, monkeypatch, tmp_path, package_name, lib_name):
         """Test that the real libmpi file is found among the decoys"""
         lib_dir = tmp_path / "lib"
         decoys = [lib_dir / name for name in self.DECOY_FILES]
         # Use a non-normalized path to check that the result gets normalized
         real_lib = lib_dir / ".." / "lib" / lib_name
-        _fake_openmpi_package(monkeypatch, decoys + [real_lib])
+        _fake_pip_packages(monkeypatch, {package_name: decoys + [real_lib]})
 
-        assert _get_pip_openmpi_lib() == str(lib_dir / lib_name)
+        assert _get_pip_mpi_lib() == str(lib_dir / lib_name)
+        assert _get_pip_mpi_lib(package_name) == str(lib_dir / lib_name)
+
+    @pytest.mark.parametrize(
+        "mpi_implementation, expected_lib",
+        [
+            ("openmpi", "/openmpi/libmpi.so.40"),
+            ("mpich", "/mpich/libmpi.so.12"),
+            # Unknown implementation: 'openmpi' is preferred
+            (None, "/openmpi/libmpi.so.40"),
+        ],
+    )
+    def test_both_installed(self, monkeypatch, mpi_implementation, expected_lib):
+        """Test that the package matching the MPI implementation is used"""
+        _fake_pip_packages(
+            monkeypatch,
+            {
+                "openmpi": ["/openmpi/libmpi.so.40"],
+                "mpich": ["/mpich/libmpi.so.12"],
+            },
+        )
+
+        assert _get_pip_mpi_lib(mpi_implementation) == expected_lib
+
+    def test_other_package_not_searched(self, monkeypatch, capsys):
+        """Test that only the package matching the MPI implementation is searched"""
+        _fake_pip_packages(monkeypatch, {"openmpi": ["/openmpi/libmpi.so.40"]})
+
+        assert _get_pip_mpi_lib("mpich") is None
+        assert "['mpich'] not found" in capsys.readouterr().out
 
     def test_only_decoys(self, monkeypatch, tmp_path):
         """Test that None is returned if no file matches"""
         decoys = [tmp_path / name for name in self.DECOY_FILES]
-        _fake_openmpi_package(monkeypatch, decoys)
+        _fake_pip_packages(monkeypatch, {"openmpi": decoys, "mpich": decoys})
 
-        assert _get_pip_openmpi_lib() is None
+        assert _get_pip_mpi_lib() is None
 
     def test_empty_package(self, monkeypatch):
         """Test that None is returned if the package lists no files"""
-        _fake_openmpi_package(monkeypatch, [])
+        _fake_pip_packages(monkeypatch, {"openmpi": [], "mpich": []})
 
-        assert _get_pip_openmpi_lib() is None
+        assert _get_pip_mpi_lib() is None
 
     def test_not_installed(self, monkeypatch, capsys):
         """Test that None is returned and a message printed if not installed"""
-        import importlib.metadata
+        _fake_pip_packages(monkeypatch, {})
 
-        def _not_installed(name):
-            raise importlib.metadata.PackageNotFoundError(name)
+        assert _get_pip_mpi_lib() is None
+        assert "['openmpi', 'mpich'] not found" in capsys.readouterr().out
 
-        monkeypatch.setattr(importlib.metadata, "distribution", _not_installed)
-
-        assert _get_pip_openmpi_lib() is None
-        assert "PyPI 'openmpi' package not found" in capsys.readouterr().out
-
-    @requires_pip_openmpi
-    def test_real_package(self):
-        """Test that libmpi is found in an actually-installed 'openmpi' package"""
-        mpi_lib = _get_pip_openmpi_lib()
+    @pytest.mark.parametrize(
+        "package_name",
+        [
+            pytest.param("openmpi", marks=requires_pip_openmpi),
+            pytest.param("mpich", marks=requires_pip_mpich),
+        ],
+    )
+    def test_real_package(self, package_name):
+        """Test that libmpi is found in an actually-installed package"""
+        mpi_lib = _get_pip_mpi_lib(package_name)
 
         assert mpi_lib is not None
         assert Path(mpi_lib).is_absolute()
         assert Path(mpi_lib).is_file()
+
+
+class TestDetectMpiImplementation:
+    """Tests for detecting the MPI implementation of the MPI launcher"""
+
+    @pytest.mark.parametrize(
+        "version_output, expected",
+        [
+            ("mpiexec (Open MPI) 5.0.11\n", "openmpi"),
+            ("mpirun (Open MPI) 4.1.6\n", "openmpi"),
+            ("mpiexec (OpenRTE) 4.0.3\n", "openmpi"),
+            ("HYDRA build details:\n    Version:    5.0.2\n", "mpich"),
+            ("Intel(R) MPI Library for Linux* OS, Version 2021.10 (Hydra)", "mpich"),
+            ("slurm 23.02.7\n", None),
+            ("", None),
+        ],
+    )
+    def test_version_output(self, monkeypatch, version_output, expected):
+        """Test that the '--version' output of the launcher is parsed correctly"""
+        import subprocess
+
+        received_cmds = []
+
+        def _fake_run(cmd, **kwargs):
+            received_cmds.append(cmd)
+            return subprocess.CompletedProcess(cmd, 0, version_output, "")
+
+        monkeypatch.setattr(subprocess, "run", _fake_run)
+
+        assert _detect_mpi_implementation("mpiexec -host foo") == expected
+        # Only the launcher itself is run, without any of its other arguments
+        assert received_cmds == [["mpiexec", "--version"]]
+
+    @pytest.mark.parametrize("mpi_cmd", ["", "hnn_core_nonexistent_mpiexec"])
+    def test_launcher_not_found(self, mpi_cmd):
+        """Test that None is returned if the launcher cannot be run"""
+        assert _detect_mpi_implementation(mpi_cmd) is None
+
+
+@requires_mpi4py
+@requires_psutil
+@pytest.mark.parametrize(
+    "mpi_implementation, override_option",
+    itertools.product(["openmpi", "mpich", None], [None, True, False]),
+)
+def test_mpibackend_launcher_options(monkeypatch, mpi_implementation, override_option):
+    """Test that OpenMPI-only launcher options are never passed to MPICH"""
+    from hnn_core import parallel_backends
+
+    monkeypatch.setattr(
+        parallel_backends, "_detect_mpi_implementation", lambda cmd: mpi_implementation
+    )
+    # Pretend hardware-threading is present, with only 2 cores available
+    monkeypatch.setattr(
+        parallel_backends, "_determine_cores_hwthreading", lambda **kwargs: [2, True]
+    )
+
+    if (mpi_implementation == "mpich") and override_option:
+        expected_warning = "MPICH was detected"
+    elif (mpi_implementation == "mpich") or (override_option is not False):
+        expected_warning = "Number of requested MPI processes exceeds"
+    else:
+        expected_warning = "you have forced off MPI oversubscription"
+    with pytest.warns(UserWarning, match=expected_warning):
+        backend = MPIBackend(
+            n_procs=4,
+            override_hwthreading_option=override_option,
+            override_oversubscribe_option=override_option,
+        )
+
+    assert backend.mpi_implementation == mpi_implementation
+    mpi_cmd = " ".join(backend.mpi_cmd)
+    uses_openmpi_options = (mpi_implementation != "mpich") and (
+        override_option is not False
+    )
+    assert ("--use-hwthread-cpus" in mpi_cmd) == uses_openmpi_options
+    assert ("--oversubscribe" in mpi_cmd) == uses_openmpi_options
 
 
 # Fake library paths. Each one names where the MPI library "came from", so a
@@ -780,7 +910,7 @@ def test_get_mpi_env_lib_path(
         monkeypatch.setenv("MPI_LIB_NRN_PATH", preexisting_env_value)
 
     # Control what the PyPI 'openmpi' library search returns
-    _fake_pip_openmpi_lib(monkeypatch, pip_lib_found)
+    _fake_pip_mpi_lib(monkeypatch, pip_lib_found)
 
     env = _get_mpi_env(autoload_mpi_library=autoload, mpi_lib_path=user_lib_path)
 
@@ -801,13 +931,26 @@ def test_get_mpi_env_skips_openmpi_search(monkeypatch, capsys, kwargs):
     """Test that the 'openmpi' package is only searched when autoloading"""
     from hnn_core import parallel_backends
 
-    def _fail():
-        raise AssertionError("'openmpi' package should not be searched")
+    def _fail(mpi_implementation=None):
+        raise AssertionError("PyPI MPI packages should not be searched")
 
-    monkeypatch.setattr(parallel_backends, "_get_pip_openmpi_lib", _fail)
+    monkeypatch.setattr(parallel_backends, "_get_pip_mpi_lib", _fail)
 
     _get_mpi_env(**kwargs)
     assert capsys.readouterr().out == ""
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="MPI env vars not set on Windows")
+@pytest.mark.parametrize("mpi_implementation", ["openmpi", "mpich", None])
+def test_get_mpi_env_openmpi_vars(monkeypatch, mpi_implementation):
+    """Test that OpenMPI-specific variables are not set for MPICH"""
+    monkeypatch.delenv("OMPI_MCA_btl_base_warn_component_unused", raising=False)
+    _fake_pip_mpi_lib(monkeypatch, None)
+
+    env = _get_mpi_env(mpi_implementation=mpi_implementation)
+
+    has_ompi_var = "OMPI_MCA_btl_base_warn_component_unused" in env
+    assert has_ompi_var == (mpi_implementation != "mpich")
 
 
 @requires_mpi4py
@@ -878,5 +1021,9 @@ def test_mpibackend_passes_mpi_lib_args(monkeypatch, tmp_path):
     with pytest.raises(_StopSimulation):
         backend.simulate(net, tstop=1, dt=0.025, n_trials=1)
     assert received_kwargs == [
-        dict(autoload_mpi_library=False, mpi_lib_path=str(lib_file))
+        dict(
+            autoload_mpi_library=False,
+            mpi_lib_path=str(lib_file),
+            mpi_implementation=backend.mpi_implementation,
+        )
     ]

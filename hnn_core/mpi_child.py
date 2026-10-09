@@ -83,20 +83,22 @@ class MPISimulation(object):
             MPI.Finalize()
 
     def _read_net(self):
-        """Read net broadcasted to all ranks on stdin"""
+        """Read net from the file signaled on stdin, then broadcast to all ranks"""
 
-        # read Network from stdin
+        # read the path of the Network temp file from stdin, then read the Network
+        # from that file. The parent process removes the file afterwards.
         if self.rank == 0:
             input_str = ""
             while True:
                 line = sys.stdin.readline()
                 line = line.rstrip("\n")
                 input_str += line
-                end_match = re.search(r"@end_of_net:\d+@", input_str)
-                if end_match is not None:
+                file_match = re.search(r"@net_file:(.+)@", input_str)
+                if file_match is not None:
                     break
 
-            net = _str_to_net(input_str)
+            with open(file_match.group(1), "r") as f:
+                net = _str_to_net(f.read())
         else:
             net = None
 
