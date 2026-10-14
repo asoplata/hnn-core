@@ -29,53 +29,53 @@ if version is None:
     raise RuntimeError("Could not determine version")
 
 
-# test install with:
-# $ rm -rf hnn_core/mod/x86_64/
-# $ rm -rf hnn_core/mod/arm64/
-# $ python setup.py clean --all install
-#
-# to make sure there are no residual mod files
-#
-# also see following link to understand why build_py must be overridden:
-# https://stackoverflow.com/questions/51243633/python-setuptools-setup-py-install-does-not-automatically-call-build
-class BuildMod(Command):
-    user_options = []
+# # test install with:
+# # $ rm -rf hnn_core/mod/x86_64/
+# # $ rm -rf hnn_core/mod/arm64/
+# # $ python setup.py clean --all install
+# #
+# # to make sure there are no residual mod files
+# #
+# # also see following link to understand why build_py must be overridden:
+# # https://stackoverflow.com/questions/51243633/python-setuptools-setup-py-install-does-not-automatically-call-build
+# class BuildMod(Command):
+#     user_options = []
 
-    def initialize_options(self):
-        pass
+#     def initialize_options(self):
+#         pass
 
-    def finalize_options(self):
-        pass
+#     def finalize_options(self):
+#         pass
 
-    def run(self):
-        print("=> Building mod files ...")
+#     def run(self):
+#         print("=> Building mod files ...")
 
-        if platform.system() == "Windows":
-            shell = True
-        else:
-            shell = False
+#         if platform.system() == "Windows":
+#             shell = True
+#         else:
+#             shell = False
 
-        mod_path = Path(__file__).parent / "hnn_core" / "mod"
-        process = subprocess.Popen(
-            ["nrnivmodl"],
-            cwd=mod_path,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=shell,
-        )
-        outs, errs = process.communicate()
-        print(outs)
+#         mod_path = Path(__file__).parent / "hnn_core" / "mod"
+#         process = subprocess.Popen(
+#             ["nrnivmodl"],
+#             cwd=mod_path,
+#             stdout=subprocess.PIPE,
+#             stderr=subprocess.PIPE,
+#             shell=shell,
+#         )
+#         outs, errs = process.communicate()
+#         print(outs)
 
 
-class build_py_mod(build_py):
-    def run(self):
-        self.run_command("build_mod")
+# class build_py_mod(build_py):
+#     def run(self):
+#         self.run_command("build_mod")
 
-        build_dir = Path(self.build_lib)/ "hnn_core"/ "mod"
-        mod_path = Path(__file__).parent / "hnn_core" / "mod"
-        shutil.copytree(mod_path, build_dir)
+#         build_dir = Path(self.build_lib)/ "hnn_core"/ "mod"
+#         mod_path = Path(__file__).parent / "hnn_core" / "mod"
+#         shutil.copytree(mod_path, build_dir)
 
-        build_py.run(self)
+#         build_py.run(self)
 
 
 # `scikit-learn` requires installation of `joblib`, so technically, running optimization
@@ -163,12 +163,13 @@ if __name__ == "__main__":
         packages=find_packages(),
         package_data={
             "hnn_core": [
+                "mod/*.mod",
                 "param/*.json",
                 "gui/*.css",
                 "gui/*.ipynb",
                 "gui/*.js",
             ]
         },
-        cmdclass={"build_py": build_py_mod, "build_mod": BuildMod},
+        # cmdclass={"build_py": build_py_mod, "build_mod": BuildMod},
         entry_points={"console_scripts": ["hnn-gui=hnn_core.gui.gui:launch"]},
     )
