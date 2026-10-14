@@ -123,7 +123,7 @@ pip install -U build twine
 
 13. Build our package locally using the following (clearing out old build output first matters, since stale files listed there, such as old compiled mechanisms, can get packed into the packages):
 ```
-rm -rf build dist hnn_core.egg-info
+make clean-packaging  # same as `rm -rf build dist hnn_core.egg-info`
 python -m build
 ```
 This will create both a source tarball (`dist/hnn_core-<version>.tar.gz`) and a wheel (`dist/hnn_core-<version>-py3-none-any.whl`) of the new version in a new `dist` directory.
