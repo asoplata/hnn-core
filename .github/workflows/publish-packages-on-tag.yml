@@ -47,11 +47,11 @@ jobs:
       run: |
         make clean
 
-    - name: Build ONLY a source tarball
+    - name: Build a source tarball and a wheel
       run: |
-        python3 -m build --sdist
+        python3 -m build
 
-    - name: Check source tarball
+    - name: Check distribution packages
       run: |
         twine check dist/*
 
