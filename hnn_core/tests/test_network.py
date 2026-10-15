@@ -2934,7 +2934,7 @@ def test_offline_spike_replay(fix_net_model, request):
     """Test a workflow of offline spike recording and replay between networks."""
     # Create first network (source)
     net_model = request.getfixturevalue(fix_net_model)
-    net_A, _ = net_model()
+    net_A, _ = net_model(reduced=True)
 
     # Add drive to first network
     net_A.add_evoked_drive(
@@ -2984,7 +2984,7 @@ def test_offline_spike_replay(fix_net_model, request):
     assert total_spikes >= 2, f"Not enough spikes recorded ({total_spikes})"
 
     # Create second network (target)
-    net_B, _ = net_model()
+    net_B, _ = net_model(reduced=True)
 
     # Feed spike data to second network
     net_B.add_spike_train_drive(

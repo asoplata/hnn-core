@@ -17,10 +17,23 @@ import numpy as np
 import pytest
 
 
-@pytest.mark.parametrize("solver", ["bayesian", "cobyla", "cma"])
-@pytest.mark.parametrize("obj_fun", ["dipole_corr", "dipole_rmse", "dipole_rmse_corr"])
+# Instead of the full (3 solvers x 3 objective functions x 2 models = 18) cross-product,
+# this is a "pairwise" set of combinations: every solver is run with every objective
+# function, and every solver and every objective function is run with both models. The
+# slowest combination, CMA with the Duecker model, is only used once.
 @pytest.mark.parametrize(
-    "fix_net_model", ["fix_net_neymotin_2020", "fix_net_duecker_ET"]
+    "solver,obj_fun,fix_net_model",
+    [
+        ("bayesian", "dipole_corr", "fix_net_neymotin_2020"),
+        ("bayesian", "dipole_rmse", "fix_net_duecker_ET"),
+        ("bayesian", "dipole_rmse_corr", "fix_net_duecker_ET"),
+        ("cobyla", "dipole_corr", "fix_net_neymotin_2020"),
+        ("cobyla", "dipole_rmse", "fix_net_duecker_ET"),
+        ("cobyla", "dipole_rmse_corr", "fix_net_neymotin_2020"),
+        ("cma", "dipole_corr", "fix_net_duecker_ET"),
+        ("cma", "dipole_rmse", "fix_net_neymotin_2020"),
+        ("cma", "dipole_rmse_corr", "fix_net_neymotin_2020"),
+    ],
 )
 def test_optimize_evoked(solver, obj_fun, fix_net_model, request):
     """Test optimization routines for evoked drives in a reduced network."""
@@ -101,7 +114,9 @@ def test_optimize_evoked(solver, obj_fun, fix_net_model, request):
     # test repr before fitting
     assert "fit=False" in repr(optim), "optimizer is already fit"
 
-    optim.fit(target=dpl_orig, n_trials=3, scale_factor=3000, smooth_window_len=1)
+    # Fitting with multiple trials is tested in `test_initial_params` and
+    # `test_custom_loss_fun`
+    optim.fit(target=dpl_orig, n_trials=1, scale_factor=3000, smooth_window_len=1)
 
     # test repr after fitting
     assert "fit=True" in repr(optim), "optimizer was not fit"
@@ -121,10 +136,19 @@ def test_optimize_evoked(solver, obj_fun, fix_net_model, request):
     assert all(vals >= 0 for vals in obj), "loss values should be positive"
 
 
-@pytest.mark.parametrize("solver", ["bayesian", "cobyla", "cma"])
-@pytest.mark.parametrize("relative_bandpower", [[1, 2], 0.5])
+# Similar to `test_optimize_evoked`, this is a "pairwise" set of combinations instead of
+# the full cross-product: every solver is run with both `relative_bandpower` types, and
+# every solver and `relative_bandpower` type is run with both models.
 @pytest.mark.parametrize(
-    "fix_net_model", ["fix_net_neymotin_2020", "fix_net_duecker_ET"]
+    "solver,relative_bandpower,fix_net_model",
+    [
+        ("bayesian", [1, 2], "fix_net_neymotin_2020"),
+        ("bayesian", 0.5, "fix_net_duecker_ET"),
+        ("cobyla", [1, 2], "fix_net_neymotin_2020"),
+        ("cobyla", 0.5, "fix_net_duecker_ET"),
+        ("cma", [1, 2], "fix_net_duecker_ET"),
+        ("cma", 0.5, "fix_net_neymotin_2020"),
+    ],
 )
 def test_rhythmic(solver, relative_bandpower, fix_net_model, request):
     """Test optimization routines for rhythmic drives in a reduced network."""

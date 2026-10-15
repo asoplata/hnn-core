@@ -8,7 +8,6 @@ import json
 import logging
 import sys
 import tempfile
-import time
 from pathlib import Path
 from urllib.request import urlretrieve
 
@@ -610,9 +609,9 @@ def test_gui_init_network(setup_reduced_gui, fix_load_featureful_tmp_path):
 @requires_mpi4py
 @requires_psutil
 @pytest.mark.uses_mpi
-def test_gui_run_simulation_mpi(setup_full_gui):
+def test_gui_run_simulation_mpi(setup_reduced_gui):
     """Test if run button triggers simulation with MPIBackend."""
-    gui = setup_full_gui
+    gui = setup_reduced_gui
 
     gui.widget_tstop.value = 70
     gui.widget_dt.value = 0.5
@@ -664,6 +663,8 @@ def test_gui_run_simulations(setup_reduced_gui):
 def test_simulation_auto_rename_duplicate(setup_reduced_gui):
     """Checks that simulation auto-renames if the name is already taken."""
     gui = setup_reduced_gui
+    # Only the simulation names are tested here, so use very short simulations
+    gui.widget_tstop.value = 10
 
     default_sim_name = gui.widget_simulation_name.value
 
@@ -1877,6 +1878,9 @@ def test_diff_gui_vs_api_networks_simulations(setup_full_gui):
 # - `cma` does not need to be run against MPI Backend because `cma` does not actually
 # use EITHER Joblib or MPI Backend. Instead, it uses BatchSimulate's, which uses its
 # own. This also means it can be run independent of needing MPI.
+# - Only one solver is run against MPI Backend, since the solvers only differ in how
+# they choose parameters, not in how they run simulations. All solvers are run against
+# Joblib Backend.
 # - The `dt` parameter is heterogeneous because (see #960 and #663), MPI simulations
 # appear to fail for larger `dt` values, but only in certain (not completely known)
 # situations. The below values are the biggest `dt` values that AES has found that work.
@@ -1888,7 +1892,6 @@ def test_diff_gui_vs_api_networks_simulations(setup_full_gui):
         ("Joblib", "bayesian", 0.5),
         ("Joblib", "cobyla", 0.5),
         ("Joblib", "cma", 0.5),
-        pytest.param("MPI", "bayesian", 0.025, marks=pytest.mark.uses_mpi),
         pytest.param("MPI", "cobyla", 0.025, marks=pytest.mark.uses_mpi),
     ],
 )
@@ -2003,9 +2006,6 @@ def test_gui_run_optimization(backend_selection, opt_solver, dt, setup_reduced_g
     # Perform the first run of optimization
     gui.run_opt_button.click()
 
-    # Give the GUI time to regenerate
-    time.sleep(2)
-
     # Check that our target data and constraint checkboxes have not been reset
     assert gui.opt_target_widgets["target_dipole_data"].value == file_path.stem
 
@@ -2052,6 +2052,13 @@ def test_gui_run_optimization(backend_selection, opt_solver, dt, setup_reduced_g
     assert len(dpls) > 0
     assert all([isinstance(dpl, Dipole) for dpl in dpls])
 
+    # The remaining runs test the GUI's handling of consecutive runs and of different
+    # objective functions, which does not depend on the backend. Since every MPI
+    # simulation is slow to start, only the Joblib cases test these.
+    if backend_selection == "MPI":
+        plt.close("all")
+        return
+
     # Now, let's prepare to run a second run of optimization, but with a different
     # objective function:
     # ----------------------------------------------------------------------------------
@@ -2059,9 +2066,6 @@ def test_gui_run_optimization(backend_selection, opt_solver, dt, setup_reduced_g
 
     # Perform the first run of optimization
     gui.run_opt_button.click()
-
-    # Give the GUI time to regenerate
-    time.sleep(2)
 
     # Check that our target data and constraint checkboxes have not been reset
     assert gui.opt_drive_widgets[drive_index_evoked]["mu_opt_checkbox"].value
@@ -2098,9 +2102,6 @@ def test_gui_run_optimization(backend_selection, opt_solver, dt, setup_reduced_g
 
     # Perform the second run of optimization
     gui.run_opt_button.click()
-
-    # Give the GUI time to regenerate
-    time.sleep(2)
 
     # Check that our target data and constraint checkboxes have not been reset
     assert gui.opt_drive_widgets[drive_index_evoked]["mu_opt_checkbox"].value

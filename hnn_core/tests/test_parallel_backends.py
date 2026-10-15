@@ -164,7 +164,7 @@ class TestParallelBackends:
         """Test that MPIBackend can use more than 1 processor"""
         # if only 1 processor is available, then MPIBackend tests will not
         # be valid
-        with MPIBackend(n_cores=None) as backend:  # Use all available cores
+        with MPIBackend(n_procs=None) as backend:  # Use all available cores
             assert backend.n_procs > 1
 
     @requires_mpi4py
@@ -189,7 +189,7 @@ class TestParallelBackends:
     def test_terminate_mpibackend(self, fix_net_neymotin_2020):
         """Test terminating MPIBackend from thread"""
         net, _ = fix_net_neymotin_2020(add_drives_from_params=True, reduced=True)
-        with MPIBackend(n_cores=None) as backend:  # Use all available cores
+        with MPIBackend(n_procs=None) as backend:  # Use all available cores
             event = Event()
             # start background thread that will kill all MPIBackends
             # until event.set()
@@ -310,20 +310,18 @@ class TestParallelBackends:
             )
         ],
     )
-    def test_run_mpibackend_hwthreading(
+    def test_mpibackend_hwthreading_cmd(
         self,
         use_hwthreading_if_found,
         sensible_default_cores,
         override_oversubscribe_option,
-        fix_net_neymotin_2020,
     ):
-        """Test running MPIBackend with oversubscribed number of procs"""
-        net, _ = fix_net_neymotin_2020(add_drives_from_params=True, reduced=True)
+        """Test MPIBackend's hwthreading options in its MPI command.
 
+        Simulations using these MPI commands are run in
+        ``test_run_mpibackend_hwthreading``.
+        """
         n_procs = 2
-        # Test that the network runs at all
-        with MPIBackend(n_procs=n_procs) as backend:
-            simulate_dipole(net, tstop=40, n_trials=2)
 
         [_, detected_hwthreading] = _determine_cores_hwthreading(
             use_hwthreading_if_found=use_hwthreading_if_found,
@@ -331,101 +329,131 @@ class TestParallelBackends:
         )
 
         # Case 1 (default): Check that hwthreading turns on if needed
-        override_hwthreading_option = None
-
-        # Possibly needed to prevent MPIBackend failures to exit processes
-        del net
-        net, _ = fix_net_neymotin_2020(add_drives_from_params=True, reduced=True)
-
         with MPIBackend(
             n_procs=n_procs,
             use_hwthreading_if_found=use_hwthreading_if_found,
             sensible_default_cores=sensible_default_cores,
             override_oversubscribe_option=override_oversubscribe_option,
-            override_hwthreading_option=override_hwthreading_option,
+            override_hwthreading_option=None,
         ) as backend:
             if detected_hwthreading:
                 assert "--use-hwthread-cpus" in " ".join(backend.mpi_cmd)
-            simulate_dipole(net, tstop=40, n_trials=2)
 
-        # Case 2: Check that hwthreading turns on if forced. Note that the
-        # simulation should NOT be run in this case, since the underlying
-        # hardware will NOT necessarily have hardware-threading available.
-        override_hwthreading_option = True
+        # Case 2: Check that hwthreading turns on if forced.
         with MPIBackend(
             n_procs=n_procs,
             use_hwthreading_if_found=use_hwthreading_if_found,
             sensible_default_cores=sensible_default_cores,
             override_oversubscribe_option=override_oversubscribe_option,
-            override_hwthreading_option=override_hwthreading_option,
+            override_hwthreading_option=True,
         ) as backend:
             assert "--use-hwthread-cpus" in " ".join(backend.mpi_cmd)
 
         # Case 3: Check that hwthreading turns off if forced off.
-        override_hwthreading_option = False
-
-        # Possibly needed to prevent MPIBackend failures to exit processes
-        del net
-        net, _ = fix_net_neymotin_2020(add_drives_from_params=True, reduced=True)
-
         with MPIBackend(
             n_procs=n_procs,
             use_hwthreading_if_found=use_hwthreading_if_found,
             sensible_default_cores=sensible_default_cores,
             override_oversubscribe_option=override_oversubscribe_option,
-            override_hwthreading_option=override_hwthreading_option,
+            override_hwthreading_option=False,
         ) as backend:
             assert "--use-hwthread-cpus" not in " ".join(backend.mpi_cmd)
-            simulate_dipole(net, tstop=40, n_trials=2)
 
-    @pytest.mark.parametrize("backend", ["mpi", "joblib"])
-    def test_compare_hnn_core(
-        self, fix_net_neymotin_2020, fix_run_simulation, backend, n_jobs=1
-    ):
-        """Test hnn-core does not break."""
-        # small snippet of data on data branch for now. To be deleted
-        # later. Data branch should have only commit so it does not
-        # pollute the history.
-        data_url = (
-            "https://raw.githubusercontent.com/jonescompneurolab/"
-            "hnn-core/test_data/dpl.txt"
-        )
-        if not Path("dpl.txt").exists():
-            urlretrieve(data_url, "dpl.txt")
-        dpl_master = loadtxt("dpl.txt")
+    @requires_mpi4py
+    @requires_psutil
+    def test_run_mpibackend_hwthreading(self, fix_net_neymotin_2020):
+        """Test running MPIBackend with every hwthreading and oversubscribe option.
 
-        # TODO AES: CURRENTLY NEEDS LEGACY MODE
-        net, _ = fix_net_neymotin_2020(legacy_mode=True, add_drives_from_params=True)
-        dpls = fix_run_simulation(net, tstop=170, backend=backend)
-        dpl = dpls[0].smooth(30).scale(3000)
+        On any one machine, the option combinations in
+        ``test_mpibackend_hwthreading_cmd`` only produce a few distinct MPI commands.
+        Since every MPI simulation is slow to start, we only simulate once per distinct
+        MPI command, instead of once per combination of options.
+        """
+        n_procs = 2
 
-        # write the dipole to a file and compare
-        fname = "./dpl2.txt"
-        dpl.write(fname)
-
-        dpl_pr = loadtxt(fname)
-        assert_array_equal(dpl_pr[:, 2], dpl_master[:, 2])  # L2
-        assert_array_equal(dpl_pr[:, 3], dpl_master[:, 3])  # L5
-
-        # Test spike type counts
-        spike_type_counts = {}
-        for spike_gid in net.cell_response.spike_gids[0]:
-            if net.gid_to_type(spike_gid) not in spike_type_counts:
-                spike_type_counts[net.gid_to_type(spike_gid)] = 1
-            else:
-                spike_type_counts[net.gid_to_type(spike_gid)] += 1
-        assert "common" not in spike_type_counts
-        assert "exgauss" not in spike_type_counts
-        assert "extpois" not in spike_type_counts
-        assert spike_type_counts == {
-            "evprox1": 270,
-            "L2_basket": 55,
-            "L2_pyramidal": 114,
-            "L5_pyramidal": 396,
-            "L5_basket": 86,
-            "evdist1": 270,
-            "evprox2": 270,
+        # The default options are always simulated.
+        backend_kwargs_per_cmd = {
+            tuple(MPIBackend(n_procs=n_procs).mpi_cmd): dict(n_procs=n_procs)
         }
+        # Note that forcing hwthreading on (`override_hwthreading_option=True`) is NOT
+        # simulated, since the underlying hardware will NOT necessarily have
+        # hardware-threading available.
+        for (
+            use_hwthreading_if_found,
+            sensible_default_cores,
+            override_oversubscribe_option,
+            override_hwthreading_option,
+        ) in itertools.product(
+            [True, False], [True, False], [None, True, False], [None, False]
+        ):
+            backend_kwargs = dict(
+                n_procs=n_procs,
+                use_hwthreading_if_found=use_hwthreading_if_found,
+                sensible_default_cores=sensible_default_cores,
+                override_oversubscribe_option=override_oversubscribe_option,
+                override_hwthreading_option=override_hwthreading_option,
+            )
+            mpi_cmd = tuple(MPIBackend(**backend_kwargs).mpi_cmd)
+            backend_kwargs_per_cmd.setdefault(mpi_cmd, backend_kwargs)
+
+        for backend_kwargs in backend_kwargs_per_cmd.values():
+            # Use a new network for each simulation, to prevent MPIBackend failures to
+            # exit processes
+            net, _ = fix_net_neymotin_2020(add_drives_from_params=True, reduced=True)
+            with MPIBackend(**backend_kwargs):
+                simulate_dipole(net, tstop=40, n_trials=2)
+
+
+# This is not in `TestParallelBackends` so that the Joblib case can be run in the
+# (faster) non-MPI tests.
+@pytest.mark.parametrize(
+    "backend", [pytest.param("mpi", marks=pytest.mark.uses_mpi), "joblib"]
+)
+def test_compare_hnn_core(fix_net_neymotin_2020, fix_run_simulation, backend):
+    """Test hnn-core does not break."""
+    # small snippet of data on data branch for now. To be deleted
+    # later. Data branch should have only commit so it does not
+    # pollute the history.
+    data_url = (
+        "https://raw.githubusercontent.com/jonescompneurolab/hnn-core/test_data/dpl.txt"
+    )
+    if not Path("dpl.txt").exists():
+        urlretrieve(data_url, "dpl.txt")
+    dpl_master = loadtxt("dpl.txt")
+
+    # TODO AES: CURRENTLY NEEDS LEGACY MODE
+    net, _ = fix_net_neymotin_2020(legacy_mode=True, add_drives_from_params=True)
+    # Only the first trial is compared against the saved data
+    dpls = fix_run_simulation(net, tstop=170, backend=backend, n_trials=1)
+    dpl = dpls[0].smooth(30).scale(3000)
+
+    # write the dipole to a file and compare
+    fname = "./dpl2.txt"
+    dpl.write(fname)
+
+    dpl_pr = loadtxt(fname)
+    assert_array_equal(dpl_pr[:, 2], dpl_master[:, 2])  # L2
+    assert_array_equal(dpl_pr[:, 3], dpl_master[:, 3])  # L5
+
+    # Test spike type counts
+    spike_type_counts = {}
+    for spike_gid in net.cell_response.spike_gids[0]:
+        if net.gid_to_type(spike_gid) not in spike_type_counts:
+            spike_type_counts[net.gid_to_type(spike_gid)] = 1
+        else:
+            spike_type_counts[net.gid_to_type(spike_gid)] += 1
+    assert "common" not in spike_type_counts
+    assert "exgauss" not in spike_type_counts
+    assert "extpois" not in spike_type_counts
+    assert spike_type_counts == {
+        "evprox1": 270,
+        "L2_basket": 55,
+        "L2_pyramidal": 114,
+        "L5_pyramidal": 396,
+        "L5_basket": 86,
+        "evdist1": 270,
+        "evprox2": 270,
+    }
 
 
 # there are no dependencies if this unit tests fails; no need to be in
@@ -455,9 +483,10 @@ def test_mpi_failure(fix_net_neymotin_2020, fix_run_simulation):
     del environ["OMPI_MCA_btl"]
 
 
-@pytest.mark.uses_mpi
 @pytest.mark.duecker
-@pytest.mark.parametrize("backend", ["mpi", "joblib"])
+@pytest.mark.parametrize(
+    "backend", [pytest.param("mpi", marks=pytest.mark.uses_mpi), "joblib"]
+)
 def test_compare_duecker_model_output(backend):
     """Test that the Duecker model dipole output does not change"""
 
