@@ -1455,18 +1455,21 @@ class _VizManager:
             logger.error("No data has been simulated or loaded")
             return
 
-        data_name = None
+        sim_data_name = None
+        exp_data_name = None
         template_name = self.widgets["templates_dropdown"].value
         is_sim_data_template = _check_template_type_is_sim_data_dependent(template_name)
-        is_experimental_data = template_name in _experimental_data_templates
+        is_experimental_template = template_name in _experimental_data_templates
         if is_sim_data_template:
-            data_name = self.widgets["dataset_dropdown"].value
-            if data_name not in data_store.simulated_data:
+            sim_data_name = self.widgets["dataset_dropdown"].value
+            if sim_data_name not in data_store.simulated_data:
                 logger.error("No simulation data has been simulated")
                 return
-        elif is_experimental_data:
-            data_name = self.widgets["experimental_data_dropdown"].value
-            if data_name not in data_store.experimental_data:
+            exp_data_name = "None"  # Distinct from an actual None value
+        elif is_experimental_template:
+            sim_data_name = "None"  # Distinct from an actual None value
+            exp_data_name = self.widgets["experimental_data_dropdown"].value
+            if exp_data_name not in data_store.experimental_data:
                 logger.error("No experimental data has been loaded")
                 return
 
@@ -1476,7 +1479,7 @@ class _VizManager:
         if is_sim_data_template:
             template_type = sim_data_templates[template_name]
             ax_plots = sim_data_templates[template_name]["ax_plots"]
-        elif is_experimental_data:
+        elif is_experimental_template:
             template_type = blank_templates["[Blank] single figure"]
             ax_plots = [("ax0", "current dipole")]
             preprocessing_config = {"dipole_smooth": 0, "dipole_scaling": 1}
@@ -1503,26 +1506,45 @@ class _VizManager:
 
         # Plot data
         # This case only applies when the "Make figure" button in the viz tab  is clicked
-        if data_name is not None and ax_plots is not None:
+        if (
+            sim_data_name is not None
+            and exp_data_name is not None
+            and ax_plots is not None
+        ):
             fig_name = _idx2figname(self.data["fig_idx"]["idx"] - 1)
             self._draw_data(
-                fig_name, data_name, template_name, ax_plots, preprocessing_config
+                fig_name,
+                sim_data_name,
+                exp_data_name,
+                template_name,
+                ax_plots,
+                preprocessing_config,
             )
-            logger.info(
-                f"Figure {template_name} for simulation {data_name} has been created"
-            )
+            logger.info(f"Figure {template_name} has been created")
 
     def _simulate_add_fig(self):
         self.make_fig_button.click()
 
     def _draw_data(
-        self, fig_name, data_name, template_name, ax_plots, preprocessing_config=None
+        self,
+        fig_name,
+        sim_data_name,
+        exp_data_name,
+        template_name,
+        ax_plots,
+        preprocessing_config=None,
     ):
         preprocessing_config = preprocessing_config or {}
         # get figs per axis
         for ax_name, plot_type in ax_plots:
             self._simulate_edit_axis(
-                fig_name, ax_name, data_name, plot_type, preprocessing_config, "plot"
+                fig_name,
+                ax_name,
+                sim_data_name,
+                exp_data_name,
+                plot_type,
+                preprocessing_config,
+                "plot",
             )
         # template post-processing
         fig_key = self.data["fig_idx"]["idx"] - 1
@@ -1560,7 +1582,8 @@ class _VizManager:
         self,
         fig_name,
         ax_name,
-        data_name,
+        sim_data_name,
+        exp_data_name,
         plot_type,
         preprocessing_config,
         operation,
@@ -1580,8 +1603,10 @@ class _VizManager:
             The figure name shown in the GUI, e.g., 'Figure 1'.
         ax_name : str
             The axis name shown in the left side of GUI, like, 'ax0'.
-        data_name : str
-            The name of simulation or experimental data you want to visualize
+        sim_data_name : str
+            The selected value of the simulation data you want to visualize
+        exp_data_name : str
+            The selected value of the experimental data you want to visualize
         plot_type : str
             Type of visualization.
         preprocessing_config : dict
@@ -1596,71 +1621,65 @@ class _VizManager:
             `"plot"` if you want to plot and `"clear"` if you want to
             remove previously plotted visualizations.
         """
-
-        assert data_name in data_store.all_data_names
-
         assert plot_type in _plot_types
         assert operation in ("plot", "clear")
 
-        try:
-            # Select the figure tab
-            tab = self.axes_config_tabs
-            titles = tab.titles
-            assert fig_name in titles, "No such figure"
-            tab_idx = titles.index(fig_name)
-            self.axes_config_tabs.selected_index = tab_idx
+        # Select the figure tab
+        tab = self.axes_config_tabs
+        titles = tab.titles
+        assert fig_name in titles, "No such figure"
+        tab_idx = titles.index(fig_name)
+        self.axes_config_tabs.selected_index = tab_idx
 
-            # Select the figure panel/ax tab
-            ax_control_tabs = self.axes_config_tabs.children[tab_idx].children[1]
-            ax_titles = ax_control_tabs.titles
-            assert ax_name in ax_titles, "No such axis"
-            ax_idx = ax_titles.index(ax_name)
-            ax_control_tabs.selected_index = ax_idx
+        # Select the figure panel/ax tab
+        ax_control_tabs = self.axes_config_tabs.children[tab_idx].children[1]
+        ax_titles = ax_control_tabs.titles
+        assert ax_name in ax_titles, "No such axis"
+        ax_idx = ax_titles.index(ax_name)
+        ax_control_tabs.selected_index = ax_idx
 
-            buttons = ax_control_tabs.children[ax_idx].children[-2]
+        buttons = ax_control_tabs.children[ax_idx].children[-2]
 
-            # Change the appropriate data selection dropdown value to be what data_name
-            # has been passed in.
-            #
-            # We know that data_name is in data_store, and that names are mutually
-            # exclusive between simulated and experimental data, so we can just check if
-            # it's in experimental data to determine which dropdown to change:
-            is_experimental_data = data_name in data_store.experimental_data_names
-            # Since the simulation data dropdown is the 2nd widget in the ax control tab
-            # and the experimental data dropdown is the 5th widget, we need to be sure
-            # of which widget we want to change before we change its value.
-            widget_index = 4 if is_experimental_data else 1
-            data_selector_widget = ax_control_tabs.children[ax_idx].children[
-                widget_index
-            ]
-            data_selector_widget.value = data_name
+        if sim_data_name != "None":
+            if sim_data_name not in data_store.simulation_data_names:
+                raise ValueError(
+                    f"Simulation data '{sim_data_name}' not found in store"
+                )
+            sim_data_selector_widget = ax_control_tabs.children[ax_idx].children[1]
+            sim_data_selector_widget.value = sim_data_name
 
-            # Select the plot type
-            plot_type_selector = ax_control_tabs.children[ax_idx].children[0]
-            plot_type_selector.value = plot_type
+        if exp_data_name != "None":
+            if exp_data_name not in data_store.experimental_exp_names:
+                raise ValueError(
+                    f"Experimental data '{exp_data_name}' not found in store"
+                )
+            exp_data_selector_widget = ax_control_tabs.children[ax_idx].children[4]
+            exp_data_selector_widget.value = exp_data_name
 
-            # Set the plot configurations
-            config_name_idx = {
-                "dipole_smooth": 2,
-                "dipole_scaling": 3,
-                "data_to_compare": 4,
-                "data_smooth": 5,
-                "data_scaling": 6,
-                "min_spectral_frequency": 7,
-                "max_spectral_frequency": 8,
-                "spectrogram_colormap_selection": 9,
-                "hide_spike_legend": 10,
-                "marker_size": 11,
-            }
-            for conf_key, conf_val in preprocessing_config.items():
-                assert conf_key in config_name_idx.keys()
-                idx = config_name_idx[conf_key]
-                conf_widget = ax_control_tabs.children[ax_idx].children[idx]
-                conf_widget.value = conf_val
+        # Select the plot type
+        plot_type_selector = ax_control_tabs.children[ax_idx].children[0]
+        plot_type_selector.value = plot_type
 
-            if operation == "plot":
-                buttons.children[0].click()
-            elif operation == "clear":
-                buttons.children[1].click()
-        except Exception:
-            raise
+        # Set the plot configurations
+        config_name_idx = {
+            "dipole_smooth": 2,
+            "dipole_scaling": 3,
+            # Index 4 is a special case of the experimental data, handled above
+            "data_smooth": 5,
+            "data_scaling": 6,
+            "min_spectral_frequency": 7,
+            "max_spectral_frequency": 8,
+            "spectrogram_colormap_selection": 9,
+            "hide_spike_legend": 10,
+            "marker_size": 11,
+        }
+        for conf_key, conf_val in preprocessing_config.items():
+            assert conf_key in config_name_idx.keys()
+            idx = config_name_idx[conf_key]
+            conf_widget = ax_control_tabs.children[ax_idx].children[idx]
+            conf_widget.value = conf_val
+
+        if operation == "plot":
+            buttons.children[0].click()
+        elif operation == "clear":
+            buttons.children[1].click()
